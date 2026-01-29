@@ -7,7 +7,7 @@ import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { LAMPORTS_PER_SOL, PublicKey, Transaction, SystemProgram } from '@solana/web3.js';
 import { ESCROW_WALLET, MIN_TRADE_SOL } from '../lib/solana';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://18.217.232.183:3001';
+const API_URL = import.meta.env.VITE_API_URL || 'https://api.str8.fun';
 const TOKEN_STORAGE_KEY = 'pumpit_auth_token';
 
 interface StoredToken {

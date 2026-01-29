@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://18.217.232.183:3001';
-const WS_URL = import.meta.env.VITE_WS_URL || 'ws://18.217.232.183:3001';
+const API_URL = import.meta.env.VITE_API_URL || 'https://api.str8.fun';
+const WS_URL = import.meta.env.VITE_WS_URL || 'wss://api.str8.fun';
 
 // Messages older than 10 minutes are auto-deleted
 const MESSAGE_TTL_MS = 10 * 60 * 1000; // 10 minutes in milliseconds

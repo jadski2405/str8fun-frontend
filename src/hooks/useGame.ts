@@ -16,8 +16,8 @@ import {
 } from '../lib/poolEngine';
 import { PlayerPosition, Trade, GAME_CONSTANTS } from '../types/game';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://18.217.232.183:3001';
-const WS_URL = import.meta.env.VITE_WS_URL || 'ws://18.217.232.183:3001';
+const API_URL = import.meta.env.VITE_API_URL || 'https://api.str8.fun';
+const WS_URL = import.meta.env.VITE_WS_URL || 'wss://api.str8.fun';
 
 const { ROUND_DURATION_SECONDS, MIN_TRADE_SOL } = GAME_CONSTANTS;
 const COUNTDOWN_SECONDS = 20; // Time between rounds
