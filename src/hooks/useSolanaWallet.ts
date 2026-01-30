@@ -68,7 +68,7 @@ export function useSolanaWallet(): WalletState {
   const { connection } = useConnection();
   
   // Privy auth - get access token for API calls
-  const { getAccessToken, authenticated } = usePrivy();
+  const { getAccessToken, authenticated, logout } = usePrivy();
   
   const [balance, setBalance] = useState(0);
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
@@ -203,11 +203,21 @@ export function useSolanaWallet(): WalletState {
     try {
       const token = await getAccessToken();
       return token;
-    } catch (e) {
+    } catch (e: unknown) {
       console.error('Error getting Privy access token:', e);
+      // If token refresh fails, the session is invalid - logout to clear stale tokens
+      const errorMessage = e instanceof Error ? e.message : String(e);
+      if (errorMessage.includes('refresh') || errorMessage.includes('token')) {
+        console.log('[useSolanaWallet] Stale session detected, logging out...');
+        try {
+          await logout();
+        } catch (logoutError) {
+          console.error('Error during logout:', logoutError);
+        }
+      }
       return null;
     }
-  }, [getAccessToken]);
+  }, [getAccessToken, logout]);
   
   // Fetch profile with username and balance from Express backend
   const refreshProfile = useCallback(async () => {
