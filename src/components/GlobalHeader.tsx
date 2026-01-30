@@ -711,10 +711,21 @@ const Logo: React.FC = () => (
 );
 
 const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat }) => {
-  // Wallet state from Solana adapter
-  const { connected, publicKey, disconnect } = useWallet();
-  const { logout } = usePrivy();
+  // Wallet state from Solana adapter (fallback)
+  const { connected: walletAdapterConnected, publicKey: walletAdapterPublicKey, disconnect } = useWallet();
+  
+  // Privy auth state - primary source of truth
+  const { logout, authenticated, user } = usePrivy();
   const { username, depositedBalance } = useSolanaWallet();
+  
+  // Get wallet address from Privy user or fallback to wallet-adapter
+  const privyWallet = user?.linkedAccounts?.find(
+    (account) => account.type === 'wallet' && 'chainType' in account && (account as { chainType?: string }).chainType === 'solana'
+  );
+  const walletAddress = (privyWallet && 'address' in privyWallet ? privyWallet.address : null) || walletAdapterPublicKey?.toString() || '';
+  
+  // User is connected if authenticated with Privy OR wallet-adapter is connected
+  const isConnected = authenticated || walletAdapterConnected;
   
   // Dropdown states
   const [showWalletMenu, setShowWalletMenu] = useState(false);
@@ -778,8 +789,6 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
     setShowWalletMenu(!showWalletMenu);
   };
 
-  const walletAddress = publicKey?.toString() || '';
-
   // Format wallet address for display
   const formatAddress = (address: string) => {
     if (!address) return '';
@@ -821,7 +830,7 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
       </div>
 
       {/* Right Section - Wallet */}
-      {connected ? (
+      {isConnected ? (
         <>
         {/* Post-Connection Container - .header-section-main-right */}
         <div 
