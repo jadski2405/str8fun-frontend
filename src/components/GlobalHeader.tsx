@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LogOut, ArrowDownToLine, ArrowUpFromLine, ChevronDown, X, Menu, User, Wallet } from 'lucide-react';
 import { useWallet } from '@solana/wallet-adapter-react';
+import { useLogin, usePrivy } from '@privy-io/react-auth';
 import { useSolanaWallet } from '../hooks/useSolanaWallet';
 import solanaLogo from '../assets/logo_solana.png';
 
@@ -45,17 +46,29 @@ interface WalletConnectionModalProps {
 }
 
 const WalletConnectionModal: React.FC<WalletConnectionModalProps> = ({ isOpen, onClose }) => {
-  const { wallets, select, connecting } = useWallet();
-  
-  // Filter to only show installed wallets that are ready
-  const installedWallets = wallets.filter(w => w.readyState === 'Installed');
-  const otherWallets = wallets.filter(w => w.readyState !== 'Installed');
-  
-  const handleWalletSelect = async (walletName: string) => {
-    const wallet = wallets.find(w => w.adapter.name === walletName);
-    if (wallet) {
-      select(wallet.adapter.name);
+  const { ready } = usePrivy();
+  const { login } = useLogin({
+    onComplete: () => {
+      console.log('[Privy] Login complete');
       onClose();
+    },
+    onError: (error) => {
+      console.error('[Privy] Login error:', error);
+    },
+  });
+  
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  
+  // Handle Privy login - opens Privy's modal with our wallet options
+  const handleConnectWithPrivy = async () => {
+    if (!ready) return;
+    setIsLoggingIn(true);
+    try {
+      login();
+      // onClose will be called by onComplete callback
+    } catch (e) {
+      console.error('[Privy] Error initiating login:', e);
+      setIsLoggingIn(false);
     }
   };
 
@@ -172,125 +185,75 @@ const WalletConnectionModal: React.FC<WalletConnectionModalProps> = ({ isOpen, o
                 Connect your Solana wallet to start playing
               </p>
               
-              {/* Installed Wallets */}
-              {installedWallets.length > 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <span style={{ fontFamily: "'DynaPuff', sans-serif", fontSize: 11, color: 'rgba(248, 248, 252, 0.5)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Detected Wallets
-                  </span>
-                  {installedWallets.map((wallet) => (
-                    <button
-                      key={wallet.adapter.name}
-                      onClick={() => handleWalletSelect(wallet.adapter.name)}
-                      disabled={connecting}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 12,
-                        width: '100%',
-                        padding: '14px 16px',
-                        background: 'rgb(21, 22, 29)',
-                        border: `2px solid ${WALLET_THEME.primary}`,
-                        borderRadius: 8,
-                        cursor: connecting ? 'wait' : 'pointer',
-                        transition: 'all 0.2s ease',
-                        boxShadow: `${WALLET_THEME.primary}33 0px 2px 8px`,
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!connecting) {
-                          e.currentTarget.style.background = 'rgba(255, 193, 7, 0.1)';
-                          e.currentTarget.style.transform = 'translateY(-1px)';
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'rgb(21, 22, 29)';
-                        e.currentTarget.style.transform = 'translateY(0)';
-                      }}
-                    >
-                      <img 
-                        src={wallet.adapter.icon} 
-                        alt={wallet.adapter.name} 
-                        style={{ width: 28, height: 28, borderRadius: 6 }} 
-                      />
-                      <span style={{ fontFamily: "'DynaPuff', sans-serif", fontSize: 14, fontWeight: 600, color: WALLET_THEME.primary }}>
-                        {wallet.adapter.name}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              )}
+              {/* Main Connect Button - Uses Privy */}
+              <button
+                onClick={handleConnectWithPrivy}
+                disabled={isLoggingIn || !ready}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 12,
+                  width: '100%',
+                  padding: '16px 20px',
+                  background: WALLET_THEME.primary,
+                  border: 'none',
+                  borderRadius: 8,
+                  cursor: (isLoggingIn || !ready) ? 'wait' : 'pointer',
+                  transition: 'all 0.2s ease',
+                  boxShadow: `${WALLET_THEME.primary}66 0px 4px 16px`,
+                }}
+                onMouseEnter={(e) => {
+                  if (!isLoggingIn && ready) {
+                    e.currentTarget.style.background = WALLET_THEME.primaryActive;
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = WALLET_THEME.primary;
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
+              >
+                <Wallet size={20} color="#000" />
+                <span style={{ 
+                  fontFamily: "'DynaPuff', sans-serif", 
+                  fontSize: 15, 
+                  fontWeight: 700, 
+                  color: '#000' 
+                }}>
+                  {isLoggingIn ? 'Connecting...' : 'Connect Wallet'}
+                </span>
+              </button>
               
-              {/* Other Wallets (not installed) */}
-              {otherWallets.length > 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
-                  <span style={{ fontFamily: "'DynaPuff', sans-serif", fontSize: 11, color: 'rgba(248, 248, 252, 0.4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    More Wallets
-                  </span>
-                  {otherWallets.slice(0, 3).map((wallet) => (
-                    <button
-                      key={wallet.adapter.name}
-                      onClick={() => {
-                        // Open wallet website for installation
-                        if (wallet.adapter.url) {
-                          window.open(wallet.adapter.url, '_blank');
-                        }
-                      }}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        width: '100%',
-                        padding: '12px 16px',
-                        background: 'rgba(0, 0, 0, 0.2)',
-                        border: '1px solid rgb(58, 61, 74)',
-                        borderRadius: 8,
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'rgba(0, 0, 0, 0.2)';
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <img 
-                          src={wallet.adapter.icon} 
-                          alt={wallet.adapter.name} 
-                          style={{ width: 24, height: 24, borderRadius: 4, opacity: 0.7 }} 
-                        />
-                        <span style={{ fontFamily: "'DynaPuff', sans-serif", fontSize: 13, color: 'rgba(248, 248, 252, 0.6)' }}>
-                          {wallet.adapter.name}
-                        </span>
-                      </div>
-                      <span style={{ fontFamily: "'DynaPuff', sans-serif", fontSize: 10, color: 'rgba(248, 248, 252, 0.4)', textTransform: 'uppercase' }}>
-                        Install
-                      </span>
-                    </button>
-                  ))}
+              {/* Supported wallets info */}
+              <div 
+                style={{ 
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 16,
+                  marginTop: 12,
+                  padding: '12px 16px',
+                  background: 'rgba(0, 0, 0, 0.2)',
+                  borderRadius: 8,
+                }}
+              >
+                <span style={{ fontFamily: "'DynaPuff', sans-serif", fontSize: 11, color: 'rgba(248, 248, 252, 0.4)' }}>
+                  Supports:
+                </span>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <img 
+                    src="https://raw.githubusercontent.com/solana-labs/wallet-adapter/master/packages/wallets/icons/phantom.svg" 
+                    alt="Phantom" 
+                    style={{ width: 20, height: 20, borderRadius: 4 }} 
+                  />
+                  <img 
+                    src="https://raw.githubusercontent.com/solana-labs/wallet-adapter/master/packages/wallets/icons/solflare.svg" 
+                    alt="Solflare" 
+                    style={{ width: 20, height: 20, borderRadius: 4 }} 
+                  />
                 </div>
-              )}
-              
-              {/* No wallets detected */}
-              {installedWallets.length === 0 && (
-                <div 
-                  style={{ 
-                    padding: '20px 16px',
-                    background: 'rgba(255, 193, 7, 0.1)',
-                    border: '1px solid rgba(255, 193, 7, 0.3)',
-                    borderRadius: 8,
-                    textAlign: 'center',
-                  }}
-                >
-                  <p style={{ fontFamily: "'DynaPuff', sans-serif", fontSize: 13, color: WALLET_THEME.primary, margin: 0 }}>
-                    No wallet detected
-                  </p>
-                  <p style={{ fontFamily: "'DynaPuff', sans-serif", fontSize: 11, color: 'rgba(248, 248, 252, 0.5)', margin: '8px 0 0 0' }}>
-                    Install Phantom or Solflare to continue
-                  </p>
-                </div>
-              )}
+              </div>
             </div>
           </motion.div>
         </div>
@@ -742,6 +705,7 @@ const Logo: React.FC = () => (
 const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat }) => {
   // Wallet state from Solana adapter
   const { connected, publicKey, disconnect } = useWallet();
+  const { logout } = usePrivy();
   const { username, depositedBalance } = useSolanaWallet();
   
   // Dropdown states
@@ -819,9 +783,10 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
     setShowWalletConnectionModal(true);
   };
 
-  // Handle disconnect
+  // Handle disconnect - logout from Privy (which also disconnects wallet)
   const handleDisconnect = async () => {
     try {
+      await logout();
       await disconnect();
     } catch (error) {
       console.error('Error disconnecting:', error);
