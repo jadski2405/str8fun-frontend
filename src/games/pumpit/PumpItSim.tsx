@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useWallet } from '@solana/wallet-adapter-react';
-import { useWalletModal } from '@solana/wallet-adapter-react-ui';
+import { useLogin } from '@privy-io/react-auth';
 import { MessageCircle } from 'lucide-react';
 import RugsChart from './RugsChart';
 import TradeDeck, { MobileTradeDeck } from './TradeDeck';
@@ -72,10 +71,13 @@ function validateUsername(username: string): { valid: boolean; error?: string } 
 // PUMPIT SIMULATION COMPONENT
 // ============================================================================
 const PumpItSim: React.FC = () => {
-  // Wallet state
-  const { connected, publicKey } = useWallet();
-  const { setVisible: setWalletModalVisible } = useWalletModal();
+  // Privy login hook - triggers wallet connection modal
+  const { login } = useLogin();
+  
+  // Wallet state - ALL wallet access goes through useSolanaWallet hook
   const { 
+    isConnected: connected,
+    publicKey,
     balance: walletBalance, 
     depositedBalance,
     deposit,
@@ -90,7 +92,7 @@ const PumpItSim: React.FC = () => {
   } = useSolanaWallet();
   
   // Game state from hook (for real trading) - pass wallet address and auth token
-  const game = useGame(profileId, publicKey?.toString() || null, getAuthToken);
+  const game = useGame(profileId, publicKey || null, getAuthToken);
   
   // Local simulation state (visual chart)
   const [price, setPrice] = useState(INITIAL_PRICE);
@@ -303,8 +305,8 @@ const PumpItSim: React.FC = () => {
   // ============================================================================
   const handleBuy = useCallback(async (amount: number) => {
     if (!connected) {
-      // Open wallet modal if not connected
-      setWalletModalVisible(true);
+      // Open Privy wallet login modal if not connected
+      login();
       return;
     }
     
@@ -347,11 +349,11 @@ const PumpItSim: React.FC = () => {
     } finally {
       setIsProcessingTrade(false);
     }
-  }, [connected, depositedBalance, game, setWalletModalVisible, refreshDepositedBalance]);
+  }, [connected, depositedBalance, game, login, refreshDepositedBalance]);
 
   const handleSell = useCallback(async (amount: number) => {
     if (!connected) {
-      setWalletModalVisible(true);
+      login();
       return;
     }
     
@@ -387,7 +389,7 @@ const PumpItSim: React.FC = () => {
     } finally {
       setIsProcessingTrade(false);
     }
-  }, [connected, game, setWalletModalVisible, refreshDepositedBalance]);
+  }, [connected, game, login, refreshDepositedBalance]);
 
   // ============================================================================
   // DEPOSIT/WITHDRAW HANDLERS

@@ -3,6 +3,12 @@
 /* Premium Arcade Fonts - Including DynaPuff */
 @import url('https://fonts.googleapis.com/css2?family=Chewy&family=DynaPuff:wght@400;500;600;700&family=Fredoka:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap');
 
+/* Spinner animation for loading states */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 /* ============================================
    1. TAILWIND PREFLIGHT RESET FOUNDATION
    ============================================ */

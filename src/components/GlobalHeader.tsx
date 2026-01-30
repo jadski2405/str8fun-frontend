@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LogOut, ArrowDownToLine, ArrowUpFromLine, ChevronDown, X, Menu, User, Wallet } from 'lucide-react';
-import { useWallet } from '@solana/wallet-adapter-react';
 import { useLogin, usePrivy } from '@privy-io/react-auth';
 import { useSolanaWallet } from '../hooks/useSolanaWallet';
 import solanaLogo from '../assets/logo_solana.png';
@@ -277,6 +276,7 @@ interface TransactionDropdownProps {
   isOpen: boolean;
   onClose: () => void;
   balance: number;
+  onTransaction: (amount: number) => Promise<{ success: boolean; error?: string }>;
 }
 
 const TransactionDropdown: React.FC<TransactionDropdownProps> = ({ 
@@ -284,22 +284,65 @@ const TransactionDropdown: React.FC<TransactionDropdownProps> = ({
   isOpen, 
   onClose,
   balance,
+  onTransaction,
 }) => {
   const [amount, setAmount] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
   const theme = DROPDOWN_THEMES[type];
   const Icon = theme.icon;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle transaction logic here
-    console.log(`${type} amount:`, amount);
-    setAmount('');
-    onClose();
+    setError(null);
+    
+    const amountNum = parseFloat(amount);
+    if (!amountNum || amountNum <= 0) {
+      setError('Please enter a valid amount');
+      return;
+    }
+    
+    if (amountNum > balance) {
+      setError(`Insufficient ${type === 'withdraw' ? 'game' : 'wallet'} balance`);
+      return;
+    }
+    
+    setIsProcessing(true);
+    try {
+      const result = await onTransaction(amountNum);
+      if (result.success) {
+        setSuccess(true);
+        setAmount('');
+        // Auto-close after success
+        setTimeout(() => {
+          setSuccess(false);
+          onClose();
+        }, 1500);
+      } else {
+        setError(result.error || `${type} failed`);
+      }
+    } catch (err) {
+      setError('Transaction failed. Please try again.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleMaxClick = () => {
-    setAmount(balance.toString());
+    setAmount(balance.toFixed(4));
+    setError(null);
   };
+  
+  // Clear state when modal closes
+  React.useEffect(() => {
+    if (!isOpen) {
+      setAmount('');
+      setError(null);
+      setSuccess(false);
+      setIsProcessing(false);
+    }
+  }, [isOpen]);
 
   return (
     <AnimatePresence>
@@ -474,10 +517,46 @@ const TransactionDropdown: React.FC<TransactionDropdownProps> = ({
               </div>
             </div>
 
+            {/* Error Message */}
+            {error && (
+              <div 
+                style={{
+                  padding: '10px 14px',
+                  background: 'rgba(239, 68, 68, 0.15)',
+                  border: '1px solid rgba(239, 68, 68, 0.4)',
+                  borderRadius: 8,
+                  fontFamily: "'DynaPuff', sans-serif",
+                  fontSize: 12,
+                  color: '#ef4444',
+                  textAlign: 'center',
+                }}
+              >
+                {error}
+              </div>
+            )}
+
+            {/* Success Message */}
+            {success && (
+              <div 
+                style={{
+                  padding: '10px 14px',
+                  background: 'rgba(34, 197, 94, 0.15)',
+                  border: '1px solid rgba(34, 197, 94, 0.4)',
+                  borderRadius: 8,
+                  fontFamily: "'DynaPuff', sans-serif",
+                  fontSize: 12,
+                  color: '#22c55e',
+                  textAlign: 'center',
+                }}
+              >
+                {type === 'deposit' ? 'Deposit successful!' : 'Withdrawal successful!'}
+              </div>
+            )}
+
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={!amount || parseFloat(amount) <= 0 || parseFloat(amount) > balance}
+              disabled={isProcessing || !amount || parseFloat(amount) <= 0 || parseFloat(amount) > balance}
               style={{
                 width: '100%',
                 height: 48,
@@ -485,7 +564,7 @@ const TransactionDropdown: React.FC<TransactionDropdownProps> = ({
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 8,
-                background: !amount || parseFloat(amount) <= 0 || parseFloat(amount) > balance 
+                background: isProcessing || !amount || parseFloat(amount) <= 0 || parseFloat(amount) > balance 
                   ? 'rgba(255, 255, 255, 0.1)' 
                   : theme.primary,
                 border: 'none',
@@ -494,32 +573,48 @@ const TransactionDropdown: React.FC<TransactionDropdownProps> = ({
                 fontSize: 14,
                 fontWeight: 600,
                 textTransform: 'uppercase',
-                color: !amount || parseFloat(amount) <= 0 || parseFloat(amount) > balance 
+                color: isProcessing || !amount || parseFloat(amount) <= 0 || parseFloat(amount) > balance 
                   ? 'rgba(248, 248, 252, 0.4)' 
                   : 'rgb(21, 22, 29)',
-                cursor: !amount || parseFloat(amount) <= 0 || parseFloat(amount) > balance 
+                cursor: isProcessing || !amount || parseFloat(amount) <= 0 || parseFloat(amount) > balance 
                   ? 'not-allowed' 
                   : 'pointer',
                 transition: 'all 0.2s ease',
-                boxShadow: !amount || parseFloat(amount) <= 0 || parseFloat(amount) > balance 
+                boxShadow: isProcessing || !amount || parseFloat(amount) <= 0 || parseFloat(amount) > balance 
                   ? 'none'
                   : `${theme.primary}66 0px 4px 16px`,
               }}
               onMouseEnter={(e) => {
-                if (amount && parseFloat(amount) > 0 && parseFloat(amount) <= balance) {
+                if (!isProcessing && amount && parseFloat(amount) > 0 && parseFloat(amount) <= balance) {
                   e.currentTarget.style.background = theme.primaryActive;
                   e.currentTarget.style.transform = 'translateY(-1px)';
                 }
               }}
               onMouseLeave={(e) => {
-                if (amount && parseFloat(amount) > 0 && parseFloat(amount) <= balance) {
+                if (!isProcessing && amount && parseFloat(amount) > 0 && parseFloat(amount) <= balance) {
                   e.currentTarget.style.background = theme.primary;
                   e.currentTarget.style.transform = 'translateY(0)';
                 }
               }}
             >
-              <Icon size={16} />
-              {theme.buttonText}
+              {isProcessing ? (
+                <>
+                  <div style={{
+                    width: 16,
+                    height: 16,
+                    border: '2px solid rgba(248, 248, 252, 0.3)',
+                    borderTopColor: 'rgb(248, 248, 252)',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite',
+                  }} />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <Icon size={16} />
+                  {theme.buttonText}
+                </>
+              )}
             </button>
 
             {/* Info Text */}
@@ -711,21 +806,20 @@ const Logo: React.FC = () => (
 );
 
 const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat }) => {
-  // Wallet state from Solana adapter (fallback)
-  const { connected: walletAdapterConnected, publicKey: walletAdapterPublicKey, disconnect } = useWallet();
+  // Privy auth state - for logout
+  const { logout } = usePrivy();
   
-  // Privy auth state - primary source of truth
-  const { logout, authenticated, user } = usePrivy();
-  const { username, depositedBalance } = useSolanaWallet();
-  
-  // Get wallet address from Privy user or fallback to wallet-adapter
-  const privyWallet = user?.linkedAccounts?.find(
-    (account) => account.type === 'wallet' && 'chainType' in account && (account as { chainType?: string }).chainType === 'solana'
-  );
-  const walletAddress = (privyWallet && 'address' in privyWallet ? privyWallet.address : null) || walletAdapterPublicKey?.toString() || '';
-  
-  // User is connected if authenticated with Privy OR wallet-adapter is connected
-  const isConnected = authenticated || walletAdapterConnected;
+  // Global wallet state - SINGLE SOURCE OF TRUTH for wallet connection
+  const { 
+    isConnected, 
+    publicKey: walletAddress, 
+    username, 
+    depositedBalance, 
+    balance, 
+    deposit, 
+    withdraw,
+    disconnect: disconnectWallet,
+  } = useSolanaWallet();
   
   // Dropdown states
   const [showWalletMenu, setShowWalletMenu] = useState(false);
@@ -790,7 +884,7 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
   };
 
   // Format wallet address for display
-  const formatAddress = (address: string) => {
+  const formatAddress = (address: string | null) => {
     if (!address) return '';
     return `${address.slice(0, 4)}...${address.slice(-4)}`;
   };
@@ -804,7 +898,7 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
   const handleDisconnect = async () => {
     try {
       await logout();
-      await disconnect();
+      await disconnectWallet();
     } catch (error) {
       console.error('Error disconnecting:', error);
     }
@@ -921,6 +1015,7 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
               isOpen={showWithdrawMenu}
               onClose={() => setShowWithdrawMenu(false)}
               balance={depositedBalance}
+              onTransaction={withdraw}
             />
           </div>
           
@@ -969,7 +1064,8 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
               type="deposit"
               isOpen={showDepositMenu}
               onClose={() => setShowDepositMenu(false)}
-              balance={depositedBalance}
+              balance={balance}
+              onTransaction={deposit}
             />
           </div>
           

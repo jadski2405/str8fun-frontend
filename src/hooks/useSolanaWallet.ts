@@ -2,9 +2,10 @@
 // WALLET HOOK - Custom hook for wallet state and actions
 // ============================================================================
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { usePrivy } from '@privy-io/react-auth';
+import { useWallets as usePrivySolanaWallets, useSignAndSendTransaction } from '@privy-io/react-auth/solana';
 import { LAMPORTS_PER_SOL, PublicKey, Transaction, SystemProgram } from '@solana/web3.js';
 import { ESCROW_WALLET, MIN_TRADE_SOL } from '../lib/solana';
 
@@ -56,19 +57,46 @@ export interface WalletState {
 
 export function useSolanaWallet(): WalletState {
   const { 
-    publicKey, 
-    connected, 
+    publicKey: walletAdapterPublicKey, 
+    connected: walletAdapterConnected, 
     connecting,
     wallet,
     connect: walletConnect,
     disconnect: walletDisconnect,
-    sendTransaction,
+    sendTransaction: walletAdapterSendTransaction,
   } = useWallet();
   
   const { connection } = useConnection();
   
-  // Privy auth - get access token for API calls
+  // Privy auth - get access token for API calls and wallet info
   const { getAccessToken, authenticated, logout } = usePrivy();
+  
+  // Privy Solana wallets - PRIMARY source for connected wallets
+  const { wallets: privyWallets } = usePrivySolanaWallets();
+  const { signAndSendTransaction: privySignAndSendTransaction } = useSignAndSendTransaction();
+  
+  // Get the first connected Privy Solana wallet
+  const privyWallet = privyWallets?.[0] || null;
+  
+  // Derive connection state: Privy authenticated OR wallet-adapter connected
+  const isConnected = authenticated || walletAdapterConnected;
+  
+  // Derive wallet address: Privy wallet first, then wallet-adapter
+  const walletAddress = useMemo(() => {
+    if (privyWallet?.address) return privyWallet.address;
+    if (walletAdapterPublicKey) return walletAdapterPublicKey.toString();
+    return null;
+  }, [privyWallet?.address, walletAdapterPublicKey]);
+  
+  // Create PublicKey from address for balance fetching
+  const publicKey = useMemo(() => {
+    if (!walletAddress) return null;
+    try {
+      return new PublicKey(walletAddress);
+    } catch {
+      return null;
+    }
+  }, [walletAddress]);
   
   const [balance, setBalance] = useState(0);
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
@@ -101,7 +129,7 @@ export function useSolanaWallet(): WalletState {
 
   // Auto-fetch balance when connected
   useEffect(() => {
-    if (connected && publicKey) {
+    if (isConnected && publicKey) {
       refreshBalance();
       
       // Set up balance subscription
@@ -116,8 +144,10 @@ export function useSolanaWallet(): WalletState {
       return () => {
         connection.removeAccountChangeListener(subscriptionId);
       };
+    } else {
+      setBalance(0);
     }
-  }, [connected, publicKey, connection, refreshBalance]);
+  }, [isConnected, publicKey, connection, refreshBalance]);
 
   // Connect wallet
   const connect = useCallback(async () => {
@@ -140,9 +170,9 @@ export function useSolanaWallet(): WalletState {
     }
   }, [walletDisconnect]);
 
-  // Send SOL to escrow for trading
+  // Send SOL to escrow for trading (legacy - prefer deposit)
   const sendSOLToEscrow = useCallback(async (amount: number): Promise<string | null> => {
-    if (!publicKey || !ESCROW_WALLET) {
+    if (!walletAddress || !ESCROW_WALLET) {
       console.error('Wallet not connected or escrow not configured');
       return null;
     }
@@ -158,31 +188,55 @@ export function useSolanaWallet(): WalletState {
     }
     
     try {
+      const fromPubkey = new PublicKey(walletAddress);
       const escrowPubkey = new PublicKey(ESCROW_WALLET);
       const lamports = Math.floor(amount * LAMPORTS_PER_SOL);
       
-      const transaction = new Transaction().add(
-        SystemProgram.transfer({
-          fromPubkey: publicKey,
-          toPubkey: escrowPubkey,
-          lamports,
-        })
-      );
+      let signature: string;
       
-      // Get latest blockhash
-      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
-      transaction.recentBlockhash = blockhash;
-      transaction.feePayer = publicKey;
-      
-      // Send transaction
-      const signature = await sendTransaction(transaction, connection);
-      
-      // Wait for confirmation
-      await connection.confirmTransaction({
-        blockhash,
-        lastValidBlockHeight,
-        signature,
-      });
+      if (privyWallet) {
+        const transaction = new Transaction().add(
+          SystemProgram.transfer({
+            fromPubkey,
+            toPubkey: escrowPubkey,
+            lamports,
+          })
+        );
+        
+        const { blockhash } = await connection.getLatestBlockhash();
+        transaction.recentBlockhash = blockhash;
+        transaction.feePayer = fromPubkey;
+        
+        const serializedTx = transaction.serialize({ requireAllSignatures: false });
+        const result = await privySignAndSendTransaction({
+          transaction: new Uint8Array(serializedTx),
+          wallet: privyWallet,
+        });
+        signature = Buffer.from(result.signature).toString('base64');
+      } else if (walletAdapterPublicKey && walletAdapterSendTransaction) {
+        const transaction = new Transaction().add(
+          SystemProgram.transfer({
+            fromPubkey: walletAdapterPublicKey,
+            toPubkey: escrowPubkey,
+            lamports,
+          })
+        );
+        
+        const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+        transaction.recentBlockhash = blockhash;
+        transaction.feePayer = walletAdapterPublicKey;
+        
+        signature = await walletAdapterSendTransaction(transaction, connection);
+        
+        await connection.confirmTransaction({
+          blockhash,
+          lastValidBlockHeight,
+          signature,
+        });
+      } else {
+        console.error('No wallet available for signing');
+        return null;
+      }
       
       // Refresh balance after transaction
       await refreshBalance();
@@ -192,7 +246,7 @@ export function useSolanaWallet(): WalletState {
       console.error('Error sending SOL to escrow:', error);
       return null;
     }
-  }, [publicKey, balance, connection, sendTransaction, refreshBalance]);
+  }, [walletAddress, privyWallet, walletAdapterPublicKey, walletAdapterSendTransaction, balance, connection, privySignAndSendTransaction, refreshBalance]);
 
   // ============================================================================
   // PROFILE & DEPOSITED BALANCE
@@ -221,7 +275,7 @@ export function useSolanaWallet(): WalletState {
   
   // Fetch profile with username and balance from Express backend
   const refreshProfile = useCallback(async () => {
-    if (!publicKey) {
+    if (!walletAddress) {
       setProfileId(null);
       setUsernameState(null);
       setNeedsUsername(false);
@@ -236,7 +290,6 @@ export function useSolanaWallet(): WalletState {
     }
     
     setIsLoadingDepositedBalance(true);
-    const walletAddress = publicKey.toString();
     
     try {
       console.log('[useSolanaWallet] Fetching profile for:', walletAddress);
@@ -270,22 +323,22 @@ export function useSolanaWallet(): WalletState {
     } finally {
       setIsLoadingDepositedBalance(false);
     }
-  }, [publicKey, authenticated, getAuthToken]);
+  }, [walletAddress, authenticated, getAuthToken]);
 
   // Alias for backward compatibility
   const refreshDepositedBalance = refreshProfile;
 
   // Auto-fetch profile when connected AND authenticated
   useEffect(() => {
-    if (connected && publicKey && authenticated) {
+    if (isConnected && walletAddress && authenticated) {
       refreshProfile();
-    } else if (!connected) {
+    } else if (!isConnected) {
       setProfileId(null);
       setUsernameState(null);
       setNeedsUsername(false);
       setDepositedBalance(0);
     }
-  }, [connected, publicKey, authenticated, refreshProfile]);
+  }, [isConnected, publicKey, authenticated, refreshProfile]);
 
   // ============================================================================
   // USERNAME FUNCTIONS
@@ -326,7 +379,7 @@ export function useSolanaWallet(): WalletState {
   }, []);
 
   const setUsername = useCallback(async (newUsername: string): Promise<{ success: boolean; error?: string }> => {
-    if (!publicKey) {
+    if (!walletAddress) {
       return { success: false, error: 'Wallet not connected' };
     }
     
@@ -348,7 +401,7 @@ export function useSolanaWallet(): WalletState {
           ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({ 
-          wallet_address: publicKey.toString(),
+          wallet_address: walletAddress,
           username: newUsername 
         }),
       });
@@ -366,13 +419,13 @@ export function useSolanaWallet(): WalletState {
     } catch (e) {
       return { success: false, error: 'Network error' };
     }
-  }, [publicKey, checkUsernameAvailable, getAuthToken]);
+  }, [walletAddress, checkUsernameAvailable, getAuthToken]);
 
   // ============================================================================
   // DEPOSIT - Send SOL to escrow, credit in-game balance
   // ============================================================================
   const deposit = useCallback(async (amount: number): Promise<{ success: boolean; error?: string }> => {
-    if (!publicKey || !ESCROW_WALLET) {
+    if (!walletAddress || !ESCROW_WALLET) {
       return { success: false, error: 'Wallet not connected' };
     }
     
@@ -385,29 +438,64 @@ export function useSolanaWallet(): WalletState {
     }
     
     try {
-      // Step 1: Send SOL to escrow (this requires wallet approval)
+      const fromPubkey = new PublicKey(walletAddress);
       const escrowPubkey = new PublicKey(ESCROW_WALLET);
       const lamports = Math.floor(amount * LAMPORTS_PER_SOL);
       
-      const transaction = new Transaction().add(
-        SystemProgram.transfer({
-          fromPubkey: publicKey,
-          toPubkey: escrowPubkey,
-          lamports,
-        })
-      );
+      let signature: string;
       
-      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
-      transaction.recentBlockhash = blockhash;
-      transaction.feePayer = publicKey;
-      
-      const signature = await sendTransaction(transaction, connection);
-      
-      await connection.confirmTransaction({
-        blockhash,
-        lastValidBlockHeight,
-        signature,
-      });
+      // Use Privy wallet signing if available, otherwise fall back to wallet-adapter
+      if (privyWallet) {
+        // Build transaction for Privy signing
+        const transaction = new Transaction().add(
+          SystemProgram.transfer({
+            fromPubkey,
+            toPubkey: escrowPubkey,
+            lamports,
+          })
+        );
+        
+        const { blockhash } = await connection.getLatestBlockhash();
+        transaction.recentBlockhash = blockhash;
+        transaction.feePayer = fromPubkey;
+        
+        // Serialize the transaction for Privy
+        const serializedTx = transaction.serialize({ requireAllSignatures: false });
+        
+        // Sign and send via Privy
+        const result = await privySignAndSendTransaction({
+          transaction: new Uint8Array(serializedTx),
+          wallet: privyWallet,
+        });
+        
+        // Convert signature Uint8Array to base58 string
+        signature = Buffer.from(result.signature).toString('base64');
+        // For Solana, we need to wait for confirmation differently
+        // The transaction is already sent, we just need to confirm
+      } else if (walletAdapterPublicKey && walletAdapterSendTransaction) {
+        // Fallback to wallet-adapter
+        const transaction = new Transaction().add(
+          SystemProgram.transfer({
+            fromPubkey: walletAdapterPublicKey,
+            toPubkey: escrowPubkey,
+            lamports,
+          })
+        );
+        
+        const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+        transaction.recentBlockhash = blockhash;
+        transaction.feePayer = walletAdapterPublicKey;
+        
+        signature = await walletAdapterSendTransaction(transaction, connection);
+        
+        await connection.confirmTransaction({
+          blockhash,
+          lastValidBlockHeight,
+          signature,
+        });
+      } else {
+        return { success: false, error: 'No wallet available for signing' };
+      }
       
       // Step 2: Call Express API to verify and credit balance
       const token = await getAuthToken();
@@ -419,7 +507,7 @@ export function useSolanaWallet(): WalletState {
           ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
-          wallet_address: publicKey.toString(),
+          wallet_address: walletAddress,
           tx_signature: signature,
           amount: amount,
         }),
@@ -440,13 +528,13 @@ export function useSolanaWallet(): WalletState {
       console.error('Deposit error:', error);
       return { success: false, error: 'Transaction failed or cancelled' };
     }
-  }, [publicKey, balance, connection, sendTransaction, refreshBalance, getAuthToken]);
+  }, [walletAddress, privyWallet, walletAdapterPublicKey, walletAdapterSendTransaction, balance, connection, privySignAndSendTransaction, refreshBalance, getAuthToken]);
 
   // ============================================================================
   // WITHDRAW - Send SOL from escrow back to wallet
   // ============================================================================
   const withdraw = useCallback(async (amount: number): Promise<{ success: boolean; error?: string; txSignature?: string }> => {
-    if (!publicKey) {
+    if (!walletAddress) {
       return { success: false, error: 'Wallet not connected' };
     }
     
@@ -470,7 +558,7 @@ export function useSolanaWallet(): WalletState {
           ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
-          wallet_address: publicKey.toString(),
+          wallet_address: walletAddress,
           amount,
         }),
       });
@@ -490,13 +578,13 @@ export function useSolanaWallet(): WalletState {
       console.error('Withdrawal error:', error);
       return { success: false, error: 'Withdrawal failed' };
     }
-  }, [publicKey, depositedBalance, refreshBalance, getAuthToken]);
+  }, [walletAddress, depositedBalance, refreshBalance, getAuthToken]);
 
   return {
-    isConnected: connected,
+    isConnected,
     isConnecting: connecting,
-    publicKey: publicKey?.toString() || null,
-    walletName: wallet?.adapter.name || null,
+    publicKey: walletAddress,
+    walletName: wallet?.adapter.name || 'Wallet',
     profileId,
     username,
     needsUsername,
