@@ -4,6 +4,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
+import { usePrivy } from '@privy-io/react-auth';
 import { LAMPORTS_PER_SOL, PublicKey, Transaction, SystemProgram } from '@solana/web3.js';
 import { ESCROW_WALLET, MIN_TRADE_SOL } from '../lib/solana';
 
@@ -55,6 +56,9 @@ export interface WalletState {
   
   // Legacy - kept for compatibility but prefer deposit system
   sendSOLToEscrow: (amount: number) => Promise<string | null>;
+  
+  // Privy auth token getter (for API calls)
+  getAuthToken: () => Promise<string | null>;
 }
 
 export function useSolanaWallet(): WalletState {
@@ -69,6 +73,9 @@ export function useSolanaWallet(): WalletState {
   } = useWallet();
   
   const { connection } = useConnection();
+  
+  // Privy auth
+  const { getAccessToken, authenticated } = usePrivy();
   
   const [balance, setBalance] = useState(0);
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
@@ -202,6 +209,19 @@ export function useSolanaWallet(): WalletState {
   // PROFILE & DEPOSITED BALANCE
   // ============================================================================
   
+  // Get Privy access token for authenticated API calls
+  const getAuthToken = useCallback(async (): Promise<string | null> => {
+    if (!authenticated) return null;
+    
+    try {
+      const token = await getAccessToken();
+      return token;
+    } catch (e) {
+      console.error('Error getting Privy access token:', e);
+      return null;
+    }
+  }, [authenticated, getAccessToken]);
+  
   // Fetch profile with username and balance from Express backend
   const refreshProfile = useCallback(async () => {
     if (!publicKey) {
@@ -218,11 +238,15 @@ export function useSolanaWallet(): WalletState {
     try {
       console.log('[useSolanaWallet] Fetching profile for:', walletAddress);
       
+      // Get Privy auth token
+      const token = await getAuthToken();
+      
       // Get or create profile via Express API
       const response = await fetch(`${API_URL}/api/auth/profile`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({ wallet_address: walletAddress }),
       });
@@ -243,7 +267,7 @@ export function useSolanaWallet(): WalletState {
     } finally {
       setIsLoadingDepositedBalance(false);
     }
-  }, [publicKey]);
+  }, [publicKey, getAuthToken]);
 
   // Alias for backward compatibility
   const refreshDepositedBalance = refreshProfile;
@@ -381,11 +405,15 @@ export function useSolanaWallet(): WalletState {
     }
     
     try {
+      // Get Privy auth token
+      const token = await getAuthToken();
+      
       // Update username via Express API
       const response = await fetch(`${API_URL}/api/auth/username`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({ 
           wallet_address: publicKey.toString(),
@@ -406,7 +434,7 @@ export function useSolanaWallet(): WalletState {
     } catch (e) {
       return { success: false, error: 'Network error' };
     }
-  }, [publicKey, checkUsernameAvailable]);
+  }, [publicKey, checkUsernameAvailable, getAuthToken]);
 
   // ============================================================================
   // DEPOSIT - Send SOL to escrow, credit in-game balance
@@ -450,9 +478,14 @@ export function useSolanaWallet(): WalletState {
       });
       
       // Step 2: Call Express API to verify and credit balance
+      const token = await getAuthToken();
+      
       const response = await fetch(`${API_URL}/api/deposit/confirm`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           wallet_address: publicKey.toString(),
           tx_signature: signature,
@@ -475,7 +508,7 @@ export function useSolanaWallet(): WalletState {
       console.error('Deposit error:', error);
       return { success: false, error: 'Transaction failed or cancelled' };
     }
-  }, [publicKey, balance, connection, sendTransaction, refreshBalance]);
+  }, [publicKey, balance, connection, sendTransaction, refreshBalance, getAuthToken]);
 
   // ============================================================================
   // WITHDRAW - Send SOL from escrow back to wallet
@@ -494,11 +527,15 @@ export function useSolanaWallet(): WalletState {
     }
     
     try {
+      // Get Privy auth token
+      const token = await getAuthToken();
+      
       // Call Express API to process withdrawal
       const response = await fetch(`${API_URL}/api/withdraw`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
           wallet_address: publicKey.toString(),
@@ -521,7 +558,7 @@ export function useSolanaWallet(): WalletState {
       console.error('Withdrawal error:', error);
       return { success: false, error: 'Withdrawal failed' };
     }
-  }, [publicKey, depositedBalance, refreshBalance]);
+  }, [publicKey, depositedBalance, refreshBalance, getAuthToken]);
 
   return {
     isConnected: connected,
@@ -545,6 +582,7 @@ export function useSolanaWallet(): WalletState {
     deposit,
     withdraw,
     sendSOLToEscrow,
+    getAuthToken,
   };
 }
 

@@ -1,8 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LogOut, ArrowDownToLine, ArrowUpFromLine, ChevronDown, X, Menu, User } from 'lucide-react';
+import { LogOut, ArrowDownToLine, ArrowUpFromLine, ChevronDown, X, Menu, User, Wallet } from 'lucide-react';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import { useSolanaWallet } from '../hooks/useSolanaWallet';
 import solanaLogo from '../assets/logo_solana.png';
 
@@ -24,13 +23,281 @@ const DROPDOWN_THEMES = {
     buttonText: 'Withdraw',
   },
   deposit: {
-    primary: '#ffc107',
-    primaryActive: '#e6ad06',
+    primary: '#22c55e',
+    primaryActive: '#16a34a',
     icon: ArrowDownToLine,
     title: 'Deposit SOL',
     placeholder: 'Amount to deposit',
     buttonText: 'Deposit',
   },
+};
+
+// Wallet Connection Modal Theme (yellow like deposit menu was)
+const WALLET_THEME = {
+  primary: '#ffc107',
+  primaryActive: '#e6ad06',
+};
+
+// Custom Wallet Connection Modal
+interface WalletConnectionModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const WalletConnectionModal: React.FC<WalletConnectionModalProps> = ({ isOpen, onClose }) => {
+  const { wallets, select, connecting } = useWallet();
+  
+  // Filter to only show installed wallets that are ready
+  const installedWallets = wallets.filter(w => w.readyState === 'Installed');
+  const otherWallets = wallets.filter(w => w.readyState !== 'Installed');
+  
+  const handleWalletSelect = async (walletName: string) => {
+    const wallet = wallets.find(w => w.adapter.name === walletName);
+    if (wallet) {
+      select(wallet.adapter.name);
+      onClose();
+    }
+  };
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          {/* Backdrop */}
+          <motion.div
+            className="mobile-modal-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            onClick={onClose}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.7)',
+              zIndex: 1000,
+            }}
+          />
+          {/* Modal Container - Flexbox Centering */}
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1001,
+              pointerEvents: 'none',
+            }}
+          >
+            {/* Modal */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ duration: 0.2 }}
+              style={{
+                width: 320,
+                maxWidth: 'calc(100vw - 32px)',
+                backgroundColor: 'rgb(30, 32, 42)',
+                borderRadius: 12,
+                border: '1px solid rgb(58, 61, 74)',
+                boxShadow: 'rgba(0, 0, 0, 0.3) 0px 8px 32px',
+                overflow: 'hidden',
+                pointerEvents: 'auto',
+              }}
+            >
+            {/* Header */}
+            <div 
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '16px 20px',
+                borderBottom: '1px solid rgb(58, 61, 74)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <Wallet size={18} style={{ color: WALLET_THEME.primary }} />
+                <span 
+                  style={{ 
+                    fontFamily: "'DynaPuff', sans-serif",
+                    fontSize: 16,
+                    fontWeight: 600,
+                    color: 'rgb(248, 248, 252)',
+                  }}
+                >
+                  Connect Wallet
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 28,
+                  height: 28,
+                  borderRadius: 6,
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'background 0.2s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                }}
+              >
+                <X size={16} color="rgb(248, 248, 252)" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {/* Info text */}
+              <p 
+                style={{ 
+                  fontFamily: "'DynaPuff', sans-serif", 
+                  fontSize: 12, 
+                  color: 'rgba(248, 248, 252, 0.6)',
+                  textAlign: 'center',
+                  margin: '0 0 8px 0',
+                  lineHeight: 1.5,
+                }}
+              >
+                Connect your Solana wallet to start playing
+              </p>
+              
+              {/* Installed Wallets */}
+              {installedWallets.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <span style={{ fontFamily: "'DynaPuff', sans-serif", fontSize: 11, color: 'rgba(248, 248, 252, 0.5)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Detected Wallets
+                  </span>
+                  {installedWallets.map((wallet) => (
+                    <button
+                      key={wallet.adapter.name}
+                      onClick={() => handleWalletSelect(wallet.adapter.name)}
+                      disabled={connecting}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 12,
+                        width: '100%',
+                        padding: '14px 16px',
+                        background: 'rgb(21, 22, 29)',
+                        border: `2px solid ${WALLET_THEME.primary}`,
+                        borderRadius: 8,
+                        cursor: connecting ? 'wait' : 'pointer',
+                        transition: 'all 0.2s ease',
+                        boxShadow: `${WALLET_THEME.primary}33 0px 2px 8px`,
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!connecting) {
+                          e.currentTarget.style.background = 'rgba(255, 193, 7, 0.1)';
+                          e.currentTarget.style.transform = 'translateY(-1px)';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'rgb(21, 22, 29)';
+                        e.currentTarget.style.transform = 'translateY(0)';
+                      }}
+                    >
+                      <img 
+                        src={wallet.adapter.icon} 
+                        alt={wallet.adapter.name} 
+                        style={{ width: 28, height: 28, borderRadius: 6 }} 
+                      />
+                      <span style={{ fontFamily: "'DynaPuff', sans-serif", fontSize: 14, fontWeight: 600, color: WALLET_THEME.primary }}>
+                        {wallet.adapter.name}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              
+              {/* Other Wallets (not installed) */}
+              {otherWallets.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+                  <span style={{ fontFamily: "'DynaPuff', sans-serif", fontSize: 11, color: 'rgba(248, 248, 252, 0.4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    More Wallets
+                  </span>
+                  {otherWallets.slice(0, 3).map((wallet) => (
+                    <button
+                      key={wallet.adapter.name}
+                      onClick={() => {
+                        // Open wallet website for installation
+                        if (wallet.adapter.url) {
+                          window.open(wallet.adapter.url, '_blank');
+                        }
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        width: '100%',
+                        padding: '12px 16px',
+                        background: 'rgba(0, 0, 0, 0.2)',
+                        border: '1px solid rgb(58, 61, 74)',
+                        borderRadius: 8,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'rgba(0, 0, 0, 0.2)';
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <img 
+                          src={wallet.adapter.icon} 
+                          alt={wallet.adapter.name} 
+                          style={{ width: 24, height: 24, borderRadius: 4, opacity: 0.7 }} 
+                        />
+                        <span style={{ fontFamily: "'DynaPuff', sans-serif", fontSize: 13, color: 'rgba(248, 248, 252, 0.6)' }}>
+                          {wallet.adapter.name}
+                        </span>
+                      </div>
+                      <span style={{ fontFamily: "'DynaPuff', sans-serif", fontSize: 10, color: 'rgba(248, 248, 252, 0.4)', textTransform: 'uppercase' }}>
+                        Install
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              
+              {/* No wallets detected */}
+              {installedWallets.length === 0 && (
+                <div 
+                  style={{ 
+                    padding: '20px 16px',
+                    background: 'rgba(255, 193, 7, 0.1)',
+                    border: '1px solid rgba(255, 193, 7, 0.3)',
+                    borderRadius: 8,
+                    textAlign: 'center',
+                  }}
+                >
+                  <p style={{ fontFamily: "'DynaPuff', sans-serif", fontSize: 13, color: WALLET_THEME.primary, margin: 0 }}>
+                    No wallet detected
+                  </p>
+                  <p style={{ fontFamily: "'DynaPuff', sans-serif", fontSize: 11, color: 'rgba(248, 248, 252, 0.5)', margin: '8px 0 0 0' }}>
+                    Install Phantom or Solflare to continue
+                  </p>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        </div>
+        </>
+      )}
+    </AnimatePresence>
+  );
 };
 
 // Shared Dropdown Shell Component
@@ -475,7 +742,6 @@ const Logo: React.FC = () => (
 const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat }) => {
   // Wallet state from Solana adapter
   const { connected, publicKey, disconnect } = useWallet();
-  const { setVisible } = useWalletModal();
   const { username, depositedBalance } = useSolanaWallet();
   
   // Dropdown states
@@ -485,6 +751,7 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
   const [showMobileNav, setShowMobileNav] = useState(false);
   const [showMobileDeposit, setShowMobileDeposit] = useState(false);
   const [showMobileWithdraw, setShowMobileWithdraw] = useState(false);
+  const [showWalletConnectionModal, setShowWalletConnectionModal] = useState(false);
   
   // Refs for click outside handling
   const menuRef = useRef<HTMLDivElement>(null);
@@ -547,9 +814,9 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
     return `${address.slice(0, 4)}...${address.slice(-4)}`;
   };
 
-  // Handle connect button click
+  // Handle connect button click - use custom modal
   const handleConnectClick = () => {
-    setVisible(true);
+    setShowWalletConnectionModal(true);
   };
 
   // Handle disconnect
@@ -976,7 +1243,13 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
         isOpen={showMobileWithdraw}
         onClose={() => setShowMobileWithdraw(false)}
         balance={depositedBalance}
-      />    </div>
+      />
+      {/* Custom Wallet Connection Modal */}
+      <WalletConnectionModal
+        isOpen={showWalletConnectionModal}
+        onClose={() => setShowWalletConnectionModal(false)}
+      />
+    </div>
   );
 };
 

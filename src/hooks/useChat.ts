@@ -20,6 +20,7 @@ interface UseChatOptions {
   limit?: number;
   walletAddress?: string | null;
   username?: string | null;
+  getAuthToken?: () => Promise<string | null>;
 }
 
 interface UseChatReturn {
@@ -38,7 +39,7 @@ const isMessageValid = (msg: ChatMessage): boolean => {
   return (now - messageTime) < MESSAGE_TTL_MS;
 };
 
-export function useChat({ room = 'pumpit', limit = 50, walletAddress = null, username: _username = null }: UseChatOptions = {}): UseChatReturn {
+export function useChat({ room = 'pumpit', limit = 50, walletAddress = null, username: _username = null, getAuthToken = undefined }: UseChatOptions = {}): UseChatReturn {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -194,9 +195,15 @@ export function useChat({ room = 'pumpit', limit = 50, walletAddress = null, use
     }
 
     try {
+      // Get auth token if available
+      const token = getAuthToken ? await getAuthToken() : null;
+      
       const response = await fetch(`${API_URL}/api/chat`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           wallet_address: walletAddress,
           message: trimmedText,

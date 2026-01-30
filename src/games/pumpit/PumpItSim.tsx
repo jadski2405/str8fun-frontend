@@ -86,10 +86,11 @@ const PumpItSim: React.FC = () => {
     needsUsername,
     setUsername,
     checkUsernameAvailable,
+    getAuthToken,
   } = useSolanaWallet();
   
-  // Game state from hook (for real trading) - pass wallet address
-  const game = useGame(profileId, publicKey?.toString() || null);
+  // Game state from hook (for real trading) - pass wallet address and auth token
+  const game = useGame(profileId, publicKey?.toString() || null, getAuthToken);
   
   // Local simulation state (visual chart)
   const [price, setPrice] = useState(INITIAL_PRICE);
@@ -649,6 +650,7 @@ const PumpItSim: React.FC = () => {
             room="pumpit"
             isWalletConnected={connected}
             walletAddress={publicKey?.toString() || null}
+            getAuthToken={getAuthToken}
           />
         }
         sidebarCollapsed={chatCollapsed}

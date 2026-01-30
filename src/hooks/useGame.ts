@@ -58,7 +58,11 @@ export interface GameState {
 // HOOK
 // ============================================================================
 
-export function useGame(profileId: string | null, walletAddress: string | null): GameState {
+export function useGame(
+  profileId: string | null, 
+  walletAddress: string | null,
+  getAuthToken?: () => Promise<string | null>
+): GameState {
   // Round state
   const [roundId, setRoundId] = useState<string | null>(null);
   const [roundStatus, setRoundStatus] = useState<'loading' | 'active' | 'ended' | 'countdown' | 'error'>('loading');
@@ -356,10 +360,16 @@ export function useGame(profileId: string | null, walletAddress: string | null):
       // Calculate trade locally first for optimistic update
       const calculation = calculateBuy(pool, solAmount);
       
+      // Get auth token if available
+      const token = getAuthToken ? await getAuthToken() : null;
+      
       // Execute trade via Express API
       const response = await fetch(`${API_URL}/api/game/trade`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           wallet_address: walletAddress,
           trade_type: 'buy',
@@ -417,10 +427,16 @@ export function useGame(profileId: string | null, walletAddress: string | null):
         return { success: false, error: 'Not enough tokens' };
       }
       
+      // Get auth token if available
+      const token = getAuthToken ? await getAuthToken() : null;
+      
       // Execute trade via Express API
       const response = await fetch(`${API_URL}/api/game/trade`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           wallet_address: walletAddress,
           trade_type: 'sell',

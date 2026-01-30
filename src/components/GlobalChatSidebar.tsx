@@ -8,6 +8,7 @@ interface GlobalChatSidebarProps {
   room?: string;
   isWalletConnected?: boolean;
   walletAddress?: string | null;
+  getAuthToken?: () => Promise<string | null>;
 }
 
 // Badge styles - enough variety to avoid duplicates in typical chat
@@ -31,13 +32,14 @@ const GlobalChatSidebar: React.FC<GlobalChatSidebarProps> = ({
   onToggleCollapse: _onToggleCollapse,
   room = 'global',
   isWalletConnected = false,
-  walletAddress = null
+  walletAddress = null,
+  getAuthToken = undefined
 }) => {
   const [inputValue, setInputValue] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   
-  const { messages, loading, error, sendMessage, isRateLimited } = useChat({ room, walletAddress });
+  const { messages, loading, error, sendMessage, isRateLimited } = useChat({ room, walletAddress, getAuthToken });
   
   const onlineCount = 1247;
 
