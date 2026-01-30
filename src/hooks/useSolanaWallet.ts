@@ -15,6 +15,7 @@ export interface WalletState {
   // Connection state
   isConnected: boolean;
   isConnecting: boolean;
+  isWalletLoading: boolean;
   
   // Wallet info
   publicKey: string | null;
@@ -78,15 +79,31 @@ export function useSolanaWallet(): WalletState {
   // Get the first connected Privy Solana wallet
   const privyWallet = privyWallets?.[0] || null;
   
-  // Derive connection state: Privy authenticated OR wallet-adapter connected
-  const isConnected = authenticated || walletAdapterConnected;
-  
   // Derive wallet address: Privy wallet first, then wallet-adapter
   const walletAddress = useMemo(() => {
     if (privyWallet?.address) return privyWallet.address;
     if (walletAdapterPublicKey) return walletAdapterPublicKey.toString();
     return null;
   }, [privyWallet?.address, walletAdapterPublicKey]);
+  
+  // Derive connection state: ONLY connected when we have a usable wallet address
+  // This fixes race condition where authenticated=true but wallet not yet populated
+  const isConnected = (authenticated && !!walletAddress) || walletAdapterConnected;
+  
+  // Loading state: authenticated but wallet not yet available
+  const isWalletLoading = authenticated && !walletAddress && !walletAdapterConnected;
+  
+  // Debug logging for wallet state
+  useEffect(() => {
+    console.log('[useSolanaWallet] State:', {
+      authenticated,
+      privyWalletsCount: privyWallets?.length || 0,
+      walletAddress,
+      walletAdapterConnected,
+      isConnected,
+      isWalletLoading
+    });
+  }, [authenticated, privyWallets?.length, walletAddress, walletAdapterConnected, isConnected, isWalletLoading]);
   
   // Create PublicKey from address for balance fetching
   const publicKey = useMemo(() => {
@@ -425,8 +442,12 @@ export function useSolanaWallet(): WalletState {
   // DEPOSIT - Send SOL to escrow, credit in-game balance
   // ============================================================================
   const deposit = useCallback(async (amount: number): Promise<{ success: boolean; error?: string }> => {
-    if (!walletAddress || !ESCROW_WALLET) {
+    if (!walletAddress) {
       return { success: false, error: 'Wallet not connected' };
+    }
+    
+    if (!ESCROW_WALLET) {
+      return { success: false, error: 'Escrow wallet not configured - contact support' };
     }
     
     if (amount < 0.01) {
@@ -583,6 +604,7 @@ export function useSolanaWallet(): WalletState {
   return {
     isConnected,
     isConnecting: connecting,
+    isWalletLoading,
     publicKey: walletAddress,
     walletName: wallet?.adapter.name || 'Wallet',
     profileId,

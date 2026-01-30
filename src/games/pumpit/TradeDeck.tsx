@@ -327,8 +327,8 @@ export const MobileTradeDeck: React.FC<MobileTradeDeckProps> = ({
   };
 
   const parsedAmount = parseFloat(tradeAmount) || 0;
-  // canBuy and canSell logic moved to error handling in handleBuy/handleSell
-  void parsedAmount; // Suppress unused warning
+  const canBuy = parsedAmount > 0 && parsedAmount <= balance;
+  const canSell = parsedAmount > 0 && tokenBalance > 0;
 
   return (
     <div className="mobile-trade-deck">
@@ -375,14 +375,14 @@ export const MobileTradeDeck: React.FC<MobileTradeDeckProps> = ({
       <div className="mobile-action-row">
         <button
           onClick={handleBuy}
-          disabled={!connected}
+          disabled={!canBuy}
           className="mobile-action-btn buy"
         >
           BUY
         </button>
         <button
           onClick={handleSell}
-          disabled={!connected}
+          disabled={!canSell}
           className="mobile-action-btn sell"
         >
           SELL

@@ -52,6 +52,10 @@ export interface GameState {
   buy: (solAmount: number) => Promise<{ success: boolean; error?: string; newBalance?: number }>;
   sell: (solAmount: number) => Promise<{ success: boolean; error?: string; newBalance?: number }>;
   refreshState: () => Promise<void>;
+  retryConnection: () => Promise<void>;
+  
+  // Error state
+  errorMessage: string | null;
 }
 
 // ============================================================================
@@ -79,8 +83,14 @@ export function useGame(
   // Trade history
   const [recentTrades, setRecentTrades] = useState<Trade[]>([]);
   
+  // Error state
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  
   // Refs for timer
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Retry ref for auto-retry
+  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // ============================================================================
   // DERIVED VALUES
@@ -102,14 +112,13 @@ export function useGame(
   
   const fetchActiveRound = useCallback(async () => {
     try {
+      setRoundStatus('loading');
       const response = await fetch(`${API_URL}/api/game/round`);
       
       if (!response.ok) {
         console.error('Error fetching active round:', response.status);
-        // Fall back to local simulation
-        setRoundStatus('active');
-        setRoundStartedAt(new Date());
-        setTimeRemaining(ROUND_DURATION_SECONDS);
+        setRoundStatus('error');
+        setErrorMessage('Failed to connect to game server');
         return;
       }
       
@@ -124,24 +133,23 @@ export function useGame(
           accumulatedFees: Number(round.accumulated_fees) || 0,
         });
         setRoundStatus(round.status === 'active' ? 'active' : 'ended');
+        setErrorMessage(null);
         
         // Calculate time remaining
         const elapsed = (Date.now() - new Date(round.started_at).getTime()) / 1000;
         const remaining = Math.max(0, (round.duration_seconds || ROUND_DURATION_SECONDS) - elapsed);
         setTimeRemaining(Math.ceil(remaining));
       } else {
-        // No active round, start countdown or create new
-        setRoundStatus('active');
-        setRoundStartedAt(new Date());
-        setTimeRemaining(ROUND_DURATION_SECONDS);
+        // No active round from server - show error
+        console.error('No active round returned from server');
+        setRoundStatus('error');
+        setErrorMessage('No active game round available');
       }
       
     } catch (error) {
       console.error('Error in fetchActiveRound:', error);
-      // Fall back to local simulation instead of error state
-      setRoundStatus('active');
-      setRoundStartedAt(new Date());
-      setTimeRemaining(ROUND_DURATION_SECONDS);
+      setRoundStatus('error');
+      setErrorMessage('Unable to connect to game server');
     }
   }, []);
 
@@ -250,6 +258,32 @@ export function useGame(
   useEffect(() => {
     fetchRecentTrades();
   }, [fetchRecentTrades]);
+
+  // ============================================================================
+  // AUTO-RETRY ON ERROR
+  // ============================================================================
+  
+  useEffect(() => {
+    if (roundStatus === 'error') {
+      // Retry every 5 seconds
+      retryTimeoutRef.current = setInterval(() => {
+        console.log('Auto-retrying connection to game server...');
+        fetchActiveRound();
+      }, 5000);
+      
+      return () => {
+        if (retryTimeoutRef.current) {
+          clearInterval(retryTimeoutRef.current);
+        }
+      };
+    }
+  }, [roundStatus, fetchActiveRound]);
+
+  // Manual retry connection
+  const retryConnection = useCallback(async () => {
+    setErrorMessage(null);
+    await fetchActiveRound();
+  }, [fetchActiveRound]);
 
   // ============================================================================
   // WEBSOCKET REALTIME SUBSCRIPTIONS
@@ -495,10 +529,14 @@ export function useGame(
     // Trade history
     recentTrades,
     
+    // Error state
+    errorMessage,
+    
     // Actions
     buy,
     sell,
     refreshState,
+    retryConnection,
   };
 }
 

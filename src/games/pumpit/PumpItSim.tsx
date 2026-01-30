@@ -118,6 +118,9 @@ const PumpItSim: React.FC = () => {
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [depositError, setDepositError] = useState<string | null>(null);
   
+  // Trade error state for user feedback
+  const [tradeError, setTradeError] = useState<string | null>(null);
+  
   // Username modal state
   const [showUsernameModal, setShowUsernameModal] = useState(false);
   const [usernameInput, setUsernameInput] = useState('');
@@ -343,6 +346,7 @@ const PumpItSim: React.FC = () => {
         refreshDepositedBalance();
       } else {
         console.log(`❌ Buy failed: ${result.error}`);
+        setTradeError(result.error || 'Buy failed');
       }
     } catch (error) {
       console.error('Error executing buy:', error);
@@ -383,6 +387,7 @@ const PumpItSim: React.FC = () => {
         refreshDepositedBalance();
       } else {
         console.log(`❌ Sell failed: ${result.error}`);
+        setTradeError(result.error || 'Sell failed');
       }
     } catch (error) {
       console.error('Error executing sell:', error);
@@ -459,11 +464,44 @@ const PumpItSim: React.FC = () => {
   const displayBalance = connected ? depositedBalance : 10.0; // Show 10 SOL for demo when not connected
   // Token value calculation available if needed: game.tokenBalance * price
 
+  // Auto-hide trade error after 5 seconds
+  useEffect(() => {
+    if (tradeError) {
+      const timer = setTimeout(() => setTradeError(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [tradeError]);
+
   // ============================================================================
   // RENDER
   // ============================================================================
   return (
     <>
+      {/* Backend Connection Error Banner */}
+      {game.roundStatus === 'error' && (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-red-600 text-white p-4 text-center">
+          <div className="flex items-center justify-center gap-4">
+            <span className="font-medium">
+              ⚠️ {game.errorMessage || 'Unable to connect to game server'}
+            </span>
+            <button
+              onClick={() => game.retryConnection()}
+              className="px-4 py-1 bg-white text-red-600 rounded font-medium hover:bg-gray-100 transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+          <div className="text-sm mt-1 opacity-80">Auto-retrying every 5 seconds...</div>
+        </div>
+      )}
+
+      {/* Trade Error Popup */}
+      {tradeError && (
+        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 bg-red-500/90 text-white px-6 py-3 rounded-lg shadow-lg">
+          {tradeError}
+        </div>
+      )}
+
       {/* Username Modal - First time setup */}
       {showUsernameModal && connected && (
         <div className="username-modal-overlay">
@@ -663,6 +701,17 @@ const PumpItSim: React.FC = () => {
         }
         chart={
           <div className="relative w-full h-full flex flex-col">
+            {/* Round Timer - visible during active round */}
+            {game.roundStatus === 'active' && game.timeRemaining > 0 && (
+              <div className="flex justify-center py-2">
+                <div className="bg-[#1a1f2a]/90 backdrop-blur-sm rounded-lg px-4 py-1.5 border border-[#2a3441]">
+                  <span className="font-dynapuff text-sm text-white/70">Round ends in </span>
+                  <span className="font-dynapuff text-sm font-bold text-yellow-400">
+                    {Math.floor(game.timeRemaining / 60)}:{(game.timeRemaining % 60).toString().padStart(2, '0')}
+                  </span>
+                </div>
+              </div>
+            )}
             <div className="relative flex-1">
               <RugsChart data={candles} currentPrice={price} startPrice={INITIAL_PRICE} />
             </div>
