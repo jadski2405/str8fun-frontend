@@ -1137,6 +1137,7 @@ body {
   flex-direction: column;
   gap: 12px;
   background: rgb(21, 22, 29);
+  margin-bottom: 10vh;
 }
 
 @media (max-width: 1680px) {
