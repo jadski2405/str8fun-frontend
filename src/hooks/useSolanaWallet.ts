@@ -2,19 +2,13 @@
 // WALLET HOOK - Custom hook for wallet state and actions
 // ============================================================================
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
+import { usePrivy } from '@privy-io/react-auth';
 import { LAMPORTS_PER_SOL, PublicKey, Transaction, SystemProgram } from '@solana/web3.js';
 import { ESCROW_WALLET, MIN_TRADE_SOL } from '../lib/solana';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://api.str8.fun';
-const TOKEN_STORAGE_KEY = 'pumpit_auth_token';
-
-interface StoredToken {
-  wallet: string;
-  token: string;
-  expiresAt: string;
-}
 
 export interface WalletState {
   // Connection state
@@ -73,6 +67,9 @@ export function useSolanaWallet(): WalletState {
   
   const { connection } = useConnection();
   
+  // Privy auth - get access token for API calls
+  const { getAccessToken } = usePrivy();
+  
   const [balance, setBalance] = useState(0);
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
   const [depositedBalance, setDepositedBalance] = useState(0);
@@ -82,10 +79,6 @@ export function useSolanaWallet(): WalletState {
   const [profileId, setProfileId] = useState<string | null>(null);
   const [username, setUsernameState] = useState<string | null>(null);
   const [needsUsername, setNeedsUsername] = useState(false);
-  
-  // Auth token state (stored in ref to avoid re-renders)
-  const authTokenRef = useRef<string | null>(null);
-  const tokenExpiresRef = useRef<Date | null>(null);
 
   // Fetch SOL balance
   const refreshBalance = useCallback(async () => {
@@ -205,45 +198,16 @@ export function useSolanaWallet(): WalletState {
   // PROFILE & DEPOSITED BALANCE
   // ============================================================================
   
-  // Get auth token from Express backend (wallet-based auth)
+  // Get Privy access token for authenticated API calls
   const getAuthToken = useCallback(async (): Promise<string | null> => {
-    if (!publicKey) return null;
-    
-    // Check if we have a valid cached token
-    if (authTokenRef.current && tokenExpiresRef.current && tokenExpiresRef.current > new Date()) {
-      return authTokenRef.current;
-    }
-    
-    // Fetch new token from Express backend
     try {
-      const response = await fetch(`${API_URL}/api/auth/token`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ wallet_address: publicKey.toString() }),
-      });
-      
-      const result = await response.json();
-      
-      if (result.success || result.token) {
-        authTokenRef.current = result.token;
-        tokenExpiresRef.current = new Date(result.expires_at || Date.now() + 48 * 60 * 60 * 1000);
-        
-        // Store in localStorage
-        const toStore: StoredToken = {
-          wallet: publicKey.toString(),
-          token: result.token,
-          expiresAt: result.expires_at || new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
-        };
-        localStorage.setItem(TOKEN_STORAGE_KEY, JSON.stringify(toStore));
-        
-        return result.token;
-      }
+      const token = await getAccessToken();
+      return token;
     } catch (e) {
-      console.error('Error fetching auth token from backend:', e);
+      console.error('Error getting Privy access token:', e);
+      return null;
     }
-    
-    return null;
-  }, [publicKey]);
+  }, [getAccessToken]);
   
   // Fetch profile with username and balance from Express backend
   const refreshProfile = useCallback(async () => {
@@ -299,40 +263,13 @@ export function useSolanaWallet(): WalletState {
   useEffect(() => {
     if (connected && publicKey) {
       refreshProfile();
-      // Also load auth token from storage
-      loadStoredToken();
     } else {
       setProfileId(null);
       setUsernameState(null);
       setNeedsUsername(false);
       setDepositedBalance(0);
-      authTokenRef.current = null;
-      tokenExpiresRef.current = null;
     }
   }, [connected, publicKey, refreshProfile]);
-
-  // ============================================================================
-  // AUTH TOKEN MANAGEMENT
-  // ============================================================================
-  
-  const loadStoredToken = useCallback(() => {
-    if (!publicKey) return;
-    
-    try {
-      const stored = localStorage.getItem(TOKEN_STORAGE_KEY);
-      if (stored) {
-        const parsed: StoredToken = JSON.parse(stored);
-        const expires = new Date(parsed.expiresAt);
-        
-        if (parsed.wallet === publicKey.toString() && expires > new Date()) {
-          authTokenRef.current = parsed.token;
-          tokenExpiresRef.current = expires;
-        }
-      }
-    } catch (e) {
-      console.error('Error loading stored token:', e);
-    }
-  }, [publicKey]);
 
   // ============================================================================
   // USERNAME FUNCTIONS
