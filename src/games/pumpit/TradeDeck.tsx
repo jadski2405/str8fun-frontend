@@ -10,6 +10,7 @@ interface TradeDeckProps {
   onBuy: (amount: number) => void;
   onSell: (amount: number) => void;
   tokenBalance?: number; // User's token balance for selling
+  onError?: (message: string) => void; // Callback to show error messages
 }
 
 // ============================================================================
@@ -32,6 +33,7 @@ const TradeDeck: React.FC<TradeDeckProps> = ({
   onBuy,
   onSell,
   tokenBalance = 0,
+  onError,
 }) => {
   // ============================================================================
   // STATE
@@ -128,16 +130,28 @@ const TradeDeck: React.FC<TradeDeckProps> = ({
   // ============================================================================
   const handleBuy = () => {
     const amount = parseFloat(tradeAmount) || 0;
-    if (amount > 0 && amount <= balance) {
-      onBuy(amount);
+    if (amount <= 0) {
+      onError?.('Enter an amount to buy');
+      return;
     }
+    if (amount > balance) {
+      onError?.('Insufficient balance - deposit SOL first');
+      return;
+    }
+    onBuy(amount);
   };
 
   const handleSell = () => {
     const amount = parseFloat(tradeAmount) || 0;
-    if (amount > 0 && tokenBalance > 0) {
-      onSell(amount);
+    if (amount <= 0) {
+      onError?.('Enter an amount to sell');
+      return;
     }
+    if (tokenBalance <= 0) {
+      onError?.('No tokens to sell - buy first');
+      return;
+    }
+    onSell(amount);
   };
 
   const parsedAmount = parseFloat(tradeAmount) || 0;
@@ -231,14 +245,12 @@ const TradeDeck: React.FC<TradeDeckProps> = ({
       <div className="trd-row trd-row-actions">
         <button
           onClick={handleBuy}
-          disabled={!canBuy}
           className="trd-action-btn trd-buy-btn always-glow"
         >
           BUY
         </button>
         <button
           onClick={handleSell}
-          disabled={!canSell}
           className="trd-action-btn trd-sell-btn"
         >
           SELL
@@ -375,14 +387,12 @@ export const MobileTradeDeck: React.FC<MobileTradeDeckProps> = ({
       <div className="mobile-action-row">
         <button
           onClick={handleBuy}
-          disabled={!canBuy}
           className="mobile-action-btn buy"
         >
           BUY
         </button>
         <button
           onClick={handleSell}
-          disabled={!canSell}
           className="mobile-action-btn sell"
         >
           SELL

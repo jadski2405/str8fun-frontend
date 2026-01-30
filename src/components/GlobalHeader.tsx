@@ -556,7 +556,7 @@ const TransactionDropdown: React.FC<TransactionDropdownProps> = ({
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={isProcessing || !amount || parseFloat(amount) <= 0 || parseFloat(amount) > balance}
+              disabled={isProcessing}
               style={{
                 width: '100%',
                 height: 48,
@@ -564,7 +564,7 @@ const TransactionDropdown: React.FC<TransactionDropdownProps> = ({
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 8,
-                background: isProcessing || !amount || parseFloat(amount) <= 0 || parseFloat(amount) > balance 
+                background: isProcessing
                   ? 'rgba(255, 255, 255, 0.1)' 
                   : theme.primary,
                 border: 'none',
@@ -573,25 +573,25 @@ const TransactionDropdown: React.FC<TransactionDropdownProps> = ({
                 fontSize: 14,
                 fontWeight: 600,
                 textTransform: 'uppercase',
-                color: isProcessing || !amount || parseFloat(amount) <= 0 || parseFloat(amount) > balance 
+                color: isProcessing
                   ? 'rgba(248, 248, 252, 0.4)' 
                   : 'rgb(21, 22, 29)',
-                cursor: isProcessing || !amount || parseFloat(amount) <= 0 || parseFloat(amount) > balance 
+                cursor: isProcessing
                   ? 'not-allowed' 
                   : 'pointer',
                 transition: 'all 0.2s ease',
-                boxShadow: isProcessing || !amount || parseFloat(amount) <= 0 || parseFloat(amount) > balance 
+                boxShadow: isProcessing
                   ? 'none'
                   : `${theme.primary}66 0px 4px 16px`,
               }}
               onMouseEnter={(e) => {
-                if (!isProcessing && amount && parseFloat(amount) > 0 && parseFloat(amount) <= balance) {
+                if (!isProcessing) {
                   e.currentTarget.style.background = theme.primaryActive;
                   e.currentTarget.style.transform = 'translateY(-1px)';
                 }
               }}
               onMouseLeave={(e) => {
-                if (!isProcessing && amount && parseFloat(amount) > 0 && parseFloat(amount) <= balance) {
+                if (!isProcessing) {
                   e.currentTarget.style.background = theme.primary;
                   e.currentTarget.style.transform = 'translateY(0)';
                 }
@@ -756,18 +756,12 @@ const MobileTransactionModal: React.FC<MobileTransactionModalProps> = ({
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={!amount || parseFloat(amount) <= 0 || parseFloat(amount) > balance}
+                disabled={false}
                 className="mobile-modal-submit-btn"
                 style={{
-                  background: !amount || parseFloat(amount) <= 0 || parseFloat(amount) > balance 
-                    ? 'rgba(255, 255, 255, 0.1)' 
-                    : theme.primary,
-                  color: !amount || parseFloat(amount) <= 0 || parseFloat(amount) > balance 
-                    ? 'rgba(248, 248, 252, 0.4)' 
-                    : 'rgb(21, 22, 29)',
-                  cursor: !amount || parseFloat(amount) <= 0 || parseFloat(amount) > balance 
-                    ? 'not-allowed' 
-                    : 'pointer',
+                  background: theme.primary,
+                  color: 'rgb(21, 22, 29)',
+                  cursor: 'pointer',
                 }}
               >
                 <Icon size={16} />

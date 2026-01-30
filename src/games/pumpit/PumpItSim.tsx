@@ -740,6 +740,7 @@ const PumpItSim: React.FC = () => {
             onBuy={handleBuy}
             onSell={handleSell}
             tokenBalance={game.tokenBalance}
+            onError={setTradeError}
           />
         }
         mobileTradeControls={
