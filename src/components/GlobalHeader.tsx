@@ -46,7 +46,7 @@ interface WalletConnectionModalProps {
 }
 
 const WalletConnectionModal: React.FC<WalletConnectionModalProps> = ({ isOpen, onClose }) => {
-  const { ready } = usePrivy();
+  const { ready, authenticated } = usePrivy();
   const { login } = useLogin({
     onComplete: () => {
       console.log('[Privy] Login complete');
@@ -62,6 +62,14 @@ const WalletConnectionModal: React.FC<WalletConnectionModalProps> = ({ isOpen, o
   // Handle Privy login - opens Privy's modal with our wallet options
   const handleConnectWithPrivy = async () => {
     if (!ready) return;
+    
+    // If already authenticated, just close the modal
+    if (authenticated) {
+      console.log('[Privy] Already authenticated, closing modal');
+      onClose();
+      return;
+    }
+    
     setIsLoggingIn(true);
     try {
       login();
