@@ -68,7 +68,7 @@ export function useSolanaWallet(): WalletState {
   const { connection } = useConnection();
   
   // Privy auth - get access token for API calls
-  const { getAccessToken } = usePrivy();
+  const { getAccessToken, authenticated } = usePrivy();
   
   const [balance, setBalance] = useState(0);
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
@@ -219,6 +219,12 @@ export function useSolanaWallet(): WalletState {
       return;
     }
     
+    // Wait for Privy authentication before making API calls
+    if (!authenticated) {
+      console.log('[useSolanaWallet] Waiting for Privy authentication...');
+      return;
+    }
+    
     setIsLoadingDepositedBalance(true);
     const walletAddress = publicKey.toString();
     
@@ -254,22 +260,22 @@ export function useSolanaWallet(): WalletState {
     } finally {
       setIsLoadingDepositedBalance(false);
     }
-  }, [publicKey, getAuthToken]);
+  }, [publicKey, authenticated, getAuthToken]);
 
   // Alias for backward compatibility
   const refreshDepositedBalance = refreshProfile;
 
-  // Auto-fetch profile when connected
+  // Auto-fetch profile when connected AND authenticated
   useEffect(() => {
-    if (connected && publicKey) {
+    if (connected && publicKey && authenticated) {
       refreshProfile();
-    } else {
+    } else if (!connected) {
       setProfileId(null);
       setUsernameState(null);
       setNeedsUsername(false);
       setDepositedBalance(0);
     }
-  }, [connected, publicKey, refreshProfile]);
+  }, [connected, publicKey, authenticated, refreshProfile]);
 
   // ============================================================================
   // USERNAME FUNCTIONS

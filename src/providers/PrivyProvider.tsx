@@ -27,7 +27,6 @@ export const PrivyWalletProvider: React.FC<PrivyProviderProps> = ({ children }) 
         appearance: {
           theme: 'dark',
           accentColor: '#ffc107', // Yellow to match wallet connection theme
-          logo: 'https://str8.fun/logo.png',
           walletChainType: 'solana-only',
         },
         loginMethods: ['wallet'], // Wallet only - no email/social
