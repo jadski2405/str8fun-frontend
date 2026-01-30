@@ -4,7 +4,6 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
-import { usePrivy } from '@privy-io/react-auth';
 import { LAMPORTS_PER_SOL, PublicKey, Transaction, SystemProgram } from '@solana/web3.js';
 import { ESCROW_WALLET, MIN_TRADE_SOL } from '../lib/solana';
 
@@ -73,9 +72,6 @@ export function useSolanaWallet(): WalletState {
   } = useWallet();
   
   const { connection } = useConnection();
-  
-  // Privy auth
-  const { getAccessToken, authenticated } = usePrivy();
   
   const [balance, setBalance] = useState(0);
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
@@ -209,18 +205,45 @@ export function useSolanaWallet(): WalletState {
   // PROFILE & DEPOSITED BALANCE
   // ============================================================================
   
-  // Get Privy access token for authenticated API calls
+  // Get auth token from Express backend (wallet-based auth)
   const getAuthToken = useCallback(async (): Promise<string | null> => {
-    if (!authenticated) return null;
+    if (!publicKey) return null;
     
-    try {
-      const token = await getAccessToken();
-      return token;
-    } catch (e) {
-      console.error('Error getting Privy access token:', e);
-      return null;
+    // Check if we have a valid cached token
+    if (authTokenRef.current && tokenExpiresRef.current && tokenExpiresRef.current > new Date()) {
+      return authTokenRef.current;
     }
-  }, [authenticated, getAccessToken]);
+    
+    // Fetch new token from Express backend
+    try {
+      const response = await fetch(`${API_URL}/api/auth/token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wallet_address: publicKey.toString() }),
+      });
+      
+      const result = await response.json();
+      
+      if (result.success || result.token) {
+        authTokenRef.current = result.token;
+        tokenExpiresRef.current = new Date(result.expires_at || Date.now() + 48 * 60 * 60 * 1000);
+        
+        // Store in localStorage
+        const toStore: StoredToken = {
+          wallet: publicKey.toString(),
+          token: result.token,
+          expiresAt: result.expires_at || new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
+        };
+        localStorage.setItem(TOKEN_STORAGE_KEY, JSON.stringify(toStore));
+        
+        return result.token;
+      }
+    } catch (e) {
+      console.error('Error fetching auth token from backend:', e);
+    }
+    
+    return null;
+  }, [publicKey]);
   
   // Fetch profile with username and balance from Express backend
   const refreshProfile = useCallback(async () => {
@@ -310,50 +333,6 @@ export function useSolanaWallet(): WalletState {
       console.error('Error loading stored token:', e);
     }
   }, [publicKey]);
-
-  // Auth token getter - available for future use
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _getAuthToken = useCallback(async (): Promise<string | null> => {
-    if (!publicKey) return null;
-    
-    // Check if we have a valid token
-    if (authTokenRef.current && tokenExpiresRef.current && tokenExpiresRef.current > new Date()) {
-      return authTokenRef.current;
-    }
-    
-    // Fetch new token from Express backend
-    try {
-      const response = await fetch(`${API_URL}/api/auth/token`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ wallet_address: publicKey.toString() }),
-      });
-      
-      const result = await response.json();
-      
-      if (result.success || result.token) {
-        authTokenRef.current = result.token;
-        tokenExpiresRef.current = new Date(result.expires_at || Date.now() + 48 * 60 * 60 * 1000);
-        
-        // Store in localStorage
-        const toStore: StoredToken = {
-          wallet: publicKey.toString(),
-          token: result.token,
-          expiresAt: result.expires_at || new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
-        };
-        localStorage.setItem(TOKEN_STORAGE_KEY, JSON.stringify(toStore));
-        
-        return result.token;
-      }
-    } catch (e) {
-      console.error('Error fetching auth token:', e);
-    }
-    
-    return null;
-  }, [publicKey]);
-
-  // Suppress unused warning - available for future use
-  void _getAuthToken;
 
   // ============================================================================
   // USERNAME FUNCTIONS
