@@ -311,7 +311,7 @@ export function useSolanaWallet(): WalletState {
     try {
       console.log('[useSolanaWallet] Fetching profile for:', walletAddress);
       
-      // Get Privy auth token
+      // Get Privy auth token (optional - backend should work without it)
       const token = await getAuthToken();
       
       // Get or create profile via Express API
@@ -319,7 +319,7 @@ export function useSolanaWallet(): WalletState {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          ...(token ? { 'Authorization': `Bearer ${token}`, 'x-auth-token': token } : {}),
         },
         body: JSON.stringify({ wallet_address: walletAddress }),
       });
@@ -519,13 +519,16 @@ export function useSolanaWallet(): WalletState {
       }
       
       // Step 2: Call Express API to verify and credit balance
+      // Note: wallet_address + tx_signature is sufficient auth (signature proves ownership)
       const token = await getAuthToken();
+      console.log('[Deposit] Confirming deposit:', { walletAddress, signature: signature.slice(0, 20) + '...', amount });
       
       const response = await fetch(`${API_URL}/api/deposit/confirm`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          // Send token if available, but backend should work without it
+          ...(token ? { 'Authorization': `Bearer ${token}`, 'x-auth-token': token } : {}),
         },
         body: JSON.stringify({
           wallet_address: walletAddress,
@@ -534,7 +537,20 @@ export function useSolanaWallet(): WalletState {
         }),
       });
       
+      console.log('[Deposit] Response status:', response.status);
+      
+      // Handle non-OK responses before trying to parse JSON
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[Deposit] Error response:', errorText);
+        if (response.status === 401) {
+          return { success: false, error: 'Backend auth issue - deposit sent, contact support with tx: ' + signature.slice(0, 20) };
+        }
+        return { success: false, error: `Server error ${response.status}` };
+      }
+      
       const result = await response.json();
+      console.log('[Deposit] Success:', result);
       
       if (!result.success) {
         return { success: false, error: result.error || 'Failed to confirm deposit' };
@@ -568,21 +584,30 @@ export function useSolanaWallet(): WalletState {
     }
     
     try {
-      // Get Privy auth token
+      // Get auth token if available (backend should work without it)
       const token = await getAuthToken();
+      console.log('[Withdraw] Requesting withdrawal:', { walletAddress, amount });
       
       // Call Express API to process withdrawal
       const response = await fetch(`${API_URL}/api/withdraw`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          ...(token ? { 'Authorization': `Bearer ${token}`, 'x-auth-token': token } : {}),
         },
         body: JSON.stringify({
           wallet_address: walletAddress,
           amount,
         }),
       });
+      
+      console.log('[Withdraw] Response status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[Withdraw] Error:', errorText);
+        return { success: false, error: `Server error ${response.status}` };
+      }
       
       const result = await response.json();
       

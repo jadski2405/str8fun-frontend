@@ -394,15 +394,16 @@ export function useGame(
       // Calculate trade locally first for optimistic update
       const calculation = calculateBuy(pool, solAmount);
       
-      // Get auth token if available
+      // Get auth token if available (backend should work without it)
       const token = getAuthToken ? await getAuthToken() : null;
+      console.log('[Trade] Executing BUY:', { walletAddress, solAmount, roundId });
       
       // Execute trade via Express API
       const response = await fetch(`${API_URL}/api/game/trade`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          ...(token ? { 'Authorization': `Bearer ${token}`, 'x-auth-token': token } : {}),
         },
         body: JSON.stringify({
           wallet_address: walletAddress,
@@ -461,15 +462,16 @@ export function useGame(
         return { success: false, error: 'Not enough tokens' };
       }
       
-      // Get auth token if available
+      // Get auth token if available (backend should work without it)
       const token = getAuthToken ? await getAuthToken() : null;
+      console.log('[Trade] Executing SELL:', { walletAddress, solAmount, roundId });
       
       // Execute trade via Express API
       const response = await fetch(`${API_URL}/api/game/trade`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          ...(token ? { 'Authorization': `Bearer ${token}`, 'x-auth-token': token } : {}),
         },
         body: JSON.stringify({
           wallet_address: walletAddress,
