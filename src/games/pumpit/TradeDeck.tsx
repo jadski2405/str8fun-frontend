@@ -154,10 +154,6 @@ const TradeDeck: React.FC<TradeDeckProps> = ({
     onSell(amount);
   };
 
-  const parsedAmount = parseFloat(tradeAmount) || 0;
-  const canBuy = parsedAmount > 0 && parsedAmount <= balance;
-  const canSell = parsedAmount > 0 && tokenBalance > 0;
-
   // ============================================================================
   // RENDER - Vertical Stacked Layout (rugs.fun style)
   // ============================================================================
@@ -285,7 +281,7 @@ export const MobileTradeDeck: React.FC<MobileTradeDeckProps> = ({
   onBuy,
   onSell,
   tokenBalance = 0,
-  connected = true,
+  connected: _connected = true,
 }) => {
   const [tradeAmount, setTradeAmount] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -337,10 +333,6 @@ export const MobileTradeDeck: React.FC<MobileTradeDeckProps> = ({
     onSell(amount);
     setTradeAmount('');
   };
-
-  const parsedAmount = parseFloat(tradeAmount) || 0;
-  const canBuy = parsedAmount > 0 && parsedAmount <= balance;
-  const canSell = parsedAmount > 0 && tokenBalance > 0;
 
   return (
     <div className="mobile-trade-deck">
