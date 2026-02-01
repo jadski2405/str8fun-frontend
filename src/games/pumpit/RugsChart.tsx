@@ -14,6 +14,9 @@ interface RugsChartProps {
   data: CandleData[];
   currentPrice: number;
   startPrice: number;
+  positionValue?: number;   // Current value of player's position in SOL
+  unrealizedPnL?: number;   // Player's unrealized profit/loss in SOL
+  hasPosition?: boolean;    // Whether player has an open position
 }
 
 // ============================================================================
@@ -44,7 +47,7 @@ const COLOR_TEXT = 'rgba(255, 255, 255, 0.4)';
 // ============================================================================
 // RUGS CHART COMPONENT - Canvas Based for 60fps
 // ============================================================================
-const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice }) => {
+const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, positionValue = 0, unrealizedPnL = 0, hasPosition = false }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>(0);
@@ -453,6 +456,47 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice })
           {multiplierText}
         </div>
       </div>
+      
+      {/* Position Overlay - Top Right */}
+      {hasPosition && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '12px',
+            right: '12px',
+            pointerEvents: 'none',
+            textAlign: 'right',
+          }}
+        >
+          <div
+            style={{
+              fontSize: '20px',
+              fontWeight: 700,
+              fontFamily: "'DynaPuff', system-ui, sans-serif",
+              color: unrealizedPnL >= 0 ? COLOR_GREEN : COLOR_RED,
+              textShadow: `0 0 10px ${unrealizedPnL >= 0 ? 'rgba(0, 255, 127, 0.5)' : 'rgba(255, 59, 59, 0.5)'}`,
+              lineHeight: 1
+            }}
+          >
+            {unrealizedPnL >= 0 
+              ? `Up ${unrealizedPnL.toFixed(4)} SOL` 
+              : `${Math.abs(unrealizedPnL).toFixed(4)} SOL left`
+            }
+          </div>
+          <div
+            style={{
+              fontSize: '12px',
+              fontWeight: 500,
+              fontFamily: "'DynaPuff', system-ui, sans-serif",
+              color: 'rgba(255, 255, 255, 0.6)',
+              marginTop: '4px',
+              lineHeight: 1
+            }}
+          >
+            Position: {positionValue.toFixed(4)} SOL
+          </div>
+        </div>
+      )}
     </div>
   );
 };

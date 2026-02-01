@@ -35,6 +35,7 @@ const formatTokens = (value: number): string => {
 // ============================================================================
 const TradeDeck: React.FC<TradeDeckProps> = ({
   balance,
+  currentPrice,
   onBuy,
   onSell,
   tokenBalance = 0,
@@ -107,20 +108,26 @@ const TradeDeck: React.FC<TradeDeckProps> = ({
       
       if (type === 'add') {
         newValue = Math.max(0, current + value);
+        // Cap at balance for buying
+        newValue = Math.min(newValue, balance);
       } else if (type === 'multiply') {
         newValue = Math.max(0, current * value);
+        // Cap at balance for buying
+        newValue = Math.min(newValue, balance);
       } else {
-        // percent - calculate from balance
-        newValue = (balance * value) / 100;
+        // percent - calculate from position value for SELLING
+        // If no position, do nothing
+        if (tokenBalance <= 0) {
+          return prev; // Return unchanged
+        }
+        const positionValueInSol = tokenBalance * currentPrice;
+        newValue = (positionValueInSol * value) / 100;
       }
-      
-      // Cap at balance
-      newValue = Math.min(newValue, balance);
       
       // Format to max 3 decimals
       return newValue > 0 ? formatSOL(newValue) : '';
     });
-  }, [balance]);
+  }, [balance, tokenBalance, currentPrice]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;

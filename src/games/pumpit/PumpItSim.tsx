@@ -725,7 +725,14 @@ const PumpItSim: React.FC = () => {
               </div>
             )}
             <div className="relative flex-1">
-              <RugsChart data={candles} currentPrice={price} startPrice={INITIAL_PRICE} />
+              <RugsChart 
+                data={candles} 
+                currentPrice={price} 
+                startPrice={INITIAL_PRICE}
+                positionValue={game.tokenBalance * price}
+                unrealizedPnL={game.unrealizedPnL}
+                hasPosition={game.tokenBalance > 0}
+              />
             </div>
             {/* Round Countdown Overlay - inside chart only */}
             {game.roundStatus === 'countdown' && connected && !showUsernameModal && (
