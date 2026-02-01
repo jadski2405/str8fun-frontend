@@ -406,20 +406,32 @@ export function useGame(
   }, [roundId, profileId, walletAddress]);
 
   // ============================================================================
-  // CHART RESET - Clear chart data when round changes
+  // CHART RESET & POSITION SYNC - Clear data when round changes
   // ============================================================================
   
   useEffect(() => {
     if (roundId && roundId !== previousRoundId) {
+      console.log('[useGame] Round changed:', previousRoundId, '->', roundId);
+      
+      // Reset chart
       setShouldResetChart(true);
-      setPreviousRoundId(roundId);
       setBackendPriceMultiplier(1.0); // Reset to 1.0x for new round
       
-      // Reset the flag after a short delay so components can react
+      // Clear position from previous round - IMPORTANT for sell validation
+      setPlayerPosition(null);
+      
+      // Fetch fresh position for new round
+      if (walletAddress) {
+        fetchPlayerPosition();
+      }
+      
+      setPreviousRoundId(roundId);
+      
+      // Reset the chart flag after a short delay so components can react
       const timeout = setTimeout(() => setShouldResetChart(false), 100);
       return () => clearTimeout(timeout);
     }
-  }, [roundId, previousRoundId]);
+  }, [roundId, previousRoundId, walletAddress, fetchPlayerPosition]);
 
   // ============================================================================
   // BUY ACTION - Uses deposited balance, no wallet approval needed
@@ -494,16 +506,19 @@ export function useGame(
       return { success: false, error: `Minimum trade is ${MIN_TRADE_SOL} SOL` };
     }
     
-    if (tokenBalance <= 0) {
-      return { success: false, error: 'No tokens to sell' };
-    }
+    // Note: We skip frontend token validation and let the backend be source of truth
+    // This prevents issues with stale position data from previous rounds
+    console.log('[Trade] Attempting SELL:', { walletAddress, solAmount, roundId, localTokenBalance: tokenBalance });
     
     try {
-      // Calculate how many tokens needed for this SOL value
-      const { tokensNeeded, ...calculation } = calculateSellBySolValue(pool, solAmount);
-      
-      if (tokensNeeded > tokenBalance) {
-        return { success: false, error: 'Not enough tokens' };
+      // Calculate expected values for optimistic update (may be stale)
+      let calculation;
+      try {
+        const result = calculateSellBySolValue(pool, solAmount);
+        calculation = result;
+      } catch {
+        // Pool calculation failed, let backend handle it
+        calculation = null;
       }
       
       // Get auth token if available (backend should work without it)
@@ -531,16 +546,18 @@ export function useGame(
         return { success: false, error: data.error || 'Failed to execute trade' };
       }
       
-      // Update local state optimistically
-      applySell(pool, calculation);
-      setPool({ ...pool });
+      // Update local state from backend response
+      if (calculation) {
+        applySell(pool, calculation);
+        setPool({ ...pool });
+      }
       
       // Update position if returned
       if (data.position) {
         setPlayerPosition(data.position);
       }
       
-      console.log(`🔴 SELL: ${solAmount.toFixed(4)} SOL worth | Net: ${data.sol_received?.toFixed(4) || calculation.netAmount.toFixed(4)} SOL`);
+      console.log(`🔴 SELL: ${solAmount.toFixed(4)} SOL worth | Net: ${data.sol_received?.toFixed(4) || 'N/A'} SOL`);
       
       return { success: true, newBalance: data.new_balance };
     } catch (error) {
