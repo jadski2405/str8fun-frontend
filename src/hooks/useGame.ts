@@ -112,7 +112,6 @@ export function useGame(
   
   const fetchActiveRound = useCallback(async () => {
     try {
-      setRoundStatus('loading');
       const response = await fetch(`${API_URL}/api/game/round`);
       
       if (!response.ok) {
@@ -124,6 +123,15 @@ export function useGame(
       
       const round = await response.json();
       
+      // Handle countdown status - this is NOT an error
+      if (round.status === 'countdown') {
+        setRoundId(null);
+        setCountdownRemaining(round.countdown_seconds || COUNTDOWN_SECONDS);
+        setRoundStatus('countdown');
+        setErrorMessage(null);
+        return; // Don't retry, countdown is expected
+      }
+      
       if (round && round.id) {
         setRoundId(round.id);
         setRoundStartedAt(new Date(round.started_at));
@@ -134,16 +142,18 @@ export function useGame(
         });
         setRoundStatus(round.status === 'active' ? 'active' : 'ended');
         setErrorMessage(null);
+        setCountdownRemaining(0);
         
         // Calculate time remaining
         const elapsed = (Date.now() - new Date(round.started_at).getTime()) / 1000;
         const remaining = Math.max(0, (round.duration_seconds || ROUND_DURATION_SECONDS) - elapsed);
         setTimeRemaining(Math.ceil(remaining));
       } else {
-        // No active round from server - show error
-        console.error('No active round returned from server');
-        setRoundStatus('error');
-        setErrorMessage('No active game round available');
+        // Only log "no active round" if we're NOT in countdown and id is missing
+        console.log('No active round returned from server');
+        setRoundStatus('countdown');
+        setCountdownRemaining(COUNTDOWN_SECONDS);
+        setErrorMessage(null);
       }
       
     } catch (error) {

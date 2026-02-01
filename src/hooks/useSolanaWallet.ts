@@ -489,8 +489,14 @@ export function useSolanaWallet(): WalletState {
           wallet: privyWallet,
         });
         
-        // Convert signature Uint8Array to base58 string
-        signature = Buffer.from(result.signature).toString('base64');
+        // Convert signature to base58 string (Solana standard format)
+        if (result.signature instanceof Uint8Array) {
+          const bs58 = await import('bs58');
+          signature = bs58.default.encode(result.signature);
+        } else {
+          // Already a base58 string
+          signature = result.signature;
+        }
         // For Solana, we need to wait for confirmation differently
         // The transaction is already sent, we just need to confirm
       } else if (walletAdapterPublicKey && walletAdapterSendTransaction) {
