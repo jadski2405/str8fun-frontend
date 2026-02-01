@@ -7,7 +7,7 @@ import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { usePrivy } from '@privy-io/react-auth';
 import { useWallets as usePrivySolanaWallets, useSignAndSendTransaction } from '@privy-io/react-auth/solana';
 import { LAMPORTS_PER_SOL, PublicKey, Transaction, SystemProgram } from '@solana/web3.js';
-import { ESCROW_WALLET, MIN_TRADE_SOL } from '../lib/solana';
+import { ESCROW_WALLET as ENV_ESCROW_WALLET, MIN_TRADE_SOL } from '../lib/solana';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://api.str8.fun';
 
@@ -40,6 +40,7 @@ export interface WalletState {
   refreshBalance: () => Promise<void>;
   refreshDepositedBalance: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  updateDepositedBalance: (newBalance: number) => void;  // Immediate update after trades
   
   // Username
   setUsername: (username: string) => Promise<{ success: boolean; error?: string }>;
@@ -120,6 +121,27 @@ export function useSolanaWallet(): WalletState {
   const [depositedBalance, setDepositedBalance] = useState(0);
   const [isLoadingDepositedBalance, setIsLoadingDepositedBalance] = useState(false);
   
+  // Escrow address - fetched from API, fallback to env
+  const [escrowAddress, setEscrowAddress] = useState<string>(ENV_ESCROW_WALLET);
+  
+  // Fetch escrow address from API on mount
+  useEffect(() => {
+    const fetchEscrowAddress = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/deposit/escrow`);
+        const data = await response.json();
+        if (data.success && data.escrow_address) {
+          setEscrowAddress(data.escrow_address);
+          console.log('[useSolanaWallet] Escrow address:', data.escrow_address);
+        }
+      } catch (error) {
+        console.error('[useSolanaWallet] Error fetching escrow address:', error);
+        // Keep using env fallback
+      }
+    };
+    fetchEscrowAddress();
+  }, []);
+  
   // Profile state
   const [profileId, setProfileId] = useState<string | null>(null);
   const [username, setUsernameState] = useState<string | null>(null);
@@ -189,7 +211,7 @@ export function useSolanaWallet(): WalletState {
 
   // Send SOL to escrow for trading (legacy - prefer deposit)
   const sendSOLToEscrow = useCallback(async (amount: number): Promise<string | null> => {
-    if (!walletAddress || !ESCROW_WALLET) {
+    if (!walletAddress || !escrowAddress) {
       console.error('Wallet not connected or escrow not configured');
       return null;
     }
@@ -206,7 +228,7 @@ export function useSolanaWallet(): WalletState {
     
     try {
       const fromPubkey = new PublicKey(walletAddress);
-      const escrowPubkey = new PublicKey(ESCROW_WALLET);
+      const escrowPubkey = new PublicKey(escrowAddress);
       const lamports = Math.floor(amount * LAMPORTS_PER_SOL);
       
       let signature: string;
@@ -458,7 +480,7 @@ export function useSolanaWallet(): WalletState {
       return { success: false, error: 'Wallet not connected' };
     }
     
-    if (!ESCROW_WALLET) {
+    if (!escrowAddress) {
       return { success: false, error: 'Escrow wallet not configured - contact support' };
     }
     
@@ -472,7 +494,7 @@ export function useSolanaWallet(): WalletState {
     
     try {
       const fromPubkey = new PublicKey(walletAddress);
-      const escrowPubkey = new PublicKey(ESCROW_WALLET);
+      const escrowPubkey = new PublicKey(escrowAddress);
       const lamports = Math.floor(amount * LAMPORTS_PER_SOL);
       
       let signature: string;
@@ -644,6 +666,11 @@ export function useSolanaWallet(): WalletState {
     }
   }, [walletAddress, depositedBalance, refreshBalance, getAuthToken]);
 
+  // Immediate balance update (for after trades)
+  const updateDepositedBalance = useCallback((newBalance: number) => {
+    setDepositedBalance(newBalance);
+  }, []);
+
   return {
     isConnected,
     isConnecting: connecting,
@@ -662,6 +689,7 @@ export function useSolanaWallet(): WalletState {
     refreshBalance,
     refreshDepositedBalance,
     refreshProfile,
+    updateDepositedBalance,
     setUsername,
     checkUsernameAvailable,
     deposit,

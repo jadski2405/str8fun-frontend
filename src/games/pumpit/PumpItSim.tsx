@@ -84,6 +84,7 @@ const PumpItSim: React.FC = () => {
     deposit,
     withdraw,
     refreshDepositedBalance,
+    updateDepositedBalance,
     profileId,
     username: _username,
     needsUsername,
@@ -358,8 +359,12 @@ const PumpItSim: React.FC = () => {
         pendingImpact.current += PUMP_IMPACT * impactMultiplier;
         console.log(`🟢 BUY: ${amount.toFixed(4)} SOL`);
         
-        // Refresh deposited balance
-        refreshDepositedBalance();
+        // Update balance immediately if returned, otherwise refresh
+        if (result.newBalance !== undefined) {
+          updateDepositedBalance(result.newBalance);
+        } else {
+          refreshDepositedBalance();
+        }
       } else {
         console.log(`❌ Buy failed: ${result.error}`);
         setTradeError(result.error || 'Buy failed');
@@ -369,7 +374,7 @@ const PumpItSim: React.FC = () => {
     } finally {
       setIsProcessingTrade(false);
     }
-  }, [connected, depositedBalance, game, login, refreshDepositedBalance]);
+  }, [connected, depositedBalance, game, login, refreshDepositedBalance, updateDepositedBalance]);
 
   const handleSell = useCallback(async (amount: number) => {
     if (!connected) {
@@ -399,8 +404,12 @@ const PumpItSim: React.FC = () => {
         pendingImpact.current -= DUMP_IMPACT * impactMultiplier;
         console.log(`🔴 SELL: ~${amount.toFixed(4)} SOL worth`);
         
-        // Refresh deposited balance
-        refreshDepositedBalance();
+        // Update balance immediately if returned, otherwise refresh
+        if (result.newBalance !== undefined) {
+          updateDepositedBalance(result.newBalance);
+        } else {
+          refreshDepositedBalance();
+        }
       } else {
         console.log(`❌ Sell failed: ${result.error}`);
         setTradeError(result.error || 'Sell failed');
@@ -410,15 +419,15 @@ const PumpItSim: React.FC = () => {
     } finally {
       setIsProcessingTrade(false);
     }
-  }, [connected, game, login, refreshDepositedBalance]);
+  }, [connected, game, login, refreshDepositedBalance, updateDepositedBalance]);
 
   // ============================================================================
   // DEPOSIT/WITHDRAW HANDLERS
   // ============================================================================
   const handleDeposit = useCallback(async () => {
     const amount = parseFloat(depositAmount);
-    if (isNaN(amount) || amount < 0.01) {
-      setDepositError('Minimum deposit is 0.01 SOL');
+    if (isNaN(amount) || amount < 0.001) {
+      setDepositError('Minimum deposit is 0.001 SOL');
       return;
     }
     if (amount > walletBalance) {
@@ -447,8 +456,8 @@ const PumpItSim: React.FC = () => {
 
   const handleWithdraw = useCallback(async () => {
     const amount = parseFloat(withdrawAmount);
-    if (isNaN(amount) || amount < 0.01) {
-      setDepositError('Minimum withdrawal is 0.01 SOL');
+    if (isNaN(amount) || amount < 0.001) {
+      setDepositError('Minimum withdrawal is 0.001 SOL');
       return;
     }
     if (amount > depositedBalance) {
