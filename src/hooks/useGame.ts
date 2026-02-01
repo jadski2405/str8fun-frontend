@@ -472,7 +472,7 @@ export function useGame(
         setPlayerPosition(data.position);
       }
       
-      console.log(`🟢 BUY: ${solAmount.toFixed(4)} SOL | Tokens: ${data.tokens_traded?.toFixed(2) || calculation.tokensTransferred.toFixed(2)}`);
+      console.log(`🟢 BUY: ${solAmount.toFixed(4)} SOL | Tokens: ${data.tokens_traded?.toFixed(4) || calculation.tokensTransferred.toFixed(4)}`);
       
       return { success: true, newBalance: data.new_balance };
     } catch (error) {

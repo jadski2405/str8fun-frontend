@@ -20,9 +20,14 @@ const INCREMENTORS = [0.001, 0.01, 0.1, 1] as const;
 const PERCENTAGES = [10, 25, 50, 100] as const;
 const MAX_HOLD_DURATION = 2000; // 2 seconds to fill MAX button
 
-// Helper: Format to max 3 decimal places
+// Helper: Format SOL to max 3 decimal places
 const formatSOL = (value: number): string => {
   return value.toFixed(3);
+};
+
+// Helper: Format tokens to 4 decimal places (for small amounts)
+const formatTokens = (value: number): string => {
+  return value.toFixed(4);
 };
 
 // ============================================================================
@@ -256,7 +261,7 @@ const TradeDeck: React.FC<TradeDeckProps> = ({
       {/* Token Balance Info */}
       {tokenBalance > 0 && (
         <div className="trd-token-info">
-          Tokens: {formatSOL(tokenBalance)}
+          Tokens: {formatTokens(tokenBalance)}
         </div>
       )}
     </div>
