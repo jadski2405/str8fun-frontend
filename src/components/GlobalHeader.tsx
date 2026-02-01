@@ -647,6 +647,7 @@ interface MobileTransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
   balance: number;
+  onTransaction: (amount: number) => Promise<{ success: boolean; error?: string }>;
 }
 
 const MobileTransactionModal: React.FC<MobileTransactionModalProps> = ({ 
@@ -654,26 +655,64 @@ const MobileTransactionModal: React.FC<MobileTransactionModalProps> = ({
   isOpen, 
   onClose,
   balance,
+  onTransaction,
 }) => {
   const [amount, setAmount] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
   const theme = DROPDOWN_THEMES[type];
   const Icon = theme.icon;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log(`${type} amount:`, amount);
-    setAmount('');
-    onClose();
+    setError(null);
+    
+    const amountNum = parseFloat(amount);
+    if (!amountNum || amountNum <= 0) {
+      setError('Please enter a valid amount');
+      return;
+    }
+    
+    if (amountNum > balance) {
+      setError(`Insufficient ${type === 'withdraw' ? 'game' : 'wallet'} balance`);
+      return;
+    }
+    
+    setIsProcessing(true);
+    try {
+      const result = await onTransaction(amountNum);
+      if (result.success) {
+        setSuccess(true);
+        setAmount('');
+        setTimeout(() => {
+          setSuccess(false);
+          onClose();
+        }, 1500);
+      } else {
+        setError(result.error || `${type} failed`);
+      }
+    } catch (err) {
+      setError('Transaction failed. Please try again.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleMaxClick = () => {
     const formatted = balance < 0.001 ? '0.000' : balance.toFixed(3);
     setAmount(formatted);
+    setError(null);
   };
 
-  // Reset amount when modal closes
+  // Reset state when modal closes
   useEffect(() => {
-    if (!isOpen) setAmount('');
+    if (!isOpen) {
+      setAmount('');
+      setError(null);
+      setSuccess(false);
+      setIsProcessing(false);
+    }
   }, [isOpen]);
 
   return (
@@ -755,19 +794,56 @@ const MobileTransactionModal: React.FC<MobileTransactionModalProps> = ({
                 </div>
               </div>
 
+              {/* Error Message */}
+              {error && (
+                <div 
+                  style={{
+                    padding: '10px 14px',
+                    background: 'rgba(239, 68, 68, 0.15)',
+                    border: '1px solid rgba(239, 68, 68, 0.4)',
+                    borderRadius: 8,
+                    fontFamily: "'DynaPuff', sans-serif",
+                    fontSize: 12,
+                    color: '#ef4444',
+                    textAlign: 'center',
+                  }}
+                >
+                  {error}
+                </div>
+              )}
+
+              {/* Success Message */}
+              {success && (
+                <div 
+                  style={{
+                    padding: '10px 14px',
+                    background: 'rgba(34, 197, 94, 0.15)',
+                    border: '1px solid rgba(34, 197, 94, 0.4)',
+                    borderRadius: 8,
+                    fontFamily: "'DynaPuff', sans-serif",
+                    fontSize: 12,
+                    color: '#22c55e',
+                    textAlign: 'center',
+                  }}
+                >
+                  {type === 'deposit' ? 'Deposit successful!' : 'Withdrawal successful!'}
+                </div>
+              )}
+
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={false}
+                disabled={isProcessing}
                 className="mobile-modal-submit-btn"
                 style={{
-                  background: theme.primary,
+                  background: isProcessing ? 'rgba(128, 128, 128, 0.5)' : theme.primary,
                   color: 'rgb(21, 22, 29)',
-                  cursor: 'pointer',
+                  cursor: isProcessing ? 'not-allowed' : 'pointer',
+                  opacity: isProcessing ? 0.7 : 1,
                 }}
               >
                 <Icon size={16} />
-                {theme.buttonText}
+                {isProcessing ? 'Processing...' : theme.buttonText}
               </button>
 
               {/* Info Text */}
@@ -1310,13 +1386,15 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
         type="deposit"
         isOpen={showMobileDeposit}
         onClose={() => setShowMobileDeposit(false)}
-        balance={depositedBalance}
+        balance={balance}
+        onTransaction={deposit}
       />
       <MobileTransactionModal
         type="withdraw"
         isOpen={showMobileWithdraw}
         onClose={() => setShowMobileWithdraw(false)}
         balance={depositedBalance}
+        onTransaction={withdraw}
       />
       {/* Custom Wallet Connection Modal */}
       <WalletConnectionModal

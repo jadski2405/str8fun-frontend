@@ -49,6 +49,9 @@ export interface GameState {
   // Trade history
   recentTrades: Trade[];
   
+  // Online players count
+  onlineCount: number;
+  
   // Actions - NO wallet approval needed, uses deposited balance
   buy: (solAmount: number) => Promise<{ success: boolean; error?: string; newBalance?: number }>;
   sell: (solAmount: number) => Promise<{ success: boolean; error?: string; newBalance?: number }>;
@@ -90,6 +93,9 @@ export function useGame(
   
   // Trade history
   const [recentTrades, setRecentTrades] = useState<Trade[]>([]);
+  
+  // Online players count
+  const [onlineCount, setOnlineCount] = useState<number>(0);
   
   // Error state
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -374,6 +380,10 @@ export function useGame(
               setPlayerPosition(data.position);
             }
           }
+          
+          if (data.type === 'ONLINE_COUNT') {
+            setOnlineCount(data.count || 0);
+          }
         } catch (e) {
           console.error('WebSocket message error:', e);
         }
@@ -592,6 +602,9 @@ export function useGame(
     
     // Trade history
     recentTrades,
+    
+    // Online count
+    onlineCount,
     
     // Error state
     errorMessage,
