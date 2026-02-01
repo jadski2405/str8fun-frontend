@@ -227,6 +227,18 @@ const PumpItSim: React.FC = () => {
   }, [game.priceMultiplier, game.roundStatus]);
 
   // ============================================================================
+  // RESET CHART ON NEW ROUND
+  // ============================================================================
+  useEffect(() => {
+    if (game.shouldResetChart) {
+      setCandles(generateFlatCandles(10, INITIAL_PRICE));
+      priceRef.current = INITIAL_PRICE;
+      setPrice(INITIAL_PRICE);
+      console.log('[PumpItSim] Chart reset for new round:', game.roundId);
+    }
+  }, [game.shouldResetChart, game.roundId]);
+
+  // ============================================================================
   // FAST VISUAL TICK - 60fps price micro-movements for smooth animation
   // ============================================================================
   useEffect(() => {

@@ -357,6 +357,18 @@ export function useSolanaWallet(): WalletState {
     }
   }, [isConnected, publicKey, authenticated, refreshProfile]);
 
+  // Auto-refresh balance every 5 seconds when connected
+  useEffect(() => {
+    if (!isConnected || !walletAddress || !authenticated) return;
+    
+    // Poll every 5 seconds to keep balance in sync
+    const interval = setInterval(() => {
+      refreshProfile();
+    }, 5000);
+    
+    return () => clearInterval(interval);
+  }, [isConnected, walletAddress, authenticated, refreshProfile]);
+
   // ============================================================================
   // USERNAME FUNCTIONS
   // ============================================================================

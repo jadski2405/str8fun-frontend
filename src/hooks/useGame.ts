@@ -32,6 +32,7 @@ export interface GameState {
   roundStatus: 'loading' | 'active' | 'ended' | 'countdown' | 'error';
   timeRemaining: number;
   countdownRemaining: number;
+  shouldResetChart: boolean;
   
   // Pool state
   pool: Pool;
@@ -77,6 +78,13 @@ export function useGame(
   // Pool state
   const [pool, setPool] = useState<Pool>(createInitialPool());
   
+  // Backend-provided price multiplier (use directly, no local calculation)
+  const [backendPriceMultiplier, setBackendPriceMultiplier] = useState<number>(1.0);
+  
+  // Track previous round ID for chart reset
+  const [previousRoundId, setPreviousRoundId] = useState<string | null>(null);
+  const [shouldResetChart, setShouldResetChart] = useState<boolean>(false);
+  
   // Player state
   const [playerPosition, setPlayerPosition] = useState<PlayerPosition | null>(null);
   
@@ -97,7 +105,8 @@ export function useGame(
   // ============================================================================
   
   const price = getPrice(pool);
-  const priceMultiplier = getPriceMultiplier(pool);
+  // Use backend-provided multiplier directly if available, otherwise calculate locally
+  const priceMultiplier = backendPriceMultiplier > 0 ? backendPriceMultiplier : getPriceMultiplier(pool);
   const tokenBalance = playerPosition?.token_balance ?? 0;
   const totalSolIn = playerPosition?.total_sol_in ?? 0;
   const totalSolOut = playerPosition?.total_sol_out ?? 0;
@@ -342,9 +351,18 @@ export function useGame(
               tokenSupply: Number(round.pool_token_supply) || 1_000_000,
               accumulatedFees: Number(round.accumulated_fees) || 0,
             });
+            // Use backend price_multiplier directly if provided
+            if (round.price_multiplier !== undefined) {
+              setBackendPriceMultiplier(Number(round.price_multiplier));
+            }
             if (round.status !== 'active') {
               setRoundStatus('ended');
             }
+          }
+          
+          // Update price multiplier from trade events
+          if (data.type === 'TRADE' && data.price_multiplier !== undefined) {
+            setBackendPriceMultiplier(Number(data.price_multiplier));
           }
           
           if (data.type === 'TRADE' && data.trade) {
@@ -386,6 +404,22 @@ export function useGame(
       }
     };
   }, [roundId, profileId, walletAddress]);
+
+  // ============================================================================
+  // CHART RESET - Clear chart data when round changes
+  // ============================================================================
+  
+  useEffect(() => {
+    if (roundId && roundId !== previousRoundId) {
+      setShouldResetChart(true);
+      setPreviousRoundId(roundId);
+      setBackendPriceMultiplier(1.0); // Reset to 1.0x for new round
+      
+      // Reset the flag after a short delay so components can react
+      const timeout = setTimeout(() => setShouldResetChart(false), 100);
+      return () => clearTimeout(timeout);
+    }
+  }, [roundId, previousRoundId]);
 
   // ============================================================================
   // BUY ACTION - Uses deposited balance, no wallet approval needed
@@ -525,6 +559,7 @@ export function useGame(
     roundStatus,
     timeRemaining,
     countdownRemaining,
+    shouldResetChart,
     
     // Pool state
     pool,
