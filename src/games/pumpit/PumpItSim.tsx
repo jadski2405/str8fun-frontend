@@ -680,7 +680,10 @@ const PumpItSim: React.FC = () => {
                   </button>
                 ))}
                 <button
-                  onClick={() => setWithdrawAmount(depositedBalance.toString())}
+                  onClick={() => {
+                    const formatted = depositedBalance < 0.001 ? '0.000' : depositedBalance.toFixed(3);
+                    setWithdrawAmount(formatted);
+                  }}
                   disabled={depositedBalance <= 0}
                   className="flex-1 py-2.5 bg-[#1a1f2a] border border-[#2a3441] rounded-lg text-sm text-gray-400 hover:text-white hover:border-[#00ff88] transition-colors disabled:opacity-50"
                 >

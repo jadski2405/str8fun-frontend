@@ -330,7 +330,8 @@ const TransactionDropdown: React.FC<TransactionDropdownProps> = ({
   };
 
   const handleMaxClick = () => {
-    setAmount(balance.toFixed(4));
+    const formatted = balance < 0.001 ? '0.000' : balance.toFixed(3);
+    setAmount(formatted);
     setError(null);
   };
   
@@ -666,7 +667,8 @@ const MobileTransactionModal: React.FC<MobileTransactionModalProps> = ({
   };
 
   const handleMaxClick = () => {
-    setAmount(balance.toString());
+    const formatted = balance < 0.001 ? '0.000' : balance.toFixed(3);
+    setAmount(formatted);
   };
 
   // Reset amount when modal closes

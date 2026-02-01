@@ -20,8 +20,9 @@ const INCREMENTORS = [0.001, 0.01, 0.1, 1] as const;
 const PERCENTAGES = [10, 25, 50, 100] as const;
 const MAX_HOLD_DURATION = 2000; // 2 seconds to fill MAX button
 
-// Helper: Format SOL to max 3 decimal places
+// Helper: Format SOL to exactly 3 decimal places, 0.000 if < 0.001
 const formatSOL = (value: number): string => {
+  if (value < 0.001) return '0.000';
   return value.toFixed(3);
 };
 
