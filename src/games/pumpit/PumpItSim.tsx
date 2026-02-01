@@ -6,6 +6,7 @@ import TradeDeck, { MobileTradeDeck } from './TradeDeck';
 import LivePnLFeed, { PlayerPnL } from './LivePnLFeed';
 import { useSolanaWallet } from '../../hooks/useSolanaWallet';
 import { useGame } from '../../hooks/useGame';
+import { useLeaderboard } from '../../hooks/useLeaderboard';
 import { GAME_CONSTANTS } from '../../types/game';
 import GameLayout from '../../components/layout/GameLayout';
 import GlobalHeader from '../../components/GlobalHeader';
@@ -93,6 +94,9 @@ const PumpItSim: React.FC = () => {
   
   // Game state from hook (for real trading) - pass wallet address and auth token
   const game = useGame(profileId, publicKey || null, getAuthToken);
+  
+  // Leaderboard data - refreshes every hour
+  const leaderboard = useLeaderboard(10);
   
   // Local simulation state (visual chart)
   const [price, setPrice] = useState(INITIAL_PRICE);
@@ -776,21 +780,27 @@ const PumpItSim: React.FC = () => {
           <>
             <div id="ldrbrd-header">🏆 Leaderboard</div>
             <div id="ldrbrd-list">
-              <div className="ldrbrd-row">
-                <span className="ldrbrd-rank gold">1</span>
-                <span className="ldrbrd-name">CryptoKing</span>
-                <span className="ldrbrd-score">+245.5 SOL</span>
-              </div>
-              <div className="ldrbrd-row">
-                <span className="ldrbrd-rank silver">2</span>
-                <span className="ldrbrd-name">DiamondHands</span>
-                <span className="ldrbrd-score">+182.3 SOL</span>
-              </div>
-              <div className="ldrbrd-row">
-                <span className="ldrbrd-rank bronze">3</span>
-                <span className="ldrbrd-name">MoonBoi</span>
-                <span className="ldrbrd-score">+156.8 SOL</span>
-              </div>
+              {leaderboard.isLoading ? (
+                <div className="ldrbrd-row">
+                  <span className="ldrbrd-name" style={{ opacity: 0.5 }}>Loading...</span>
+                </div>
+              ) : leaderboard.entries.length === 0 ? (
+                <div className="ldrbrd-row">
+                  <span className="ldrbrd-name" style={{ opacity: 0.5 }}>No data yet</span>
+                </div>
+              ) : (
+                leaderboard.entries.map((entry) => (
+                  <div key={entry.wallet_address || entry.rank} className="ldrbrd-row">
+                    <span className={`ldrbrd-rank ${entry.rank === 1 ? 'gold' : entry.rank === 2 ? 'silver' : entry.rank === 3 ? 'bronze' : ''}`}>
+                      {entry.rank}
+                    </span>
+                    <span className="ldrbrd-name">{entry.username}</span>
+                    <span className={`ldrbrd-score ${entry.total_pnl < 0 ? 'negative' : ''}`}>
+                      {entry.total_pnl >= 0 ? '+' : ''}{entry.total_pnl.toFixed(2)} SOL
+                    </span>
+                  </div>
+                ))
+              )}
             </div>
           </>
         }
