@@ -94,18 +94,6 @@ export function useSolanaWallet(): WalletState {
   // Loading state: authenticated but wallet not yet available
   const isWalletLoading = authenticated && !walletAddress && !walletAdapterConnected;
   
-  // Debug logging for wallet state
-  useEffect(() => {
-    console.log('[useSolanaWallet] State:', {
-      authenticated,
-      privyWalletsCount: privyWallets?.length || 0,
-      walletAddress,
-      walletAdapterConnected,
-      isConnected,
-      isWalletLoading
-    });
-  }, [authenticated, privyWallets?.length, walletAddress, walletAdapterConnected, isConnected, isWalletLoading]);
-  
   // Create PublicKey from address for balance fetching
   const publicKey = useMemo(() => {
     if (!walletAddress) return null;
@@ -132,7 +120,6 @@ export function useSolanaWallet(): WalletState {
         const data = await response.json();
         if (data.success && data.escrow_address) {
           setEscrowAddress(data.escrow_address);
-          console.log('[useSolanaWallet] Escrow address:', data.escrow_address);
         }
       } catch (error) {
         console.error('[useSolanaWallet] Error fetching escrow address:', error);
@@ -301,7 +288,6 @@ export function useSolanaWallet(): WalletState {
       // If token refresh fails, the session is invalid - logout to clear stale tokens
       const errorMessage = e instanceof Error ? e.message : String(e);
       if (errorMessage.includes('refresh') || errorMessage.includes('token')) {
-        console.log('[useSolanaWallet] Stale session detected, logging out...');
         try {
           await logout();
         } catch (logoutError) {
@@ -324,15 +310,12 @@ export function useSolanaWallet(): WalletState {
     
     // Wait for Privy authentication before making API calls
     if (!authenticated) {
-      console.log('[useSolanaWallet] Waiting for Privy authentication...');
       return;
     }
     
     setIsLoadingDepositedBalance(true);
     
     try {
-      console.log('[useSolanaWallet] Fetching profile for:', walletAddress);
-      
       // Get Privy auth token (optional - backend should work without it)
       const token = await getAuthToken();
       
@@ -348,7 +331,6 @@ export function useSolanaWallet(): WalletState {
       
       if (response.ok) {
         const profile = await response.json();
-        console.log('[useSolanaWallet] Got profile:', profile);
         setProfileId(profile.id);
         setUsernameState(profile.username);
         setNeedsUsername(profile.needsUsername || profile.username === null);

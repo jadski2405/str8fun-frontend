@@ -265,13 +265,6 @@ const TradeDeck: React.FC<TradeDeckProps> = ({
           SELL
         </button>
       </div>
-
-      {/* Token Balance Info */}
-      {tokenBalance > 0 && (
-        <div className="trd-token-info">
-          Tokens: {formatTokens(tokenBalance)}
-        </div>
-      )}
     </div>
   );
 };
@@ -402,12 +395,6 @@ export const MobileTradeDeck: React.FC<MobileTradeDeckProps> = ({
         >
           SELL
         </button>
-      </div>
-
-      {/* Current Price Display */}
-      <div className="mobile-price-display">
-        <span className="mobile-price-label">Price</span>
-        <span className="mobile-price-value">{currentPrice.toFixed(6)}</span>
       </div>
     </div>
   );
