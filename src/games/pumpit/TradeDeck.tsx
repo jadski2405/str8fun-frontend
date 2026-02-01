@@ -26,11 +26,6 @@ const formatSOL = (value: number): string => {
   return value.toFixed(3);
 };
 
-// Helper: Format tokens to 4 decimal places (for small amounts)
-const formatTokens = (value: number): string => {
-  return value.toFixed(4);
-};
-
 // ============================================================================
 // TRADE DECK COMPONENT - Vertical Stacked Layout (rugs.fun style)
 // ============================================================================
@@ -283,7 +278,7 @@ interface MobileTradeDeckProps {
 
 export const MobileTradeDeck: React.FC<MobileTradeDeckProps> = ({
   balance,
-  currentPrice,
+  currentPrice: _currentPrice,
   onBuy,
   onSell,
   tokenBalance = 0,
