@@ -295,7 +295,7 @@ export const MobileTradeDeck: React.FC<MobileTradeDeckProps> = ({
     }
   };
 
-  const adjustAmount = useCallback((type: 'percent', value: number) => {
+  const adjustAmount = useCallback((_type: 'percent', value: number) => {
     // For selling - calculate from position value (like desktop)
     if (tokenBalance > 0) {
       const positionValueInSol = tokenBalance * currentPrice;
