@@ -712,6 +712,7 @@ const PumpItSim: React.FC = () => {
             isWalletConnected={connected}
             walletAddress={publicKey?.toString() || null}
             getAuthToken={getAuthToken}
+            onlineCount={game.onlineCount}
           />
         }
         sidebarCollapsed={chatCollapsed}

@@ -9,6 +9,7 @@ interface GlobalChatSidebarProps {
   isWalletConnected?: boolean;
   walletAddress?: string | null;
   getAuthToken?: () => Promise<string | null>;
+  onlineCount?: number;
 }
 
 // Badge styles - enough variety to avoid duplicates in typical chat
@@ -33,15 +34,14 @@ const GlobalChatSidebar: React.FC<GlobalChatSidebarProps> = ({
   room = 'global',
   isWalletConnected = false,
   walletAddress = null,
-  getAuthToken = undefined
+  getAuthToken = undefined,
+  onlineCount = 50
 }) => {
   const [inputValue, setInputValue] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   
   const { messages, loading, error, sendMessage, isRateLimited } = useChat({ room, walletAddress, getAuthToken });
-  
-  const onlineCount = 1247;
 
   // Build a map of unique usernames to unique badge styles
   // This ensures no two users share the same badge in the current message list
