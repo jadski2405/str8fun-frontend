@@ -520,13 +520,6 @@ const PumpItSim: React.FC = () => {
         </div>
       )}
 
-      {/* Trade Error Popup */}
-      {tradeError && (
-        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 bg-red-500/90 text-white px-6 py-3 rounded-lg shadow-lg">
-          {tradeError}
-        </div>
-      )}
-
       {/* Username Modal - First time setup */}
       {showUsernameModal && connected && (
         <div className="username-modal-overlay">
@@ -738,6 +731,12 @@ const PumpItSim: React.FC = () => {
               </div>
             )}
             <div className="relative flex-1">
+              {/* Trade Error Popup - centered at top of chart */}
+              {tradeError && (
+                <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-20 bg-red-500/90 text-white px-6 py-3 rounded-lg shadow-lg font-dynapuff text-sm">
+                  {tradeError}
+                </div>
+              )}
               <RugsChart 
                 data={candles} 
                 currentPrice={price} 
