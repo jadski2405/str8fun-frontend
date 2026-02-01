@@ -166,7 +166,7 @@ export interface RoundEndEvent {
 // ============================================================================
 
 export const TradeErrors = {
-  MIN_TRADE: { code: 'MIN_TRADE', message: 'Minimum trade is 0.01 SOL' },
+  MIN_TRADE: { code: 'MIN_TRADE', message: 'Minimum trade is 0.001 SOL' },
   MAX_TRADE: { code: 'MAX_TRADE', message: 'Maximum trade exceeded' },
   INSUFFICIENT_BALANCE: { code: 'INSUFFICIENT_BALANCE', message: 'Not enough SOL in wallet' },
   INSUFFICIENT_TOKENS: { code: 'INSUFFICIENT_TOKENS', message: 'Not enough tokens to sell' },
@@ -185,7 +185,7 @@ export type TradeErrorCode = keyof typeof TradeErrors;
 // ============================================================================
 
 export const GAME_CONSTANTS = {
-  MIN_TRADE_SOL: 0.01,
+  MIN_TRADE_SOL: 0.001,
   HOUSE_FEE_PERCENT: 2,
   ROUND_DURATION_SECONDS: 30,
   INITIAL_TOKEN_SUPPLY: 1_000_000,

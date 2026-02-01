@@ -25,7 +25,7 @@ export const ESCROW_WALLET = import.meta.env.VITE_ESCROW_WALLET || '';
 export const HOUSE_WALLET = import.meta.env.VITE_HOUSE_WALLET || '';
 
 // Trade constants
-export const MIN_TRADE_SOL = 0.01;
+export const MIN_TRADE_SOL = 0.001;
 export const HOUSE_FEE_PERCENT = 2;
 export const ROUND_DURATION_SECONDS = 30;
 export const INITIAL_TOKEN_SUPPLY = 1_000_000;

@@ -462,8 +462,8 @@ export function useSolanaWallet(): WalletState {
       return { success: false, error: 'Escrow wallet not configured - contact support' };
     }
     
-    if (amount < 0.01) {
-      return { success: false, error: 'Minimum deposit is 0.01 SOL' };
+    if (amount < 0.001) {
+      return { success: false, error: 'Minimum deposit is 0.001 SOL' };
     }
     
     if (amount > balance) {
@@ -593,8 +593,8 @@ export function useSolanaWallet(): WalletState {
       return { success: false, error: 'Wallet not connected' };
     }
     
-    if (amount < 0.01) {
-      return { success: false, error: 'Minimum withdrawal is 0.01 SOL' };
+    if (amount < 0.001) {
+      return { success: false, error: 'Minimum withdrawal is 0.001 SOL' };
     }
     
     if (amount > depositedBalance) {
