@@ -785,6 +785,7 @@ const PumpItSim: React.FC = () => {
             onSell={handleSell}
             tokenBalance={game.tokenBalance}
             connected={connected}
+            onError={setTradeError}
           />
         }
         leaderboard={

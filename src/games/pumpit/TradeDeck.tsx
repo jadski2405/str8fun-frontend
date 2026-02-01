@@ -274,26 +274,19 @@ interface MobileTradeDeckProps {
   onSell: (amount: number) => void;
   tokenBalance?: number;
   connected?: boolean;
+  onError?: (message: string) => void;
 }
 
 export const MobileTradeDeck: React.FC<MobileTradeDeckProps> = ({
   balance,
-  currentPrice: _currentPrice,
+  currentPrice,
   onBuy,
   onSell,
   tokenBalance = 0,
   connected: _connected = true,
+  onError,
 }) => {
   const [tradeAmount, setTradeAmount] = useState<string>('');
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  // Auto-hide error after 5 seconds
-  useEffect(() => {
-    if (errorMessage) {
-      const timer = setTimeout(() => setErrorMessage(null), 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [errorMessage]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -302,48 +295,47 @@ export const MobileTradeDeck: React.FC<MobileTradeDeckProps> = ({
     }
   };
 
-  const adjustAmount = useCallback((_type: 'percent', value: number) => {
-    const newValue = (balance * value) / 100;
-    setTradeAmount(newValue > 0 ? formatSOL(newValue) : '');
-  }, [balance]);
+  const adjustAmount = useCallback((type: 'percent', value: number) => {
+    // For selling - calculate from position value (like desktop)
+    if (tokenBalance > 0) {
+      const positionValueInSol = tokenBalance * currentPrice;
+      const newValue = (positionValueInSol * value) / 100;
+      setTradeAmount(newValue > 0 ? formatSOL(newValue) : '');
+    } else {
+      // No position - calculate from balance for buying
+      const newValue = (balance * value) / 100;
+      setTradeAmount(newValue > 0 ? formatSOL(newValue) : '');
+    }
+  }, [balance, tokenBalance, currentPrice]);
 
   const handleBuy = () => {
     const amount = parseFloat(tradeAmount) || 0;
     if (amount <= 0) {
-      setErrorMessage('Enter an amount to buy');
+      onError?.('Enter an amount to buy');
       return;
     }
     if (amount > balance) {
-      setErrorMessage('Insufficient balance');
+      onError?.('Insufficient balance - deposit SOL first');
       return;
     }
     onBuy(amount);
-    setTradeAmount('');
   };
 
   const handleSell = () => {
     const amount = parseFloat(tradeAmount) || 0;
     if (amount <= 0) {
-      setErrorMessage('Enter an amount to sell');
+      onError?.('Enter an amount to sell');
       return;
     }
     if (tokenBalance <= 0) {
-      setErrorMessage('No tokens to sell');
+      onError?.('No tokens to sell - buy first');
       return;
     }
     onSell(amount);
-    setTradeAmount('');
   };
 
   return (
     <div className="mobile-trade-deck">
-      {/* Error Popup */}
-      {errorMessage && (
-        <div className="mobile-error-popup">
-          {errorMessage}
-        </div>
-      )}
-
       {/* Amount Input with Presets */}
       <div className="mobile-trade-input-row">
         <div className="mobile-input-wrap">
