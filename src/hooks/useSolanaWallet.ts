@@ -2,7 +2,7 @@
 // WALLET HOOK - Custom hook for wallet state and actions
 // ============================================================================
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { usePrivy } from '@privy-io/react-auth';
 import { useWallets as usePrivySolanaWallets, useSignAndSendTransaction } from '@privy-io/react-auth/solana';
@@ -108,6 +108,9 @@ export function useSolanaWallet(): WalletState {
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
   const [depositedBalance, setDepositedBalance] = useState(0);
   const [isLoadingDepositedBalance, setIsLoadingDepositedBalance] = useState(false);
+  
+  // Track when we last manually updated balance (to prevent refresh overwriting)
+  const lastManualBalanceUpdate = useRef<number>(0);
   
   // Escrow address - fetched from API, fallback to env
   const [escrowAddress, setEscrowAddress] = useState<string>(ENV_ESCROW_WALLET);
@@ -316,6 +319,13 @@ export function useSolanaWallet(): WalletState {
     setIsLoadingDepositedBalance(true);
     
     try {
+      // Skip refresh if we recently did a manual balance update (e.g., after deposit/withdraw)
+      const timeSinceManualUpdate = Date.now() - lastManualBalanceUpdate.current;
+      if (timeSinceManualUpdate < 3000) {
+        setIsLoadingDepositedBalance(false);
+        return;
+      }
+      
       // Get Privy auth token (optional - backend should work without it)
       const token = await getAuthToken();
       
@@ -578,7 +588,8 @@ export function useSolanaWallet(): WalletState {
         return { success: false, error: result.error || 'Failed to confirm deposit' };
       }
       
-      // Update local state
+      // Update local state immediately
+      lastManualBalanceUpdate.current = Date.now();
       setDepositedBalance(Number(result.new_balance) || 0);
       await refreshBalance();
       
@@ -637,7 +648,8 @@ export function useSolanaWallet(): WalletState {
         return { success: false, error: result.error || 'Withdrawal failed' };
       }
       
-      // Update local state
+      // Update local state immediately
+      lastManualBalanceUpdate.current = Date.now();
       setDepositedBalance(Number(result.new_balance) || Math.max(0, depositedBalance - amount));
       await refreshBalance();
       
@@ -650,6 +662,7 @@ export function useSolanaWallet(): WalletState {
 
   // Immediate balance update (for after trades)
   const updateDepositedBalance = useCallback((newBalance: number) => {
+    lastManualBalanceUpdate.current = Date.now();
     setDepositedBalance(newBalance);
   }, []);
 
