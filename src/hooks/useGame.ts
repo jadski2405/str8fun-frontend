@@ -511,24 +511,34 @@ export function useGame(
       // Calculate trade locally first for optimistic update
       const calculation = calculateBuy(pool, solAmount);
       
-      // Get auth token if available (backend should work without it)
-      const token = getAuthToken ? await getAuthToken() : null;
       console.log('[Trade] Executing BUY:', { walletAddress, solAmount, roundId });
       
-      // Execute trade via Express API
-      const response = await fetch(`${API_URL}/api/game/trade`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}`, 'x-auth-token': token } : {}),
-        },
-        body: JSON.stringify({
-          wallet_address: walletAddress,
-          trade_type: 'buy',
-          sol_amount: solAmount,
-        }),
-      });
+      // Execute trade with retry on 401 (token refresh)
+      const executeWithRetry = async (retries = 1): Promise<Response> => {
+        const token = getAuthToken ? await getAuthToken() : null;
+        const response = await fetch(`${API_URL}/api/game/trade`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}`, 'x-auth-token': token } : {}),
+          },
+          body: JSON.stringify({
+            wallet_address: walletAddress,
+            trade_type: 'buy',
+            sol_amount: solAmount,
+          }),
+        });
+        
+        // Retry on 401 - token will be refreshed on next getAuthToken() call
+        if (response.status === 401 && retries > 0) {
+          console.log('[Trade] 401 on buy, refreshing token and retrying...');
+          await new Promise(r => setTimeout(r, 500));
+          return executeWithRetry(retries - 1);
+        }
+        return response;
+      };
       
+      const response = await executeWithRetry();
       const data = await response.json();
       
       if (!response.ok || !data.success) {
@@ -583,23 +593,34 @@ export function useGame(
       }
       
       // Get auth token if available (backend should work without it)
-      const token = getAuthToken ? await getAuthToken() : null;
       console.log('[Trade] Executing SELL:', { walletAddress, solAmount, roundId });
       
-      // Execute trade via Express API
-      const response = await fetch(`${API_URL}/api/game/trade`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}`, 'x-auth-token': token } : {}),
-        },
-        body: JSON.stringify({
-          wallet_address: walletAddress,
-          trade_type: 'sell',
-          sol_amount: solAmount,
-        }),
-      });
+      // Execute trade with retry on 401 (token refresh)
+      const executeWithRetry = async (retries = 1): Promise<Response> => {
+        const token = getAuthToken ? await getAuthToken() : null;
+        const response = await fetch(`${API_URL}/api/game/trade`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}`, 'x-auth-token': token } : {}),
+          },
+          body: JSON.stringify({
+            wallet_address: walletAddress,
+            trade_type: 'sell',
+            sol_amount: solAmount,
+          }),
+        });
+        
+        // Retry on 401 - token will be refreshed on next getAuthToken() call
+        if (response.status === 401 && retries > 0) {
+          console.log('[Trade] 401 on sell, refreshing token and retrying...');
+          await new Promise(r => setTimeout(r, 500));
+          return executeWithRetry(retries - 1);
+        }
+        return response;
+      };
       
+      const response = await executeWithRetry();
       const data = await response.json();
       
       if (!response.ok || !data.success) {

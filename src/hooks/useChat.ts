@@ -195,21 +195,32 @@ export function useChat({ room = 'pumpit', limit = 50, walletAddress = null, use
     }
 
     try {
-      // Get auth token if available
-      const token = getAuthToken ? await getAuthToken() : null;
+      // Send with retry on 401 (token refresh)
+      const sendWithRetry = async (retries = 1): Promise<Response> => {
+        const token = getAuthToken ? await getAuthToken() : null;
+        const response = await fetch(`${API_URL}/api/chat`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}`, 'x-auth-token': token } : {}),
+          },
+          body: JSON.stringify({
+            wallet_address: walletAddress,
+            message: trimmedText,
+            room,
+          }),
+        });
+        
+        // Retry on 401 - token will be refreshed on next getAuthToken() call
+        if (response.status === 401 && retries > 0) {
+          console.log('[Chat] 401 on send, refreshing token and retrying...');
+          await new Promise(r => setTimeout(r, 500));
+          return sendWithRetry(retries - 1);
+        }
+        return response;
+      };
       
-      const response = await fetch(`${API_URL}/api/chat`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
-          wallet_address: walletAddress,
-          message: trimmedText,
-          room,
-        }),
-      });
+      const response = await sendWithRetry();
 
       if (!response.ok) {
         const result = await response.json();

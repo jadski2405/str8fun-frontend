@@ -282,15 +282,20 @@ export function useSolanaWallet(): WalletState {
   // ============================================================================
   
   // Get Privy access token for authenticated API calls
+  // Privy's getAccessToken() automatically handles token refresh internally
   const getAuthToken = useCallback(async (): Promise<string | null> => {
     try {
       const token = await getAccessToken();
       return token;
     } catch (e: unknown) {
       console.error('Error getting Privy access token:', e);
-      // If token refresh fails, the session is invalid - logout to clear stale tokens
       const errorMessage = e instanceof Error ? e.message : String(e);
-      if (errorMessage.includes('refresh') || errorMessage.includes('token')) {
+      
+      // Only logout on definitive session expiration, not on temporary token issues
+      if (errorMessage.includes('session expired') || 
+          errorMessage.includes('not authenticated') ||
+          errorMessage.includes('user is not logged in')) {
+        console.log('[getAuthToken] Session expired, logging out...');
         try {
           await logout();
         } catch (logoutError) {
@@ -326,18 +331,28 @@ export function useSolanaWallet(): WalletState {
         return;
       }
       
-      // Get Privy auth token (optional - backend should work without it)
-      const token = await getAuthToken();
+      // Fetch with retry on 401 (token refresh)
+      const fetchWithRetry = async (retries = 1): Promise<Response> => {
+        const token = await getAuthToken();
+        const response = await fetch(`${API_URL}/api/auth/profile`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}`, 'x-auth-token': token } : {}),
+          },
+          body: JSON.stringify({ wallet_address: walletAddress }),
+        });
+        
+        // Retry on 401 - Privy will refresh token on next getAuthToken() call
+        if (response.status === 401 && retries > 0) {
+          console.log('[useSolanaWallet] 401 on profile fetch, refreshing token and retrying...');
+          await new Promise(r => setTimeout(r, 500));
+          return fetchWithRetry(retries - 1);
+        }
+        return response;
+      };
       
-      // Get or create profile via Express API
-      const response = await fetch(`${API_URL}/api/auth/profile`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}`, 'x-auth-token': token } : {}),
-        },
-        body: JSON.stringify({ wallet_address: walletAddress }),
-      });
+      const response = await fetchWithRetry();
       
       if (response.ok) {
         const profile = await response.json();
