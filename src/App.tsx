@@ -36,7 +36,7 @@ function LaunchCountdown() {
         padding: 20,
       }}
     >
-      <div style={{ fontSize: '4rem', marginBottom: 20 }}>🚀</div>
+      <div style={{ fontSize: '4rem', marginBottom: 20 }}>🎰</div>
       <h1 
         style={{ 
           fontSize: 'clamp(2rem, 8vw, 4rem)', 
@@ -47,7 +47,7 @@ function LaunchCountdown() {
           marginBottom: 10,
         }}
       >
-        PUMP IT
+        str8.fun
       </h1>
       <p style={{ fontSize: 'clamp(1rem, 3vw, 1.5rem)', color: 'rgba(255,255,255,0.7)', marginBottom: 40 }}>
         Launching Soon
