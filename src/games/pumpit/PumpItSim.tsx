@@ -804,21 +804,18 @@ const PumpItSim: React.FC = () => {
                 hasPosition={game.tokenBalance > 0}
               />
             </div>
-            {/* "Get Cooked" Overlay - shows for 4 seconds after crash */}
+            {/* "Get Rinsed" Overlay - shows for 4 seconds after crash */}
             {game.showGetCooked && (
               <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-20 rounded-lg pointer-events-none">
                 <div className="text-center">
-                  <div className="text-7xl font-dynapuff font-bold text-red-500 mb-3 animate-pulse" style={{ textShadow: '0 0 30px rgba(239, 68, 68, 0.8)' }}>
-                    Get Cooked
-                  </div>
-                  <div className="text-2xl font-dynapuff text-white/70">
-                    🔥 RUGGED 🔥
+                  <div className="text-7xl font-dynapuff font-bold text-red-500 animate-pulse" style={{ textShadow: '0 0 30px rgba(239, 68, 68, 0.8)' }}>
+                    Get Rinsed
                   </div>
                 </div>
               </div>
             )}
             {/* Round Countdown Overlay - inside chart only */}
-            {game.roundStatus === 'countdown' && !game.showGetCooked && connected && !showUsernameModal && (
+            {game.roundStatus === 'countdown' && !game.showGetCooked && game.countdownRemaining > 0 && (
               <div className="absolute inset-0 bg-black/70 flex items-center justify-center z-10 rounded-lg pointer-events-none">
                 <div className="text-center">
                   <div className="text-6xl font-dynapuff font-bold text-yellow-400 mb-3 animate-pulse">

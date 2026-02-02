@@ -20,8 +20,8 @@ const API_URL = import.meta.env.VITE_API_URL || 'https://api.str8.fun';
 const WS_URL = import.meta.env.VITE_WS_URL || 'wss://api.str8.fun';
 
 const { MIN_TRADE_SOL } = GAME_CONSTANTS;
-const COUNTDOWN_SECONDS = 12; // Time between rounds (after "Get Cooked" message)
-const GET_COOKED_DURATION = 4000; // 4 seconds for "Get Cooked" message
+const COUNTDOWN_SECONDS = 12; // Time between rounds (after "Get Rinsed" message)
+const GET_RINSED_DURATION = 4000; // 4 seconds for "Get Rinsed" message
 
 // ============================================================================
 // TYPES
@@ -408,13 +408,14 @@ export function useGame(
             setFinalMultiplier(Number(data.final_multiplier) || 0);
             setRoundStatus('ended');
             
-            // After 4 seconds of "Get Cooked", transition to countdown
+            // After 4 seconds of "Get Rinsed", transition to countdown
             setTimeout(() => {
+              console.log('[useGame] Get Rinsed timeout done, starting countdown');
               setShowGetCooked(false);
               setIsCrashed(false);
               setRoundStatus('countdown');
               setCountdownRemaining(COUNTDOWN_SECONDS);
-            }, GET_COOKED_DURATION);
+            }, GET_RINSED_DURATION);
           }
           
           // Update price multiplier from trade events
