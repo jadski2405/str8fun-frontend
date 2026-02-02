@@ -32,7 +32,9 @@ export const PrivyWalletProvider: React.FC<PrivyProviderProps> = ({ children }) 
         loginMethods: ['wallet'], // Wallet only - no email/social
         // Disable embedded wallets - only use external wallets
         embeddedWallets: {
-          createOnLogin: 'off',
+          solana: {
+            createOnLogin: 'off',
+          },
         },
         externalWallets: {
           solana: {

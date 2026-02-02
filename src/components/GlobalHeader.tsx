@@ -46,7 +46,7 @@ interface WalletConnectionModalProps {
 }
 
 const WalletConnectionModal: React.FC<WalletConnectionModalProps> = ({ isOpen, onClose }) => {
-  const { ready, authenticated } = usePrivy();
+  const { authenticated } = usePrivy();
   const { login } = useLogin({
     onComplete: () => {
       onClose();
