@@ -30,6 +30,13 @@ interface Candle {
   close: number;
 }
 
+// Trade marker for showing buy/sell points on chart
+export interface TradeMarker {
+  type: 'buy' | 'sell';
+  price: number;
+  candleIndex: number; // Index into candles array when trade happened
+}
+
 // ============================================================================
 // CONSTANTS
 // ============================================================================
@@ -128,6 +135,9 @@ const PumpItSim: React.FC = () => {
   
   // Trade error state for user feedback
   const [tradeError, setTradeError] = useState<string | null>(null);
+  
+  // Trade markers for showing buy/sell points on chart (user-specific, persists until round end)
+  const [tradeMarkers, setTradeMarkers] = useState<TradeMarker[]>([]);
   
   // Username modal state
   const [showUsernameModal, setShowUsernameModal] = useState(false);
@@ -265,6 +275,7 @@ const PumpItSim: React.FC = () => {
       targetPriceRef.current = INITIAL_PRICE;
       velocityRef.current = 0;
       setPrice(INITIAL_PRICE);
+      setTradeMarkers([]); // Reset trade markers for new round
       console.log('[PumpItSim] Chart reset for new round:', game.roundId);
     }
   }, [game.shouldResetChart, game.roundId]);
@@ -420,6 +431,13 @@ const PumpItSim: React.FC = () => {
         pendingImpact.current += PUMP_IMPACT * impactMultiplier;
         console.log(`🟢 BUY: ${amount.toFixed(4)} SOL`);
         
+        // Add trade marker at current price and candle
+        setTradeMarkers(prev => [...prev, {
+          type: 'buy',
+          price: priceRef.current,
+          candleIndex: candles.length - 1,
+        }]);
+        
         // Update balance immediately if returned, otherwise refresh
         if (result.newBalance !== undefined) {
           updateDepositedBalance(result.newBalance);
@@ -464,6 +482,13 @@ const PumpItSim: React.FC = () => {
         const impactMultiplier = amount / 0.1;
         pendingImpact.current -= DUMP_IMPACT * impactMultiplier;
         console.log(`🔴 SELL: ~${amount.toFixed(4)} SOL worth`);
+        
+        // Add trade marker at current price and candle
+        setTradeMarkers(prev => [...prev, {
+          type: 'sell',
+          price: priceRef.current,
+          candleIndex: candles.length - 1,
+        }]);
         
         // Update balance immediately if returned, otherwise refresh
         if (result.newBalance !== undefined) {
@@ -798,6 +823,7 @@ const PumpItSim: React.FC = () => {
                 positionValue={game.tokenBalance * price}
                 unrealizedPnL={game.unrealizedPnL}
                 hasPosition={game.tokenBalance > 0}
+                tradeMarkers={tradeMarkers}
               />
             </div>
             {/* "Get Rinsed" Overlay - shows for 4 seconds after crash */}

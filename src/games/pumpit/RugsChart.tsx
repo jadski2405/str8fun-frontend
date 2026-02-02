@@ -1,4 +1,5 @@
 import React, { useRef, useEffect } from 'react';
+import type { TradeMarker } from './PumpItSim';
 
 // ============================================================================
 // TYPES
@@ -17,6 +18,7 @@ interface RugsChartProps {
   positionValue?: number;   // Current value of player's position in SOL
   unrealizedPnL?: number;   // Player's unrealized profit/loss in SOL
   hasPosition?: boolean;    // Whether player has an open position
+  tradeMarkers?: TradeMarker[]; // User's buy/sell markers
 }
 
 // ============================================================================
@@ -52,7 +54,7 @@ const Y_AXIS_LERP_FACTOR = 0.06; // Smoother axis scaling (lower = smoother)
 // ============================================================================
 // RUGS CHART COMPONENT - Canvas Based for 60fps
 // ============================================================================
-const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, positionValue = 0, unrealizedPnL = 0, hasPosition = false }) => {
+const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, positionValue = 0, unrealizedPnL = 0, hasPosition = false, tradeMarkers = [] }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>(0);
@@ -71,13 +73,15 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
   const dataRef = useRef(data);
   const currentPriceRef = useRef(currentPrice);
   const startPriceRef = useRef(startPrice);
+  const tradeMarkersRef = useRef(tradeMarkers);
 
   // Update refs
   useEffect(() => {
     dataRef.current = data;
     currentPriceRef.current = currentPrice;
     startPriceRef.current = startPrice;
-  }, [data, currentPrice, startPrice]);
+    tradeMarkersRef.current = tradeMarkers;
+  }, [data, currentPrice, startPrice, tradeMarkers]);
 
   // ============================================================================
   // CAMERA IMPACT EFFECT - Detect big price changes (smooth)
@@ -279,6 +283,66 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
         ctx.fill();
         ctx.globalAlpha = 1;
       });
+
+      // ================================================================
+      // DRAW TRADE MARKERS (User's buy/sell indicators)
+      // ================================================================
+      const markers = tradeMarkersRef.current;
+      if (markers.length > 0) {
+        // Calculate which candles are visible (last FIXED_CANDLE_COUNT)
+        const totalCandles = data.length;
+        const visibleStartIndex = Math.max(0, totalCandles - FIXED_CANDLE_COUNT);
+        
+        // Group markers by candle index for vertical stacking
+        const markersByCandle: { [key: number]: typeof markers } = {};
+        markers.forEach(marker => {
+          const visibleIndex = marker.candleIndex - visibleStartIndex;
+          if (visibleIndex >= 0 && visibleIndex < FIXED_CANDLE_COUNT) {
+            if (!markersByCandle[visibleIndex]) {
+              markersByCandle[visibleIndex] = [];
+            }
+            markersByCandle[visibleIndex].push(marker);
+          }
+        });
+        
+        // Draw markers
+        Object.entries(markersByCandle).forEach(([candleIndexStr, candleMarkers]) => {
+          const candleIndex = parseInt(candleIndexStr);
+          const x = startOffset + candleIndex * candleWidth + candleWidth / 2;
+          
+          candleMarkers.forEach((marker, stackIndex) => {
+            const markerY = getNormY(marker.price);
+            // Offset vertically for stacking (20px apart in display coords, so 40 in internal)
+            const yOffset = stackIndex * 40;
+            const finalY = markerY - yOffset;
+            
+            const isBuy = marker.type === 'buy';
+            const markerColor = isBuy ? COLOR_GREEN : COLOR_RED;
+            const markerRadius = 14;
+            
+            // Draw circle with glow
+            ctx.shadowColor = markerColor;
+            ctx.shadowBlur = 8;
+            ctx.fillStyle = markerColor;
+            ctx.beginPath();
+            ctx.arc(x, finalY, markerRadius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            
+            // Draw border
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Draw letter (B or S)
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 14px DynaPuff, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(isBuy ? 'B' : 'S', x, finalY + 1);
+          });
+        });
+      }
 
       // ================================================================
       // DRAW CURRENT PRICE LINE with enhanced glow
