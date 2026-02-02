@@ -59,9 +59,16 @@ const WalletConnectionModal: React.FC<WalletConnectionModalProps> = ({ isOpen, o
   
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   
+  // Debug: Log modal state
+  console.log('[WalletModal] isOpen:', isOpen, 'ready:', ready, 'authenticated:', authenticated);
+  
   // Handle Privy login - opens Privy's modal with our wallet options
   const handleConnectWithPrivy = async () => {
-    if (!ready) return;
+    console.log('[WalletModal] Connect button clicked, ready:', ready, 'authenticated:', authenticated);
+    if (!ready) {
+      console.log('[WalletModal] Privy not ready, aborting');
+      return;
+    }
     
     // If already authenticated, just close the modal
     if (authenticated) {
@@ -1033,6 +1040,7 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
 
   // Handle connect button click - use custom modal
   const handleConnectClick = () => {
+    console.log('[GlobalHeader] Connect button clicked, opening modal');
     setShowWalletConnectionModal(true);
   };
 
