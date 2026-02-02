@@ -85,7 +85,6 @@ export function useSolanaWallet(): WalletState {
   
   // Derive wallet address: Privy wallet first, then wallet-adapter
   const walletAddress = useMemo(() => {
-  const walletAddress = useMemo(() => {
     if (privyWallet?.address) return privyWallet.address;
     if (walletAdapterPublicKey) return walletAdapterPublicKey.toString();
     return null;
