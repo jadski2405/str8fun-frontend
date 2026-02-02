@@ -362,14 +362,8 @@ export function useGame(
         try {
           const data = JSON.parse(event.data);
           
-          // Debug: Log all incoming messages
-          if (data.type === 'PRICE_TICK' || data.type === 'ROUND_UPDATE') {
-            console.log('[WebSocket] Received:', data.type, data);
-          }
-          
           if (data.type === 'ROUND_UPDATE' && data.round) {
             const round = data.round;
-            console.log('[WebSocket] Round update - price_mode:', round.price_mode, 'tick_price:', round.tick_price);
             setPool({
               solBalance: Number(round.pool_sol_balance) || 0,
               tokenSupply: Number(round.pool_token_supply) || 1_000_000,
@@ -394,7 +388,6 @@ export function useGame(
           
           // PRICE_TICK: Server-generated price ticks for random mode
           if (data.type === 'PRICE_TICK') {
-            console.log('[WebSocket] PRICE_TICK received:', data.price);
             setTickPrice(Number(data.price));
             // Also update the price multiplier for display
             setBackendPriceMultiplier(Number(data.price));

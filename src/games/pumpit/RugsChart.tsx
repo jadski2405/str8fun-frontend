@@ -263,17 +263,9 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
         const bodyWidth = Math.max(candleWidth * 0.95, 8);
         const bodyX = x + (candleWidth - bodyWidth) / 2;
         
-        // Fade older candles slightly for depth
-        const fadeAlpha = 0.6 + (i / renderCandles.length) * 0.4;
-
-        // Gradient with enhanced colors
-        const gradient = ctx.createLinearGradient(bodyX, adjustedBodyTop, bodyX, adjustedBodyTop + bodyHeight + 20);
-        gradient.addColorStop(0, color);
-        gradient.addColorStop(0.5, isPump ? 'rgba(34, 197, 94, 0.7)' : 'rgba(239, 68, 68, 0.7)');
-        gradient.addColorStop(1, isPump ? 'rgba(0, 255, 127, 0.1)' : 'rgba(255, 59, 59, 0.1)');
-        
-        ctx.globalAlpha = fadeAlpha;
-        ctx.fillStyle = gradient;
+        // Solid colors - full opacity
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = color;
         ctx.beginPath();
         // DynaPuff style: fully rounded pill-shaped candles
         const cornerRadius = Math.min(bodyWidth / 2, bodyHeight / 2, 6);
@@ -283,22 +275,6 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
              ctx.rect(bodyX, adjustedBodyTop, bodyWidth, bodyHeight);
         }
         ctx.fill();
-
-        // Enhanced glow for recent candles
-        const isRecent = i >= renderCandles.length - 5;
-        ctx.shadowColor = color;
-        ctx.shadowBlur = isRecent ? 12 : 6;
-        ctx.strokeStyle = color;
-        ctx.lineWidth = isRecent ? 1 : 0.5;
-        ctx.beginPath();
-        // DynaPuff style: match fill corner radius
-        if (ctx.roundRect) {
-            ctx.roundRect(bodyX, adjustedBodyTop, bodyWidth, bodyHeight, cornerRadius);
-        } else {
-            ctx.rect(bodyX, adjustedBodyTop, bodyWidth, bodyHeight);
-        }
-        ctx.stroke();
-        ctx.shadowBlur = 0;
         ctx.globalAlpha = 1;
       });
 
