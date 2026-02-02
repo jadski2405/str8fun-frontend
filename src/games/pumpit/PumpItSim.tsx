@@ -132,6 +132,7 @@ const PumpItSim: React.FC = () => {
   const [isDepositing, setIsDepositing] = useState(false);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [depositError, setDepositError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   
   // Trade error state for user feedback
   const [tradeError, setTradeError] = useState<string | null>(null);
@@ -529,7 +530,13 @@ const PumpItSim: React.FC = () => {
       if (result.success) {
         setDepositAmount('');
         setShowDepositModal(false);
-        console.log(`✅ Deposited ${amount} SOL`);
+        
+        // Show bonus celebration if applicable
+        if (result.bonusApplied && result.bonusAmount) {
+          setSuccessMessage(`🎉 Deposited ${amount} SOL + ${result.bonusAmount} SOL bonus!`);
+        } else {
+          setSuccessMessage(`✅ Deposited ${amount} SOL`);
+        }
       } else {
         setDepositError(result.error || 'Deposit failed');
       }
@@ -558,7 +565,8 @@ const PumpItSim: React.FC = () => {
       const result = await withdraw(amount);
       if (result.success) {
         setWithdrawAmount('');
-        console.log(`✅ Withdrew ${amount} SOL | TX: ${result.txSignature?.slice(0, 8)}...`);
+        // Show pending message for withdrawals
+        setSuccessMessage(result.message || '⏳ Withdrawal submitted - processing within 24-48 hours');
       } else {
         setDepositError(result.error || 'Withdrawal failed');
       }
@@ -583,11 +591,26 @@ const PumpItSim: React.FC = () => {
     }
   }, [tradeError]);
 
+  // Auto-hide success message after 5 seconds
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => setSuccessMessage(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage]);
+
   // ============================================================================
   // RENDER
   // ============================================================================
   return (
     <>
+      {/* Success Message Toast */}
+      {successMessage && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg font-dynapuff text-sm animate-pulse">
+          {successMessage}
+        </div>
+      )}
+      
       {/* Backend Connection Error Banner */}
       {game.roundStatus === 'error' && (
         <div className="fixed top-0 left-0 right-0 z-50 bg-red-600 text-white p-4 text-center">

@@ -47,8 +47,8 @@ export interface WalletState {
   checkUsernameAvailable: (username: string) => Promise<{ valid: boolean; error?: string }>;
   
   // Deposit/Withdraw (require wallet approval)
-  deposit: (amount: number) => Promise<{ success: boolean; error?: string }>;
-  withdraw: (amount: number) => Promise<{ success: boolean; error?: string; txSignature?: string }>;
+  deposit: (amount: number) => Promise<{ success: boolean; error?: string; bonusApplied?: boolean; bonusAmount?: number }>;
+  withdraw: (amount: number) => Promise<{ success: boolean; error?: string; pending?: boolean; message?: string }>;
   
   // Legacy - kept for compatibility but prefer deposit system
   sendSOLToEscrow: (amount: number) => Promise<string | null>;
@@ -482,7 +482,7 @@ export function useSolanaWallet(): WalletState {
   // ============================================================================
   // DEPOSIT - Send SOL to escrow, credit in-game balance
   // ============================================================================
-  const deposit = useCallback(async (amount: number): Promise<{ success: boolean; error?: string }> => {
+  const deposit = useCallback(async (amount: number): Promise<{ success: boolean; error?: string; bonusApplied?: boolean; bonusAmount?: number }> => {
     if (!walletAddress) {
       return { success: false, error: 'Wallet not connected' };
     }
@@ -608,7 +608,12 @@ export function useSolanaWallet(): WalletState {
       setDepositedBalance(Number(result.new_balance) || 0);
       await refreshBalance();
       
-      return { success: true };
+      // Return success with optional bonus info
+      return { 
+        success: true,
+        bonusApplied: result.bonus_applied || false,
+        bonusAmount: result.bonus_amount || 0,
+      };
     } catch (error) {
       console.error('Deposit error:', error);
       return { success: false, error: 'Transaction failed or cancelled' };
@@ -618,7 +623,7 @@ export function useSolanaWallet(): WalletState {
   // ============================================================================
   // WITHDRAW - Send SOL from escrow back to wallet
   // ============================================================================
-  const withdraw = useCallback(async (amount: number): Promise<{ success: boolean; error?: string; txSignature?: string }> => {
+  const withdraw = useCallback(async (amount: number): Promise<{ success: boolean; error?: string; pending?: boolean; message?: string }> => {
     if (!walletAddress) {
       return { success: false, error: 'Wallet not connected' };
     }
@@ -636,8 +641,8 @@ export function useSolanaWallet(): WalletState {
       const token = await getAuthToken();
       console.log('[Withdraw] Requesting withdrawal:', { walletAddress, amount });
       
-      // Call Express API to process withdrawal
-      const response = await fetch(`${API_URL}/api/withdraw`, {
+      // Call Express API to process withdrawal (new endpoint)
+      const response = await fetch(`${API_URL}/api/deposit/withdraw`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -668,7 +673,12 @@ export function useSolanaWallet(): WalletState {
       setDepositedBalance(Number(result.new_balance) || Math.max(0, depositedBalance - amount));
       await refreshBalance();
       
-      return { success: true, txSignature: result.tx_signature };
+      // Withdrawals are now pending (processed within 24-48 hours)
+      return { 
+        success: true, 
+        pending: true,
+        message: result.message || 'Withdrawal request submitted. Processing within 24-48 hours.',
+      };
     } catch (error) {
       console.error('Withdrawal error:', error);
       return { success: false, error: 'Withdrawal failed' };
