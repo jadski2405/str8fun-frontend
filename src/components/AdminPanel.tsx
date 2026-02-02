@@ -14,7 +14,7 @@ interface AdminPanelProps {
   walletAddress: string | null;
   getAuthToken?: () => Promise<string | null>;
   currentRoundId?: string | null;
-  currentRoundStatus?: 'waiting' | 'active' | 'ended';
+  currentRoundStatus?: 'loading' | 'active' | 'ended' | 'countdown' | 'error';
 }
 
 type RoundMode = 'amm' | 'random';
@@ -221,10 +221,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
               <div className="flex items-center justify-between">
                 <span className={`text-sm font-medium ${
                   currentRoundStatus === 'active' ? 'text-green-400' : 
-                  currentRoundStatus === 'waiting' ? 'text-yellow-400' : 'text-gray-400'
+                  currentRoundStatus === 'countdown' ? 'text-yellow-400' : 
+                  currentRoundStatus === 'loading' ? 'text-blue-400' :
+                  currentRoundStatus === 'error' ? 'text-red-400' : 'text-gray-400'
                 }`}>
                   {currentRoundStatus === 'active' ? '🟢 Active' : 
-                   currentRoundStatus === 'waiting' ? '🟡 Waiting' : '⚫ Ended'}
+                   currentRoundStatus === 'countdown' ? '🟡 Countdown' : 
+                   currentRoundStatus === 'loading' ? '🔵 Loading' :
+                   currentRoundStatus === 'error' ? '🔴 Error' : '⚫ Ended'}
                 </span>
                 <span className="text-xs text-purple-400 font-medium uppercase">
                   {currentMode}
