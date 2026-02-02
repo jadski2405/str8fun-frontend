@@ -85,7 +85,7 @@ function LaunchCountdown() {
             >
               {Math.max(0, value).toString().padStart(2, '0')}
             </div>
-            <div style={{ fontSize: 'clamp(0.6rem, 2vw, 0.9rem)', color: 'rgba(255,255,255,0.5)', marginTop: 5 }}>
+            <div style={{ fontSize: 'clamp(0.6rem, 2vw, 0.9rem)', color: 'rgba(255,255,255,0.5)', marginTop: 15 }}>
               {label}
             </div>
           </div>
