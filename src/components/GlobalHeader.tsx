@@ -49,7 +49,6 @@ const WalletConnectionModal: React.FC<WalletConnectionModalProps> = ({ isOpen, o
   const { ready, authenticated } = usePrivy();
   const { login } = useLogin({
     onComplete: () => {
-      console.log('[Privy] Login complete');
       onClose();
     },
     onError: (error) => {
@@ -59,16 +58,10 @@ const WalletConnectionModal: React.FC<WalletConnectionModalProps> = ({ isOpen, o
   
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   
-  // Debug: Log modal state
-  console.log('[WalletModal] isOpen:', isOpen, 'ready:', ready, 'authenticated:', authenticated);
-  
   // Handle Privy login - opens Privy's modal with our wallet options
   const handleConnectWithPrivy = async () => {
-    console.log('[WalletModal] Connect button clicked, ready:', ready, 'authenticated:', authenticated);
-    
     // If already authenticated, just close the modal
     if (authenticated) {
-      console.log('[Privy] Already authenticated, closing modal');
       onClose();
       return;
     }
@@ -967,9 +960,6 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
     disconnect: disconnectWallet,
   } = useSolanaWallet();
   
-  // Debug: Log connection state on every render
-  console.log('[GlobalHeader] Render - isConnected:', isConnected, 'walletAddress:', walletAddress);
-  
   // Dropdown states
   const [showWalletMenu, setShowWalletMenu] = useState(false);
   const [showDepositMenu, setShowDepositMenu] = useState(false);
@@ -1040,7 +1030,6 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
 
   // Handle connect button click - use custom modal
   const handleConnectClick = () => {
-    console.log('[GlobalHeader] Connect button clicked, opening modal');
     setShowWalletConnectionModal(true);
   };
 

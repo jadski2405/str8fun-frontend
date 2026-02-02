@@ -30,13 +30,15 @@ export const PrivyWalletProvider: React.FC<PrivyProviderProps> = ({ children }) 
           walletChainType: 'solana-only',
         },
         loginMethods: ['wallet'], // Wallet only - no email/social
+        // Disable embedded wallets - only use external wallets
+        embeddedWallets: {
+          createOnLogin: 'off',
+        },
         externalWallets: {
           solana: {
             connectors: solanaConnectors,
           },
         },
-        // Note: config.solana.rpcs is only needed for embedded wallet UIs
-        // External wallets like Phantom/Solflare handle their own RPC
       }}
     >
       {children}
