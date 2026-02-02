@@ -11,7 +11,6 @@ import { GAME_CONSTANTS } from '../../types/game';
 import GameLayout from '../../components/layout/GameLayout';
 import GlobalHeader from '../../components/GlobalHeader';
 import GlobalChatSidebar from '../../components/GlobalChatSidebar';
-import AdminPanel from '../../components/AdminPanel';
 import solanaLogo from '../../assets/logo_solana.png';
 
 // ============================================================================
@@ -756,14 +755,6 @@ const PumpItSim: React.FC = () => {
           </div>
         </div>
       )}
-
-      {/* Admin Panel - Only visible to admin wallet */}
-      <AdminPanel
-        walletAddress={publicKey?.toString() || null}
-        getAuthToken={getAuthToken}
-        currentRoundId={game.roundId}
-        currentRoundStatus={game.roundStatus}
-      />
 
       {/* Main Game Layout */}
       <GameLayout
