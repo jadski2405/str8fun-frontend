@@ -37,12 +37,17 @@ const PADDING_RIGHT = 68;            // Scaled padding (1.5x)
 const PADDING_LEFT = 15;             // Scaled padding (1.5x)
 const FIXED_CANDLE_COUNT = 60;       // Fixed number of candle slots to display
 
-// Colors - matching site background
-const COLOR_BG = '#0B111D';
+// Colors - matching site background (grey panels)
+const COLOR_BG = '#15161D';
 const COLOR_GREEN = '#22C55E';
+const COLOR_GREEN_GLOW = 'rgba(34, 197, 94, 0.6)';
 const COLOR_RED = '#EF4444';
+const COLOR_RED_GLOW = 'rgba(239, 68, 68, 0.6)';
 const COLOR_GRID = 'rgba(255, 255, 255, 0.04)';
 const COLOR_TEXT = 'rgba(255, 255, 255, 0.4)';
+
+// Animation smoothing
+const Y_AXIS_LERP_FACTOR = 0.06; // Smoother axis scaling (lower = smoother)
 
 // ============================================================================
 // RUGS CHART COMPONENT - Canvas Based for 60fps
@@ -155,8 +160,8 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
       targetMinRef.current = minP - padding;
       targetMaxRef.current = maxP + padding;
 
-      // Smooth interpolation
-      const lerpFactor = 0.1;
+      // Smooth interpolation (slower for smoother feel)
+      const lerpFactor = Y_AXIS_LERP_FACTOR;
       animatedMinRef.current += (targetMinRef.current - animatedMinRef.current) * lerpFactor;
       animatedMaxRef.current += (targetMaxRef.current - animatedMaxRef.current) * lerpFactor;
       
@@ -247,72 +252,87 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
         const isPump = candle.close >= candle.open;
         const color = isPump ? COLOR_GREEN : COLOR_RED;
 
-        // Wick
-        const wickX = x + candleWidth / 2;
-        const wickTop = getNormY(candle.high);
-        const wickBottom = getNormY(candle.low);
-        
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(wickX, wickTop);
-        ctx.lineTo(wickX, wickBottom);
-        ctx.stroke();
-
         // Body
         const bodyTop = getNormY(Math.max(candle.open, candle.close));
         const bodyBottom = getNormY(Math.min(candle.open, candle.close));
         const rawHeight = bodyBottom - bodyTop;
-        const bodyHeight = Math.max(rawHeight, 4);
-        const adjustedBodyTop = rawHeight < 4 ? bodyTop - (4 - rawHeight) / 2 : bodyTop;
+        const bodyHeight = Math.max(rawHeight, 6); // Slightly taller minimum for DynaPuff style
+        const adjustedBodyTop = rawHeight < 6 ? bodyTop - (6 - rawHeight) / 2 : bodyTop;
         
-        const bodyWidth = Math.max(candleWidth - 2, 2);
+        // DynaPuff style: extra chunky, thicc candles
+        const bodyWidth = Math.max(candleWidth * 0.95, 8);
         const bodyX = x + (candleWidth - bodyWidth) / 2;
+        
+        // Fade older candles slightly for depth
+        const fadeAlpha = 0.6 + (i / renderCandles.length) * 0.4;
 
-        // Gradient
+        // Gradient with enhanced colors
         const gradient = ctx.createLinearGradient(bodyX, adjustedBodyTop, bodyX, adjustedBodyTop + bodyHeight + 20);
         gradient.addColorStop(0, color);
-        gradient.addColorStop(1, isPump ? 'rgba(0, 255, 127, 0.15)' : 'rgba(255, 59, 59, 0.15)');
+        gradient.addColorStop(0.5, isPump ? 'rgba(34, 197, 94, 0.7)' : 'rgba(239, 68, 68, 0.7)');
+        gradient.addColorStop(1, isPump ? 'rgba(0, 255, 127, 0.1)' : 'rgba(255, 59, 59, 0.1)');
         
+        ctx.globalAlpha = fadeAlpha;
         ctx.fillStyle = gradient;
         ctx.beginPath();
+        // DynaPuff style: fully rounded pill-shaped candles
+        const cornerRadius = Math.min(bodyWidth / 2, bodyHeight / 2, 6);
         if (ctx.roundRect) {
-            ctx.roundRect(bodyX, adjustedBodyTop, bodyWidth, bodyHeight, 2);
+            ctx.roundRect(bodyX, adjustedBodyTop, bodyWidth, bodyHeight, cornerRadius);
         } else {
              ctx.rect(bodyX, adjustedBodyTop, bodyWidth, bodyHeight);
         }
         ctx.fill();
 
-        // Glow
+        // Enhanced glow for recent candles
+        const isRecent = i >= renderCandles.length - 5;
         ctx.shadowColor = color;
-        ctx.shadowBlur = 8;
+        ctx.shadowBlur = isRecent ? 12 : 6;
         ctx.strokeStyle = color;
-        ctx.lineWidth = 0.5;
+        ctx.lineWidth = isRecent ? 1 : 0.5;
         ctx.beginPath();
-         if (ctx.roundRect) {
-            ctx.roundRect(bodyX, adjustedBodyTop, bodyWidth, bodyHeight, 2);
+        // DynaPuff style: match fill corner radius
+        if (ctx.roundRect) {
+            ctx.roundRect(bodyX, adjustedBodyTop, bodyWidth, bodyHeight, cornerRadius);
         } else {
-             ctx.rect(bodyX, adjustedBodyTop, bodyWidth, bodyHeight);
+            ctx.rect(bodyX, adjustedBodyTop, bodyWidth, bodyHeight);
         }
         ctx.stroke();
         ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
       });
 
       // ================================================================
-      // DRAW CURRENT PRICE LINE
+      // DRAW CURRENT PRICE LINE with enhanced glow
       // ================================================================
       if (currentPrice > 0) {
         const priceY = getNormY(currentPrice);
 
-        const dashOffset = (timestamp / 50) % 24;
+        const dashOffset = (timestamp / 40) % 24; // Slightly faster animation
+        const glowColor = isUp ? COLOR_GREEN_GLOW : COLOR_RED_GLOW;
         
+        // Pulsing glow intensity
+        const pulseIntensity = 0.7 + Math.sin(timestamp * 0.005) * 0.3;
+        
+        // Draw outer glow first (larger, softer)
+        ctx.strokeStyle = glowColor;
+        ctx.lineWidth = 6;
+        ctx.setLineDash([]);
+        ctx.globalAlpha = 0.3 * pulseIntensity;
+        ctx.beginPath();
+        ctx.moveTo(0, priceY);
+        ctx.lineTo(width, priceY);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+        
+        // Main dashed line
         ctx.strokeStyle = lineColor;
         ctx.lineWidth = 2;
         ctx.setLineDash([8, 4]);
         ctx.lineDashOffset = -dashOffset;
         
         ctx.shadowColor = lineColor;
-        ctx.shadowBlur = 6;
+        ctx.shadowBlur = 12;
         
         ctx.beginPath();
         ctx.moveTo(0, priceY);

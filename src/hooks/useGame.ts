@@ -33,11 +33,13 @@ export interface GameState {
   timeRemaining: number;
   countdownRemaining: number;
   shouldResetChart: boolean;
+  priceMode: 'amm' | 'random';  // AMM = pool-based, Random = server tick engine
   
   // Pool state
   pool: Pool;
   price: number;
   priceMultiplier: number;
+  tickPrice: number | null;  // Server-generated tick price (random mode)
   
   // Player state
   playerPosition: PlayerPosition | null;
@@ -83,6 +85,12 @@ export function useGame(
   
   // Backend-provided price multiplier (use directly, no local calculation)
   const [backendPriceMultiplier, setBackendPriceMultiplier] = useState<number>(1.0);
+  
+  // Price mode: 'amm' or 'random' (from backend)
+  const [priceMode, setPriceMode] = useState<'amm' | 'random'>('random');
+  
+  // Server tick price for random mode
+  const [tickPrice, setTickPrice] = useState<number | null>(null);
   
   // Track previous round ID for chart reset
   const [previousRoundId, setPreviousRoundId] = useState<string | null>(null);
@@ -158,6 +166,16 @@ export function useGame(
         setRoundStatus(round.status === 'active' ? 'active' : 'ended');
         setErrorMessage(null);
         setCountdownRemaining(0);
+        
+        // Set price mode from backend
+        if (round.price_mode) {
+          setPriceMode(round.price_mode as 'amm' | 'random');
+        }
+        
+        // Set tick price if in random mode
+        if (round.tick_price !== undefined) {
+          setTickPrice(Number(round.tick_price));
+        }
         
         // Calculate time remaining
         const elapsed = (Date.now() - new Date(round.started_at).getTime()) / 1000;
@@ -350,8 +368,14 @@ export function useGame(
         try {
           const data = JSON.parse(event.data);
           
+          // Debug: Log all incoming messages
+          if (data.type === 'PRICE_TICK' || data.type === 'ROUND_UPDATE') {
+            console.log('[WebSocket] Received:', data.type, data);
+          }
+          
           if (data.type === 'ROUND_UPDATE' && data.round) {
             const round = data.round;
+            console.log('[WebSocket] Round update - price_mode:', round.price_mode, 'tick_price:', round.tick_price);
             setPool({
               solBalance: Number(round.pool_sol_balance) || 0,
               tokenSupply: Number(round.pool_token_supply) || 1_000_000,
@@ -361,9 +385,25 @@ export function useGame(
             if (round.price_multiplier !== undefined) {
               setBackendPriceMultiplier(Number(round.price_multiplier));
             }
+            // Update price mode
+            if (round.price_mode) {
+              setPriceMode(round.price_mode as 'amm' | 'random');
+            }
+            // Update tick price for random mode
+            if (round.tick_price !== undefined) {
+              setTickPrice(Number(round.tick_price));
+            }
             if (round.status !== 'active') {
               setRoundStatus('ended');
             }
+          }
+          
+          // PRICE_TICK: Server-generated price ticks for random mode
+          if (data.type === 'PRICE_TICK') {
+            console.log('[WebSocket] PRICE_TICK received:', data.price);
+            setTickPrice(Number(data.price));
+            // Also update the price multiplier for display
+            setBackendPriceMultiplier(Number(data.price));
           }
           
           // Update price multiplier from trade events
@@ -587,11 +627,13 @@ export function useGame(
     timeRemaining,
     countdownRemaining,
     shouldResetChart,
+    priceMode,
     
     // Pool state
     pool,
     price,
     priceMultiplier,
+    tickPrice,
     
     // Player state
     playerPosition,

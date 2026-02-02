@@ -11,6 +11,7 @@ import { GAME_CONSTANTS } from '../../types/game';
 import GameLayout from '../../components/layout/GameLayout';
 import GlobalHeader from '../../components/GlobalHeader';
 import GlobalChatSidebar from '../../components/GlobalChatSidebar';
+import AdminPanel from '../../components/AdminPanel';
 import solanaLogo from '../../assets/logo_solana.png';
 
 // ============================================================================
@@ -38,6 +39,9 @@ const TICKS_PER_CANDLE = 5;
 const PUMP_IMPACT = 0.08; // +8% per 0.1 SOL (amplified)
 const DUMP_IMPACT = 0.06; // -6% per 0.1 SOL (amplified)
 const INITIAL_PRICE = 1.0;
+
+// Smooth animation constants
+const PRICE_LERP_SPEED = 0.08; // Smooth interpolation speed (lower = smoother)
 
 // ============================================================================
 // HELPER: Generate flat candles
@@ -141,6 +145,10 @@ const PumpItSim: React.FC = () => {
     return false;
   });
   
+  // Smooth animation refs for server tick price
+  const targetPriceRef = useRef(INITIAL_PRICE);
+  const velocityRef = useRef(0);
+  
   // Player's own PnL tracking (TODO: Backend integration needed)
   // For now, calculate from local position state
   const playerPnL: PlayerPnL | null = game.tokenBalance > 0 ? {
@@ -222,14 +230,19 @@ const PumpItSim: React.FC = () => {
   }, [usernameInput, usernameError, setUsername]);
 
   // ============================================================================
-  // SYNC PRICE FROM GAME STATE
+  // SYNC PRICE FROM GAME STATE (Server tick price or AMM price)
   // ============================================================================
   useEffect(() => {
-    if (game.roundStatus === 'active' && game.priceMultiplier > 0) {
-      // Use the real pool price for the chart
-      priceRef.current = game.priceMultiplier;
+    if (game.roundStatus === 'active') {
+      // In random mode, use server tick price; in AMM mode, use pool price
+      if (game.priceMode === 'random' && game.tickPrice !== null) {
+        targetPriceRef.current = game.tickPrice;
+      } else if (game.priceMultiplier > 0) {
+        targetPriceRef.current = game.priceMultiplier;
+        priceRef.current = game.priceMultiplier;
+      }
     }
-  }, [game.priceMultiplier, game.roundStatus]);
+  }, [game.priceMultiplier, game.tickPrice, game.priceMode, game.roundStatus]);
 
   // ============================================================================
   // RESET CHART ON NEW ROUND
@@ -238,6 +251,8 @@ const PumpItSim: React.FC = () => {
     if (game.shouldResetChart) {
       setCandles(generateFlatCandles(10, INITIAL_PRICE));
       priceRef.current = INITIAL_PRICE;
+      targetPriceRef.current = INITIAL_PRICE;
+      velocityRef.current = 0;
       setPrice(INITIAL_PRICE);
       console.log('[PumpItSim] Chart reset for new round:', game.roundId);
     }
@@ -248,8 +263,28 @@ const PumpItSim: React.FC = () => {
   // ============================================================================
   useEffect(() => {
     let animationId: number;
+    let lastTime = performance.now();
     
-    const animatePrice = () => {
+    const animatePrice = (currentTime: number) => {
+      const deltaTime = Math.min((currentTime - lastTime) / 16.67, 2); // Normalize to ~60fps, cap at 2x
+      lastTime = currentTime;
+      
+      // Smoothly interpolate towards target price (from server ticks or AMM)
+      const diff = targetPriceRef.current - priceRef.current;
+      
+      // Apply velocity (momentum)
+      velocityRef.current *= 0.92; // Friction/decay
+      
+      // Smooth lerp towards target + velocity
+      const lerpAmount = diff * PRICE_LERP_SPEED * deltaTime;
+      const velocityAmount = velocityRef.current * priceRef.current * deltaTime;
+      
+      let newPrice = priceRef.current + lerpAmount + velocityAmount;
+      
+      // Clamp to reasonable bounds
+      newPrice = Math.max(0.1, Math.min(10.0, newPrice));
+      priceRef.current = newPrice;
+      
       // Update UI with current ref price
       setPrice(priceRef.current);
       
@@ -694,6 +729,14 @@ const PumpItSim: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Admin Panel - Only visible to admin wallet */}
+      <AdminPanel
+        walletAddress={publicKey?.toString() || null}
+        getAuthToken={getAuthToken}
+        currentRoundId={game.roundId}
+        currentRoundStatus={game.roundStatus}
+      />
 
       {/* Main Game Layout */}
       <GameLayout

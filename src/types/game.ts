@@ -187,7 +187,7 @@ export type TradeErrorCode = keyof typeof TradeErrors;
 export const GAME_CONSTANTS = {
   MIN_TRADE_SOL: 0.001,
   HOUSE_FEE_PERCENT: 2,
-  ROUND_DURATION_SECONDS: 30,
+  ROUND_DURATION_SECONDS: 60,
   INITIAL_TOKEN_SUPPLY: 1_000_000,
   BASE_PRICE: 0.000001, // 1.00x multiplier
   TICK_INTERVAL_MS: 250,

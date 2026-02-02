@@ -27,7 +27,7 @@ export const HOUSE_WALLET = import.meta.env.VITE_HOUSE_WALLET || '';
 // Trade constants
 export const MIN_TRADE_SOL = 0.001;
 export const HOUSE_FEE_PERCENT = 2;
-export const ROUND_DURATION_SECONDS = 30;
+export const ROUND_DURATION_SECONDS = 60;
 export const INITIAL_TOKEN_SUPPLY = 1_000_000;
 export const INITIAL_PRICE = 0.000001; // 1.00x multiplier at this base
 
