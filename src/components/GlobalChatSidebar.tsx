@@ -344,7 +344,7 @@ const GlobalChatSidebar: React.FC<GlobalChatSidebarProps> = ({
                 fontFamily: "'DynaPuff', sans-serif",
                 boxSizing: 'border-box',
                 cursor: isRateLimited || !inputValue.trim() ? 'not-allowed' : 'pointer',
-                backgroundColor: isRateLimited || !inputValue.trim() ? 'rgba(31, 41, 55, 0.5)' : '#2DE2E6',
+                backgroundColor: isRateLimited || !inputValue.trim() ? 'rgba(31, 41, 55, 0.5)' : '#00ff88',
                 color: isRateLimited || !inputValue.trim() ? 'rgba(156, 163, 175, 0.3)' : '#000',
                 transition: 'all 0.15s ease',
               }}

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LogOut, ArrowDownToLine, ArrowUpFromLine, ChevronDown, X, Menu, User, Wallet } from 'lucide-react';
 import { useLogin, usePrivy } from '@privy-io/react-auth';
@@ -877,7 +878,76 @@ const Logo: React.FC = () => (
   </span>
 );
 
+// Game Navigation Buttons Component - Desktop Only
+const GameNavButtons: React.FC = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  
+  const isPumpit = location.pathname === '/';
+  const isSolpong = location.pathname === '/solpong';
+  
+  const baseButtonStyle: React.CSSProperties = {
+    height: 36,
+    borderRadius: 8,
+    padding: '0 12px',
+    background: '#facc15',
+    border: 'none',
+    fontFamily: "'DynaPuff', sans-serif",
+    fontSize: 14,
+    fontWeight: 600,
+    textTransform: 'uppercase',
+    color: 'rgb(13, 14, 18)',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6,
+  };
+  
+  const activeGlow = 'rgba(250, 204, 21, 0.4) 0px 0px 12px 0px, #b89b10 0px 4px 0px 0px';
+  const inactiveShadow = '#b89b10 0px 4px 0px 0px';
+  
+  return (
+    <div 
+      className="game-nav-desktop"
+      style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: 12,
+        marginLeft: 32,
+      }}
+    >
+      <button
+        type="button"
+        onClick={() => navigate('/')}
+        style={{
+          ...baseButtonStyle,
+          boxShadow: isPumpit ? activeGlow : inactiveShadow,
+        }}
+      >
+        <span>🎰</span>
+        <span>Pumpit</span>
+      </button>
+      <button
+        type="button"
+        onClick={() => navigate('/solpong')}
+        style={{
+          ...baseButtonStyle,
+          boxShadow: isSolpong ? activeGlow : inactiveShadow,
+        }}
+      >
+        <span>🏓</span>
+        <span>SolPong</span>
+      </button>
+    </div>
+  );
+};
+
 const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat }) => {
+  // Router hooks for navigation
+  const location = useLocation();
+  const navigate = useNavigate();
+  
   // Privy auth state - for logout
   const { logout } = usePrivy();
   
@@ -990,9 +1060,11 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
       }}
     >
       
-      {/* Left Section - Logo (non-clickable) */}
+      {/* Left Section - Logo + Game Nav (non-clickable logo) */}
       <div className="header-logo-container" style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
         <Logo />
+        {/* Game Navigation Buttons - Desktop Only */}
+        <GameNavButtons />
       </div>
 
       {/* Right Section - Wallet */}
@@ -1325,6 +1397,66 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
             >
               <ArrowDownToLine size={14} />
               Deposit
+            </button>
+          </div>
+
+          {/* Game Navigation Buttons */}
+          <div className="mobile-nav-games" style={{ display: 'flex', gap: 8, padding: '0 16px', marginTop: 8 }}>
+            <button
+              type="button"
+              onClick={() => {
+                setShowMobileNav(false);
+                navigate('/');
+              }}
+              style={{
+                flex: 1,
+                height: 40,
+                borderRadius: 8,
+                background: '#facc15',
+                border: 'none',
+                fontFamily: "'DynaPuff', sans-serif",
+                fontSize: 13,
+                fontWeight: 600,
+                textTransform: 'uppercase',
+                color: 'rgb(13, 14, 18)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+                boxShadow: location.pathname === '/' ? 'rgba(250, 204, 21, 0.4) 0px 0px 12px 0px, #b89b10 0px 4px 0px 0px' : '#b89b10 0px 4px 0px 0px',
+              }}
+            >
+              <span>🎰</span>
+              <span>Pumpit</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowMobileNav(false);
+                navigate('/solpong');
+              }}
+              style={{
+                flex: 1,
+                height: 40,
+                borderRadius: 8,
+                background: '#facc15',
+                border: 'none',
+                fontFamily: "'DynaPuff', sans-serif",
+                fontSize: 13,
+                fontWeight: 600,
+                textTransform: 'uppercase',
+                color: 'rgb(13, 14, 18)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+                boxShadow: location.pathname === '/solpong' ? 'rgba(250, 204, 21, 0.4) 0px 0px 12px 0px, #b89b10 0px 4px 0px 0px' : '#b89b10 0px 4px 0px 0px',
+              }}
+            >
+              <span>🏓</span>
+              <span>SolPong</span>
             </button>
           </div>
 

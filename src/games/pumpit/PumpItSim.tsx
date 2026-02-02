@@ -834,13 +834,13 @@ const PumpItSim: React.FC = () => {
         id="chat-toggle-btn"
         type="button"
         onClick={() => setChatCollapsed(!chatCollapsed)}
-        className={`fixed z-50 rounded-full bg-[#00ff88] flex items-center justify-center shadow-lg hover:bg-[#00cc6a] transition-all duration-300 ${
+        className={`fixed z-50 rounded-full bg-[#facc15] flex items-center justify-center shadow-lg hover:bg-[#e6b800] transition-all duration-300 ${
           chatCollapsed ? 'w-12 h-12' : 'w-9 h-9'
         }`}
         style={{ 
           bottom: 'calc(16px + env(safe-area-inset-bottom, 0px))', 
           left: chatCollapsed ? 16 : 320 + 8, // 320px sidebar + 8px gap outside
-          boxShadow: '0 0 20px rgba(0, 255, 136, 0.3)',
+          boxShadow: '0 0 20px rgba(250, 204, 21, 0.3)',
           transition: 'left 0.25s cubic-bezier(0.4, 0, 0.2, 1), width 0.2s, height 0.2s, transform 0.3s ease',
         }}
         aria-label={chatCollapsed ? 'Open chat' : 'Close chat'}
