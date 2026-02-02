@@ -970,6 +970,9 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
     disconnect: disconnectWallet,
   } = useSolanaWallet();
   
+  // Debug: Log connection state on every render
+  console.log('[GlobalHeader] Render - isConnected:', isConnected, 'walletAddress:', walletAddress);
+  
   // Dropdown states
   const [showWalletMenu, setShowWalletMenu] = useState(false);
   const [showDepositMenu, setShowDepositMenu] = useState(false);
