@@ -357,10 +357,15 @@ const PumpItSim: React.FC = () => {
         setCandles(prevCandles => {
           const newCandles = [...prevCandles];
           
+          // New candle opens at previous candle's close for continuity
+          const prevClose = newCandles.length > 0 
+            ? newCandles[newCandles.length - 1].close 
+            : newPrice;
+          
           newCandles.push({
-            open: newPrice,
-            high: newPrice,
-            low: newPrice,
+            open: prevClose,
+            high: Math.max(prevClose, newPrice),
+            low: Math.min(prevClose, newPrice),
             close: newPrice,
           });
 
