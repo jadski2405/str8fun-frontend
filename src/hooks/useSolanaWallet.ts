@@ -80,7 +80,11 @@ export function useSolanaWallet(): WalletState {
   // Get the first connected Privy Solana wallet
   const privyWallet = privyWallets?.[0] || null;
   
+  // Debug: Log Privy wallet state
+  console.log('[useSolanaWallet] authenticated:', authenticated, 'privyWallets:', privyWallets?.length, 'privyWallet?.address:', privyWallet?.address);
+  
   // Derive wallet address: Privy wallet first, then wallet-adapter
+  const walletAddress = useMemo(() => {
   const walletAddress = useMemo(() => {
     if (privyWallet?.address) return privyWallet.address;
     if (walletAdapterPublicKey) return walletAdapterPublicKey.toString();
