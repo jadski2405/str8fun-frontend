@@ -245,6 +245,18 @@ const PumpItSim: React.FC = () => {
   }, [game.priceMultiplier, game.tickPrice, game.priceMode, game.roundStatus]);
 
   // ============================================================================
+  // CRASH ANIMATION - Rapid drop to 0 when round crashes
+  // ============================================================================
+  useEffect(() => {
+    if (game.isCrashed) {
+      console.log('[PumpItSim] CRASH! Animating price drop to 0');
+      // Set target to 0 and add strong downward velocity for dramatic effect
+      targetPriceRef.current = 0;
+      velocityRef.current = -0.5; // Strong downward momentum
+    }
+  }, [game.isCrashed]);
+
+  // ============================================================================
   // RESET CHART ON NEW ROUND
   // ============================================================================
   useEffect(() => {
@@ -766,17 +778,6 @@ const PumpItSim: React.FC = () => {
         }
         chart={
           <div className="relative w-full h-full flex flex-col">
-            {/* Round Timer - visible during active round */}
-            {game.roundStatus === 'active' && game.timeRemaining > 0 && (
-              <div className="flex justify-center py-2">
-                <div className="bg-[#1a1f2a]/90 backdrop-blur-sm rounded-lg px-4 py-1.5 border border-[#2a3441]">
-                  <span className="font-dynapuff text-sm text-white/70">Round ends in </span>
-                  <span className="font-dynapuff text-sm font-bold text-yellow-400">
-                    {Math.floor(game.timeRemaining / 60)}:{(game.timeRemaining % 60).toString().padStart(2, '0')}
-                  </span>
-                </div>
-              </div>
-            )}
             <div className="relative flex-1">
               {/* Trade Error Popup - centered at top of chart */}
               {tradeError && (
@@ -793,8 +794,21 @@ const PumpItSim: React.FC = () => {
                 hasPosition={game.tokenBalance > 0}
               />
             </div>
+            {/* "Get Cooked" Overlay - shows for 4 seconds after crash */}
+            {game.showGetCooked && (
+              <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-20 rounded-lg pointer-events-none">
+                <div className="text-center">
+                  <div className="text-7xl font-dynapuff font-bold text-red-500 mb-3 animate-pulse" style={{ textShadow: '0 0 30px rgba(239, 68, 68, 0.8)' }}>
+                    Get Cooked
+                  </div>
+                  <div className="text-2xl font-dynapuff text-white/70">
+                    🔥 RUGGED 🔥
+                  </div>
+                </div>
+              </div>
+            )}
             {/* Round Countdown Overlay - inside chart only */}
-            {game.roundStatus === 'countdown' && connected && !showUsernameModal && (
+            {game.roundStatus === 'countdown' && !game.showGetCooked && connected && !showUsernameModal && (
               <div className="absolute inset-0 bg-black/70 flex items-center justify-center z-10 rounded-lg pointer-events-none">
                 <div className="text-center">
                   <div className="text-6xl font-dynapuff font-bold text-yellow-400 mb-3 animate-pulse">

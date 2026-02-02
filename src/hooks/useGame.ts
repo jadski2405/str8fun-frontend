@@ -19,8 +19,9 @@ import { PlayerPosition, Trade, GAME_CONSTANTS } from '../types/game';
 const API_URL = import.meta.env.VITE_API_URL || 'https://api.str8.fun';
 const WS_URL = import.meta.env.VITE_WS_URL || 'wss://api.str8.fun';
 
-const { ROUND_DURATION_SECONDS, MIN_TRADE_SOL } = GAME_CONSTANTS;
-const COUNTDOWN_SECONDS = 20; // Time between rounds
+const { MIN_TRADE_SOL } = GAME_CONSTANTS;
+const COUNTDOWN_SECONDS = 12; // Time between rounds (after "Get Cooked" message)
+const GET_COOKED_DURATION = 4000; // 4 seconds for "Get Cooked" message
 
 // ============================================================================
 // TYPES
@@ -30,10 +31,14 @@ export interface GameState {
   // Round info
   roundId: string | null;
   roundStatus: 'loading' | 'active' | 'ended' | 'countdown' | 'error';
-  timeRemaining: number;
   countdownRemaining: number;
   shouldResetChart: boolean;
   priceMode: 'amm' | 'random';  // AMM = pool-based, Random = server tick engine
+  
+  // Crash state (random round end)
+  isCrashed: boolean;
+  showGetCooked: boolean;
+  finalMultiplier: number | null;  // Price at crash
   
   // Pool state
   pool: Pool;
@@ -76,9 +81,12 @@ export function useGame(
   // Round state
   const [roundId, setRoundId] = useState<string | null>(null);
   const [roundStatus, setRoundStatus] = useState<'loading' | 'active' | 'ended' | 'countdown' | 'error'>('loading');
-  const [timeRemaining, setTimeRemaining] = useState<number>(ROUND_DURATION_SECONDS);
   const [countdownRemaining, setCountdownRemaining] = useState<number>(0);
-  const [roundStartedAt, setRoundStartedAt] = useState<Date | null>(null);
+  
+  // Crash state (random round end)
+  const [isCrashed, setIsCrashed] = useState<boolean>(false);
+  const [showGetCooked, setShowGetCooked] = useState<boolean>(false);
+  const [finalMultiplier, setFinalMultiplier] = useState<number | null>(null);
   
   // Pool state
   const [pool, setPool] = useState<Pool>(createInitialPool());
@@ -157,7 +165,6 @@ export function useGame(
       
       if (round && round.id) {
         setRoundId(round.id);
-        setRoundStartedAt(new Date(round.started_at));
         setPool({
           solBalance: Number(round.pool_sol_balance) || 0,
           tokenSupply: Number(round.pool_token_supply) || 1_000_000,
@@ -177,10 +184,10 @@ export function useGame(
           setTickPrice(Number(round.tick_price));
         }
         
-        // Calculate time remaining
-        const elapsed = (Date.now() - new Date(round.started_at).getTime()) / 1000;
-        const remaining = Math.max(0, (round.duration_seconds || ROUND_DURATION_SECONDS) - elapsed);
-        setTimeRemaining(Math.ceil(remaining));
+        // Reset crash state for active round
+        setIsCrashed(false);
+        setShowGetCooked(false);
+        setFinalMultiplier(null);
       } else {
         // Only log "no active round" if we're NOT in countdown and id is missing
         console.log('No active round returned from server');
@@ -246,37 +253,24 @@ export function useGame(
   }, [fetchActiveRound, fetchPlayerPosition, fetchRecentTrades]);
 
   // ============================================================================
-  // TIMER
+  // COUNTDOWN TIMER (only during countdown phase, not active round)
   // ============================================================================
   
   useEffect(() => {
-    if (roundStatus !== 'active' && roundStatus !== 'countdown') return;
+    if (roundStatus !== 'countdown') return;
     
     const updateTimer = () => {
-      if (roundStatus === 'active' && roundStartedAt) {
-        const elapsed = (Date.now() - roundStartedAt.getTime()) / 1000;
-        const remaining = Math.max(0, ROUND_DURATION_SECONDS - elapsed);
-        setTimeRemaining(Math.ceil(remaining));
-        
-        if (remaining <= 0) {
-          // Round ended, start 20s countdown
-          setRoundStatus('countdown');
-          setCountdownRemaining(COUNTDOWN_SECONDS);
+      setCountdownRemaining(prev => {
+        const newVal = prev - 0.1;
+        if (newVal <= 0) {
+          // Countdown finished, fetch new round
+          refreshState();
+          return 0;
         }
-      } else if (roundStatus === 'countdown') {
-        setCountdownRemaining(prev => {
-          const newVal = prev - 0.1;
-          if (newVal <= 0) {
-            // Countdown finished, fetch new round
-            refreshState();
-            return 0;
-          }
-          return newVal;
-        });
-      }
+        return newVal;
+      });
     };
     
-    updateTimer();
     timerRef.current = setInterval(updateTimer, 100);
     
     return () => {
@@ -284,7 +278,7 @@ export function useGame(
         clearInterval(timerRef.current);
       }
     };
-  }, [roundStatus, roundStartedAt, refreshState]);
+  }, [roundStatus, refreshState]);
 
   // ============================================================================
   // INITIAL LOAD
@@ -404,6 +398,23 @@ export function useGame(
             setTickPrice(Number(data.price));
             // Also update the price multiplier for display
             setBackendPriceMultiplier(Number(data.price));
+          }
+          
+          // ROUND_CRASH: Server signals random round end (rug pull!)
+          if (data.type === 'ROUND_CRASH') {
+            console.log('[WebSocket] ROUND_CRASH received:', data);
+            setIsCrashed(true);
+            setShowGetCooked(true);
+            setFinalMultiplier(Number(data.final_multiplier) || 0);
+            setRoundStatus('ended');
+            
+            // After 4 seconds of "Get Cooked", transition to countdown
+            setTimeout(() => {
+              setShowGetCooked(false);
+              setIsCrashed(false);
+              setRoundStatus('countdown');
+              setCountdownRemaining(COUNTDOWN_SECONDS);
+            }, GET_COOKED_DURATION);
           }
           
           // Update price multiplier from trade events
@@ -624,10 +635,14 @@ export function useGame(
     // Round info
     roundId,
     roundStatus,
-    timeRemaining,
     countdownRemaining,
     shouldResetChart,
     priceMode,
+    
+    // Crash state
+    isCrashed,
+    showGetCooked,
+    finalMultiplier,
     
     // Pool state
     pool,
