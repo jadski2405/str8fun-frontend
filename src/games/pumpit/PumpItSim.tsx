@@ -334,13 +334,23 @@ const PumpItSim: React.FC = () => {
       const impact = pendingImpact.current;
       pendingImpact.current = 0;
 
-      // Calculate new price (Only change on trade impact)
-      let newPrice = priceRef.current * (1 + impact);
+      // In random mode during active round, generate local random movement
+      // This provides chart movement until backend sends PRICE_TICK events
+      let randomMovement = 0;
+      if (game.priceMode === 'random' && game.roundStatus === 'active' && !game.isCrashed) {
+        // Random walk: -3% to +3% per tick, with slight upward bias
+        randomMovement = (Math.random() - 0.48) * 0.06;
+      }
+
+      // Calculate new price (trade impact + random movement in random mode)
+      let newPrice = priceRef.current * (1 + impact + randomMovement);
       
-      // Clamp to prevent going negative or too low
-      newPrice = Math.max(0.0001, newPrice);
+      // Clamp to prevent going negative or too high
+      newPrice = Math.max(0.1, Math.min(10.0, newPrice));
       
+      // Update both current and target price for smooth animation
       priceRef.current = newPrice;
+      targetPriceRef.current = newPrice;
 
       // Push new candle every N ticks
       if (tickCount.current % TICKS_PER_CANDLE === 0) {
@@ -365,7 +375,7 @@ const PumpItSim: React.FC = () => {
     }, TICK_INTERVAL);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [game.priceMode, game.roundStatus, game.isCrashed]);
 
   // ============================================================================
   // TRADE HANDLERS - Now use deposited balance (no wallet approval per trade!)
