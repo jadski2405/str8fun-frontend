@@ -94,8 +94,8 @@ export function useGame(
   // Trade history
   const [recentTrades, setRecentTrades] = useState<Trade[]>([]);
   
-  // Online players count
-  const [onlineCount, setOnlineCount] = useState<number>(0);
+  // Online players count (default 50 until WebSocket updates)
+  const [onlineCount, setOnlineCount] = useState<number>(50);
   
   // Error state
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
