@@ -121,6 +121,16 @@ export function useGame(
   
   // Retry ref for auto-retry
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Ref to prevent multiple countdown transitions
+  const isTransitioningRef = useRef<boolean>(false);
+  
+  // Ref to track Get Rinsed timeout
+  const getRinsedTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Ref to track current round status for use in callbacks (avoids stale closures)
+  const roundStatusRef = useRef<'loading' | 'active' | 'ended' | 'countdown' | 'error'>(roundStatus);
+  roundStatusRef.current = roundStatus; // Keep in sync on each render
 
   // ============================================================================
   // DERIVED VALUES
@@ -157,8 +167,11 @@ export function useGame(
       // Handle countdown status - this is NOT an error
       if (round.status === 'countdown') {
         setRoundId(null);
-        setCountdownRemaining(round.countdown_seconds || COUNTDOWN_SECONDS);
-        setRoundStatus('countdown');
+        // Only set countdown if not already counting down
+        if (roundStatusRef.current !== 'countdown') {
+          setCountdownRemaining(round.countdown_seconds || COUNTDOWN_SECONDS);
+          setRoundStatus('countdown');
+        }
         setErrorMessage(null);
         return; // Don't retry, countdown is expected
       }
@@ -191,8 +204,11 @@ export function useGame(
       } else {
         // Only log "no active round" if we're NOT in countdown and id is missing
         console.log('No active round returned from server');
-        setRoundStatus('countdown');
-        setCountdownRemaining(COUNTDOWN_SECONDS);
+        // Only start countdown if not already in one
+        if (roundStatusRef.current !== 'countdown') {
+          setRoundStatus('countdown');
+          setCountdownRemaining(COUNTDOWN_SECONDS);
+        }
         setErrorMessage(null);
       }
       
@@ -257,13 +273,26 @@ export function useGame(
   // ============================================================================
   
   useEffect(() => {
+    // Clear any existing timer first
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    
     if (roundStatus !== 'countdown') return;
+    if (countdownRemaining <= 0) return;
     
     const updateTimer = () => {
       setCountdownRemaining(prev => {
         const newVal = prev - 0.1;
         if (newVal <= 0) {
-          // Countdown finished, fetch new round
+          // Countdown finished - clear timer and fetch new round
+          if (timerRef.current) {
+            clearInterval(timerRef.current);
+            timerRef.current = null;
+          }
+          // Reset transition flag
+          isTransitioningRef.current = false;
           refreshState();
           return 0;
         }
@@ -276,6 +305,7 @@ export function useGame(
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
+        timerRef.current = null;
       }
     };
   }, [roundStatus, refreshState]);
@@ -396,18 +426,32 @@ export function useGame(
           // ROUND_CRASH: Server signals random round end (rug pull!)
           if (data.type === 'ROUND_CRASH') {
             console.log('[WebSocket] ROUND_CRASH received:', data);
+            
+            // Prevent multiple crash handlers
+            if (isTransitioningRef.current) {
+              console.log('[WebSocket] Already transitioning, ignoring ROUND_CRASH');
+              return;
+            }
+            isTransitioningRef.current = true;
+            
+            // Clear any existing Get Rinsed timeout
+            if (getRinsedTimeoutRef.current) {
+              clearTimeout(getRinsedTimeoutRef.current);
+            }
+            
             setIsCrashed(true);
             setShowGetCooked(true);
             setFinalMultiplier(Number(data.final_multiplier) || 0);
             setRoundStatus('ended');
             
             // After 4 seconds of "Get Rinsed", transition to countdown
-            setTimeout(() => {
+            getRinsedTimeoutRef.current = setTimeout(() => {
               console.log('[useGame] Get Rinsed timeout done, starting countdown');
               setShowGetCooked(false);
               setIsCrashed(false);
               setRoundStatus('countdown');
               setCountdownRemaining(COUNTDOWN_SECONDS);
+              isTransitioningRef.current = false;
             }, GET_RINSED_DURATION);
           }
           
