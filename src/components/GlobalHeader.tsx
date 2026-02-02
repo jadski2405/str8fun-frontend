@@ -65,10 +65,6 @@ const WalletConnectionModal: React.FC<WalletConnectionModalProps> = ({ isOpen, o
   // Handle Privy login - opens Privy's modal with our wallet options
   const handleConnectWithPrivy = async () => {
     console.log('[WalletModal] Connect button clicked, ready:', ready, 'authenticated:', authenticated);
-    if (!ready) {
-      console.log('[WalletModal] Privy not ready, aborting');
-      return;
-    }
     
     // If already authenticated, just close the modal
     if (authenticated) {
@@ -77,6 +73,7 @@ const WalletConnectionModal: React.FC<WalletConnectionModalProps> = ({ isOpen, o
       return;
     }
     
+    // Try to login even if not ready - Privy may still work
     setIsLoggingIn(true);
     try {
       login();
@@ -203,7 +200,7 @@ const WalletConnectionModal: React.FC<WalletConnectionModalProps> = ({ isOpen, o
               {/* Main Connect Button - Uses Privy */}
               <button
                 onClick={handleConnectWithPrivy}
-                disabled={isLoggingIn || !ready}
+                disabled={isLoggingIn}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -214,12 +211,12 @@ const WalletConnectionModal: React.FC<WalletConnectionModalProps> = ({ isOpen, o
                   background: WALLET_THEME.primary,
                   border: 'none',
                   borderRadius: 8,
-                  cursor: (isLoggingIn || !ready) ? 'wait' : 'pointer',
+                  cursor: isLoggingIn ? 'wait' : 'pointer',
                   transition: 'all 0.2s ease',
                   boxShadow: `${WALLET_THEME.primary}66 0px 4px 16px`,
                 }}
                 onMouseEnter={(e) => {
-                  if (!isLoggingIn && ready) {
+                  if (!isLoggingIn) {
                     e.currentTarget.style.background = WALLET_THEME.primaryActive;
                     e.currentTarget.style.transform = 'translateY(-2px)';
                   }

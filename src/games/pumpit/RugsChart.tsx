@@ -240,14 +240,16 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
       // DRAW CANDLES
       // ================================================================
       const chartAreaWidth = width - PADDING_LEFT - PADDING_RIGHT;
-      const candleWidth = chartAreaWidth / FIXED_CANDLE_COUNT;
+      const candleWidth = Math.floor(chartAreaWidth / FIXED_CANDLE_COUNT);
+      const totalCandlesWidth = candleWidth * FIXED_CANDLE_COUNT;
+      const startOffset = PADDING_LEFT + Math.floor((chartAreaWidth - totalCandlesWidth) / 2);
       
       // Only show last FIXED_CANDLE_COUNT candles
       const renderCandles = data.slice(-FIXED_CANDLE_COUNT);
 
       renderCandles.forEach((candle, i) => {
-        // Position
-        const x = PADDING_LEFT + i * candleWidth;
+        // Position - use integer math to prevent drift
+        const x = startOffset + i * candleWidth;
         
         const isPump = candle.close >= candle.open;
         const color = isPump ? COLOR_GREEN : COLOR_RED;
