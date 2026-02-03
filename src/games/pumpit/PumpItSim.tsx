@@ -62,6 +62,43 @@ function generateFlatCandles(count: number, price: number): Candle[] {
 }
 
 // ============================================================================
+// HELPER: Generate candles from price history array
+// ============================================================================
+function generateCandlesFromHistory(priceHistory: number[], ticksPerCandle: number = TICKS_PER_CANDLE): Candle[] {
+  if (!priceHistory || priceHistory.length === 0) {
+    return generateFlatCandles(10, INITIAL_PRICE);
+  }
+  
+  const candles: Candle[] = [];
+  
+  // Group price ticks into candles
+  for (let i = 0; i < priceHistory.length; i += ticksPerCandle) {
+    const chunk = priceHistory.slice(i, i + ticksPerCandle);
+    if (chunk.length === 0) continue;
+    
+    // Previous candle's close becomes this candle's open (for continuity)
+    const prevClose = candles.length > 0 ? candles[candles.length - 1].close : chunk[0];
+    
+    candles.push({
+      open: prevClose,
+      high: Math.max(prevClose, ...chunk),
+      low: Math.min(prevClose, ...chunk),
+      close: chunk[chunk.length - 1],
+    });
+  }
+  
+  // Ensure at least 10 candles for visual consistency
+  if (candles.length < 10) {
+    const lastPrice = candles.length > 0 ? candles[candles.length - 1].close : INITIAL_PRICE;
+    const paddingNeeded = 10 - candles.length;
+    const padding = generateFlatCandles(paddingNeeded, lastPrice);
+    return [...padding, ...candles];
+  }
+  
+  return candles;
+}
+
+// ============================================================================
 // USERNAME VALIDATION
 // ============================================================================
 function validateUsername(username: string): { valid: boolean; error?: string } {
@@ -294,6 +331,35 @@ const PumpItSim: React.FC = () => {
       console.log('[PumpItSim] Chart reset for new round:', game.roundId);
     }
   }, [game.shouldResetChart, game.roundId]);
+
+  // ============================================================================
+  // INITIALIZE CHART FROM PRICE HISTORY (mid-round joins / page refresh)
+  // ============================================================================
+  const priceHistoryInitialized = useRef(false);
+  
+  useEffect(() => {
+    // Only initialize once when we first receive price history for a round
+    // and only if we haven't already initialized (to prevent overwriting ongoing chart)
+    if (game.priceHistory.length > 0 && !priceHistoryInitialized.current && game.roundStatus === 'active') {
+      console.log('[PumpItSim] Initializing chart from price history:', game.priceHistory.length, 'ticks');
+      
+      const candlesFromHistory = generateCandlesFromHistory(game.priceHistory, TICKS_PER_CANDLE);
+      setCandles(candlesFromHistory);
+      
+      // Set current price to last price in history
+      const lastPrice = game.priceHistory[game.priceHistory.length - 1];
+      priceRef.current = lastPrice;
+      targetPriceRef.current = lastPrice;
+      setPrice(lastPrice);
+      
+      priceHistoryInitialized.current = true;
+    }
+    
+    // Reset the initialized flag when round changes
+    if (game.shouldResetChart) {
+      priceHistoryInitialized.current = false;
+    }
+  }, [game.priceHistory, game.roundStatus, game.shouldResetChart]);
 
   // ============================================================================
   // FAST VISUAL TICK - 60fps price micro-movements for smooth animation

@@ -34,6 +34,7 @@ export interface GameState {
   countdownRemaining: number;
   shouldResetChart: boolean;
   priceMode: 'amm' | 'random';  // AMM = pool-based, Random = server tick engine
+  priceHistory: number[];  // Full price history for chart reconstruction
   
   // Crash state (random round end)
   isCrashed: boolean;
@@ -103,6 +104,9 @@ export function useGame(
   // Track previous round ID for chart reset
   const [previousRoundId, setPreviousRoundId] = useState<string | null>(null);
   const [shouldResetChart, setShouldResetChart] = useState<boolean>(false);
+  
+  // Price history for chart reconstruction (from backend)
+  const [priceHistory, setPriceHistory] = useState<number[]>([]);
   
   // Player state
   const [playerPosition, setPlayerPosition] = useState<PlayerPosition | null>(null);
@@ -195,6 +199,11 @@ export function useGame(
         // Set tick price if in random mode
         if (round.tick_price !== undefined) {
           setTickPrice(Number(round.tick_price));
+        }
+        
+        // Set price history if available (for mid-round joins)
+        if (round.price_history && Array.isArray(round.price_history)) {
+          setPriceHistory(round.price_history.map((p: number) => Number(p)));
         }
         
         // Reset crash state for active round
@@ -411,6 +420,10 @@ export function useGame(
             if (round.tick_price !== undefined) {
               setTickPrice(Number(round.tick_price));
             }
+            // Initialize price history if provided (for mid-round joins)
+            if (round.price_history && Array.isArray(round.price_history)) {
+              setPriceHistory(round.price_history.map((p: number) => Number(p)));
+            }
             if (round.status !== 'active') {
               setRoundStatus('ended');
             }
@@ -418,7 +431,10 @@ export function useGame(
           
           // PRICE_TICK: Server-generated price ticks for random mode
           if (data.type === 'PRICE_TICK') {
-            setTickPrice(Number(data.price));
+            const newPrice = Number(data.price);
+            setTickPrice(newPrice);
+            // Append new price to history
+            setPriceHistory(prev => [...prev, newPrice]);
             // Also update the price multiplier for display
             setBackendPriceMultiplier(Number(data.price));
           }
@@ -512,9 +528,14 @@ export function useGame(
     if (roundId && roundId !== previousRoundId) {
       console.log('[useGame] Round changed:', previousRoundId, '->', roundId);
       
-      // Reset chart
-      setShouldResetChart(true);
-      setBackendPriceMultiplier(1.0); // Reset to 1.0x for new round
+      // Only reset chart when going from one VALID round to another VALID round
+      // (not on initial page load when previousRoundId is null)
+      if (previousRoundId !== null) {
+        console.log('[useGame] New round started, resetting chart');
+        setShouldResetChart(true);
+        setBackendPriceMultiplier(1.0); // Reset to 1.0x for new round
+        setPriceHistory([]); // Clear old history, will be populated by new round data
+      }
       
       // Clear position from previous round - IMPORTANT for sell validation
       setPlayerPosition(null);
@@ -527,8 +548,10 @@ export function useGame(
       setPreviousRoundId(roundId);
       
       // Reset the chart flag after a short delay so components can react
-      const timeout = setTimeout(() => setShouldResetChart(false), 100);
-      return () => clearTimeout(timeout);
+      if (previousRoundId !== null) {
+        const timeout = setTimeout(() => setShouldResetChart(false), 100);
+        return () => clearTimeout(timeout);
+      }
     }
   }, [roundId, previousRoundId, walletAddress, fetchPlayerPosition]);
 
@@ -697,6 +720,7 @@ export function useGame(
     countdownRemaining,
     shouldResetChart,
     priceMode,
+    priceHistory,
     
     // Crash state
     isCrashed,
