@@ -482,7 +482,7 @@ export function useSolanaWallet(): WalletState {
   // ============================================================================
   // DEPOSIT - Send SOL to escrow, credit in-game balance
   // ============================================================================
-  const deposit = useCallback(async (amount: number): Promise<{ success: boolean; error?: string; bonusApplied?: boolean; bonusAmount?: number }> => {
+  const deposit = useCallback(async (amount: number, promoCode?: string): Promise<{ success: boolean; error?: string; bonusApplied?: boolean; bonusAmount?: number; promoMessage?: string }> => {
     if (!walletAddress) {
       return { success: false, error: 'Wallet not connected' };
     }
@@ -581,6 +581,7 @@ export function useSolanaWallet(): WalletState {
           wallet_address: walletAddress,
           tx_signature: signature,
           amount: amount,
+          ...(promoCode ? { promo_code: promoCode } : {}),
         }),
       });
       
@@ -608,11 +609,12 @@ export function useSolanaWallet(): WalletState {
       setDepositedBalance(Number(result.new_balance) || 0);
       await refreshBalance();
       
-      // Return success with optional bonus info
+      // Return success with optional bonus/promo info
       return { 
         success: true,
         bonusApplied: result.bonus_applied || false,
         bonusAmount: result.bonus_amount || 0,
+        promoMessage: result.promo_message || undefined,
       };
     } catch (error) {
       console.error('Deposit error:', error);

@@ -165,6 +165,7 @@ const PumpItSim: React.FC = () => {
   // Deposit/Withdraw UI state
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [depositAmount, setDepositAmount] = useState('');
+  const [promoCode, setPromoCode] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [isDepositing, setIsDepositing] = useState(false);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
@@ -641,14 +642,19 @@ const PumpItSim: React.FC = () => {
     setDepositError(null);
     
     try {
-      const result = await deposit(amount);
+      const trimmedPromo = promoCode.trim() || undefined;
+      const result = await deposit(amount, trimmedPromo);
       if (result.success) {
         setDepositAmount('');
+        setPromoCode('');
         setShowDepositModal(false);
         
         // Show bonus celebration if applicable
         if (result.bonusApplied && result.bonusAmount) {
-          setSuccessMessage(`🎉 Deposited ${amount} SOL + ${result.bonusAmount} SOL bonus!`);
+          setSuccessMessage(`🎉 Deposit matched! +${result.bonusAmount} SOL bonus added!`);
+        } else if (result.promoMessage) {
+          // Promo code was entered but not applied — show reason
+          setSuccessMessage(`✅ Deposited ${amount} SOL — ${result.promoMessage}`);
         } else {
           setSuccessMessage(`✅ Deposited ${amount} SOL`);
         }
@@ -660,7 +666,7 @@ const PumpItSim: React.FC = () => {
     } finally {
       setIsDepositing(false);
     }
-  }, [depositAmount, walletBalance, deposit]);
+  }, [depositAmount, promoCode, walletBalance, deposit]);
 
   const handleWithdraw = useCallback(async () => {
     const amount = parseFloat(withdrawAmount);
@@ -927,6 +933,22 @@ const PumpItSim: React.FC = () => {
                     {val} SOL
                   </button>
                 ))}
+              </div>
+              
+              {/* Promo Code Input */}
+              <div className="mt-3">
+                <label className="text-gray-500 text-xs font-medium mb-1 block">Promo Code (optional)</label>
+                <input
+                  type="text"
+                  value={promoCode}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
+                    setPromoCode(val);
+                  }}
+                  placeholder="XXXX"
+                  maxLength={4}
+                  className="w-32 bg-[#1a1f2a] border border-[#2a3441] rounded-lg px-3 py-2 text-white text-center text-lg tracking-widest uppercase focus:outline-none focus:border-[#00ff88] transition-colors font-mono"
+                />
               </div>
             </div>
 
