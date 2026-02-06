@@ -188,20 +188,6 @@ const PumpItSim: React.FC = () => {
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
   const [isSettingUsername, setIsSettingUsername] = useState(false);
   
-  // Welcome promo popup state
-  const [showPromoPopup, setShowPromoPopup] = useState(() => {
-    // Only show if user hasn't dismissed it before
-    if (typeof window !== 'undefined') {
-      return !localStorage.getItem('str8fun_promo_dismissed');
-    }
-    return true;
-  });
-  
-  const handleDismissPromo = () => {
-    setShowPromoPopup(false);
-    localStorage.setItem('str8fun_promo_dismissed', 'true');
-  };
-  
   // Chat sidebar state - open by default on desktop, collapsed on mobile
   const [chatCollapsed, setChatCollapsed] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -651,10 +637,12 @@ const PumpItSim: React.FC = () => {
         
         // Show bonus celebration if applicable
         if (result.bonusApplied && result.bonusAmount) {
-          setSuccessMessage(`🎉 Deposit matched! +${result.bonusAmount} SOL bonus added!`);
-        } else if (result.promoMessage) {
+          setSuccessMessage(`🎉 Promo Applied! Deposit matched! +${result.bonusAmount} SOL bonus added!`);
+        } else if (trimmedPromo && result.promoMessage) {
           // Promo code was entered but not applied — show reason
-          setSuccessMessage(`✅ Deposited ${amount} SOL — ${result.promoMessage}`);
+          setSuccessMessage(`✅ Deposited ${amount} SOL — ❌ Promo Invalid: ${result.promoMessage}`);
+        } else if (trimmedPromo && !result.bonusApplied) {
+          setSuccessMessage(`✅ Deposited ${amount} SOL — ❌ Promo Invalid`);
         } else {
           setSuccessMessage(`✅ Deposited ${amount} SOL`);
         }
@@ -725,68 +713,6 @@ const PumpItSim: React.FC = () => {
   // ============================================================================
   return (
     <>
-      {/* Welcome Promo Popup */}
-      {showPromoPopup && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70">
-          <div 
-            style={{
-              background: 'linear-gradient(135deg, #1e2029 0%, #15161d 100%)',
-              border: '2px solid rgba(0, 255, 163, 0.3)',
-              borderRadius: 16,
-              padding: 32,
-              maxWidth: 400,
-              width: 'calc(100% - 32px)',
-              textAlign: 'center',
-              boxShadow: '0 0 40px rgba(0, 255, 163, 0.2)',
-            }}
-          >
-            <div style={{ fontSize: '3rem', marginBottom: 16 }}>🎁</div>
-            <h2 
-              style={{ 
-                fontFamily: "'DynaPuff', sans-serif",
-                fontSize: 24,
-                fontWeight: 700,
-                color: '#00FFA3',
-                marginBottom: 12,
-              }}
-            >
-              Welcome Bonus!
-            </h2>
-            <p 
-              style={{ 
-                fontFamily: "'DynaPuff', sans-serif",
-                fontSize: 18,
-                color: '#fff',
-                marginBottom: 24,
-                lineHeight: 1.5,
-              }}
-            >
-              Deposit <span style={{ color: '#00FFA3', fontWeight: 700 }}>1 SOL</span> and get{' '}
-              <span style={{ color: '#facc15', fontWeight: 700 }}>0.5 SOL</span> reward!
-            </p>
-            <button
-              onClick={handleDismissPromo}
-              style={{
-                fontFamily: "'DynaPuff', sans-serif",
-                fontSize: 16,
-                fontWeight: 600,
-                background: 'linear-gradient(to right, #3B82F6, #00FFA3)',
-                color: '#000',
-                border: 'none',
-                borderRadius: 8,
-                padding: '12px 32px',
-                cursor: 'pointer',
-                transition: 'transform 0.2s ease',
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-              onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-            >
-              Got it!
-            </button>
-          </div>
-        </div>
-      )}
-      
       {/* Success Message Toast */}
       {successMessage && (
         <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg font-dynapuff text-sm animate-pulse">
