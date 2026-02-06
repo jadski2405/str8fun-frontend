@@ -177,6 +177,9 @@ const PumpItSim: React.FC = () => {
   // Trade markers for showing buy/sell points on chart (user-specific, persists until round end)
   const [tradeMarkers, setTradeMarkers] = useState<TradeMarker[]>([]);
   
+  // Chart view reset state - triggers RugsChart to snap Y-axis back to 1.00x
+  const [chartResetView, setChartResetView] = useState(false);
+  
   // Username modal state
   const [showUsernameModal, setShowUsernameModal] = useState(false);
   const [usernameInput, setUsernameInput] = useState('');
@@ -319,6 +322,8 @@ const PumpItSim: React.FC = () => {
   // ============================================================================
   // CRASH ANIMATION - Rapid drop to 0 when round crashes
   // ============================================================================
+  const prevShowGetCooked = useRef(false);
+  
   useEffect(() => {
     if (game.isCrashed) {
       console.log('[PumpItSim] CRASH! Animating price drop to 0');
@@ -327,6 +332,26 @@ const PumpItSim: React.FC = () => {
       velocityRef.current = -0.5; // Strong downward momentum
     }
   }, [game.isCrashed]);
+
+  // ============================================================================
+  // RESET CHART AFTER "GET RINSED" ENDS - Snap back to 1.00x before countdown
+  // ============================================================================
+  useEffect(() => {
+    // Detect when Get Rinsed overlay goes away (true → false)
+    if (prevShowGetCooked.current && !game.showGetCooked) {
+      console.log('[PumpItSim] Get Rinsed ended, resetting chart to 1.00x');
+      setCandles(generateFlatCandles(10, INITIAL_PRICE));
+      priceRef.current = INITIAL_PRICE;
+      targetPriceRef.current = INITIAL_PRICE;
+      velocityRef.current = 0;
+      setPrice(INITIAL_PRICE);
+      setTradeMarkers([]);
+      setChartResetView(true);
+      // Clear the reset flag after a frame so RugsChart can pick it up
+      requestAnimationFrame(() => setChartResetView(false));
+    }
+    prevShowGetCooked.current = game.showGetCooked;
+  }, [game.showGetCooked]);
 
   // ============================================================================
   // RESET CHART ON NEW ROUND
@@ -999,7 +1024,7 @@ const PumpItSim: React.FC = () => {
                 unrealizedPnL={game.unrealizedPnL}
                 hasPosition={game.tokenBalance > 0}
                 tradeMarkers={tradeMarkers}
-                resetView={game.shouldResetChart}
+                resetView={game.shouldResetChart || chartResetView}
               />
             </div>
             {/* "Get Rinsed" Overlay - shows for 4 seconds after crash */}
