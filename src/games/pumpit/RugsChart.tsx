@@ -19,6 +19,7 @@ interface RugsChartProps {
   unrealizedPnL?: number;   // Player's unrealized profit/loss in SOL
   hasPosition?: boolean;    // Whether player has an open position
   tradeMarkers?: TradeMarker[]; // User's buy/sell markers
+  resetView?: boolean;      // When true, instantly snap Y-axis back to 1.00x centered
 }
 
 // ============================================================================
@@ -54,7 +55,7 @@ const Y_AXIS_LERP_FACTOR = 0.06; // Smoother axis scaling (lower = smoother)
 // ============================================================================
 // RUGS CHART COMPONENT - Canvas Based for 60fps
 // ============================================================================
-const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, positionValue = 0, unrealizedPnL = 0, hasPosition = false, tradeMarkers = [] }) => {
+const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, positionValue = 0, unrealizedPnL = 0, hasPosition = false, tradeMarkers = [], resetView = false }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>(0);
@@ -82,6 +83,21 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
     startPriceRef.current = startPrice;
     tradeMarkersRef.current = tradeMarkers;
   }, [data, currentPrice, startPrice, tradeMarkers]);
+
+  // ============================================================================
+  // RESET VIEW - Snap Y-axis back to 1.00x centered (on round end/new round)
+  // ============================================================================
+  useEffect(() => {
+    if (resetView) {
+      const sp = startPrice;
+      animatedMinRef.current = sp * 0.95;
+      animatedMaxRef.current = sp * 1.05;
+      targetMinRef.current = sp * 0.95;
+      targetMaxRef.current = sp * 1.05;
+      cameraOffsetRef.current = 0;
+      prevPriceRef.current = sp;
+    }
+  }, [resetView, startPrice]);
 
   // ============================================================================
   // CAMERA IMPACT EFFECT - Detect big price changes (smooth)

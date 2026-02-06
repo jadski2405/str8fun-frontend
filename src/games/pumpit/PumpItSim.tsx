@@ -999,6 +999,7 @@ const PumpItSim: React.FC = () => {
                 unrealizedPnL={game.unrealizedPnL}
                 hasPosition={game.tokenBalance > 0}
                 tradeMarkers={tradeMarkers}
+                resetView={game.shouldResetChart}
               />
             </div>
             {/* "Get Rinsed" Overlay - shows for 4 seconds after crash */}
