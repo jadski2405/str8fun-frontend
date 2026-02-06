@@ -47,7 +47,7 @@ export interface WalletState {
   checkUsernameAvailable: (username: string) => Promise<{ valid: boolean; error?: string }>;
   
   // Deposit/Withdraw (require wallet approval)
-  deposit: (amount: number) => Promise<{ success: boolean; error?: string; bonusApplied?: boolean; bonusAmount?: number }>;
+  deposit: (amount: number, promoCode?: string) => Promise<{ success: boolean; error?: string; bonusApplied?: boolean; bonusAmount?: number; promoMessage?: string }>;
   withdraw: (amount: number) => Promise<{ success: boolean; error?: string; pending?: boolean; message?: string }>;
   
   // Legacy - kept for compatibility but prefer deposit system
