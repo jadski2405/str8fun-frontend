@@ -114,8 +114,8 @@ export function useGame(
   // Trade history
   const [recentTrades, setRecentTrades] = useState<Trade[]>([]);
   
-  // Online players count (default 50 until WebSocket updates)
-  const [onlineCount, setOnlineCount] = useState<number>(50);
+  // Online players count (0 until WebSocket sends real data)
+  const [onlineCount, setOnlineCount] = useState<number>(0);
   
   // Error state
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -395,6 +395,8 @@ export function useGame(
             wallet_address: walletAddress,
           }));
         }
+        // Request current online count
+        ws?.send(JSON.stringify({ type: 'get_online_count' }));
       };
       
       ws.onmessage = (event) => {
@@ -510,10 +512,18 @@ export function useGame(
     // Small delay to avoid React Strict Mode double-mount issues
     const initTimeout = setTimeout(connect, 100);
     
+    // Periodically request online count every 30 seconds
+    const onlineCountInterval = setInterval(() => {
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({ type: 'get_online_count' }));
+      }
+    }, 30000);
+    
     return () => {
       isMounted = false;
       clearTimeout(initTimeout);
       clearTimeout(reconnectTimeout);
+      clearInterval(onlineCountInterval);
       if (wsRef.current) {
         wsRef.current.close();
       }

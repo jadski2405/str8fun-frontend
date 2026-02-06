@@ -35,7 +35,7 @@ const GlobalChatSidebar: React.FC<GlobalChatSidebarProps> = ({
   isWalletConnected = false,
   walletAddress = null,
   getAuthToken = undefined,
-  onlineCount = 50
+  onlineCount = 0
 }) => {
   const [inputValue, setInputValue] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -177,7 +177,7 @@ const GlobalChatSidebar: React.FC<GlobalChatSidebarProps> = ({
             cursor: 'pointer',
           }}
         >
-          ONLINE({onlineCount.toLocaleString()})
+          ONLINE({onlineCount > 0 ? onlineCount.toLocaleString() : '...'})
         </span>
       </div>
 
