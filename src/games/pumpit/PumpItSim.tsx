@@ -88,10 +88,10 @@ function generateCandlesFromHistory(priceHistory: number[], ticksPerCandle: numb
   }
   
   // Ensure at least 10 candles for visual consistency
+  // Padding always uses INITIAL_PRICE (1.0) so the chart visually starts at 1.00x
   if (candles.length < 10) {
-    const lastPrice = candles.length > 0 ? candles[candles.length - 1].close : INITIAL_PRICE;
     const paddingNeeded = 10 - candles.length;
-    const padding = generateFlatCandles(paddingNeeded, lastPrice);
+    const padding = generateFlatCandles(paddingNeeded, INITIAL_PRICE);
     return [...padding, ...candles];
   }
   
@@ -210,6 +210,9 @@ const PumpItSim: React.FC = () => {
   const targetPriceRef = useRef(INITIAL_PRICE);
   const velocityRef = useRef(0);
   
+  // Track whether price history has been initialized for this round
+  const priceHistoryInitialized = useRef(false);
+  
   // Player's own PnL tracking (TODO: Backend integration needed)
   // For now, calculate from local position state
   const playerPnL: PlayerPnL | null = game.tokenBalance > 0 ? {
@@ -292,9 +295,17 @@ const PumpItSim: React.FC = () => {
 
   // ============================================================================
   // SYNC PRICE FROM GAME STATE (Server tick price or AMM price)
+  // Only sync after price history has been initialized (or if no history exists)
+  // This prevents the chart jumping to a mid-round price before candles are built
   // ============================================================================
   useEffect(() => {
     if (game.roundStatus === 'active') {
+      // Wait for price history to be initialized before syncing live prices
+      // (unless there's no history to wait for)
+      if (game.priceHistory.length > 0 && !priceHistoryInitialized.current) {
+        return; // Don't sync yet — history will set the initial price
+      }
+      
       // In random mode, use server tick price; in AMM mode, use pool price
       if (game.priceMode === 'random' && game.tickPrice !== null) {
         targetPriceRef.current = game.tickPrice;
@@ -303,7 +314,7 @@ const PumpItSim: React.FC = () => {
         priceRef.current = game.priceMultiplier;
       }
     }
-  }, [game.priceMultiplier, game.tickPrice, game.priceMode, game.roundStatus]);
+  }, [game.priceMultiplier, game.tickPrice, game.priceMode, game.roundStatus, game.priceHistory]);
 
   // ============================================================================
   // CRASH ANIMATION - Rapid drop to 0 when round crashes
@@ -335,7 +346,6 @@ const PumpItSim: React.FC = () => {
   // ============================================================================
   // INITIALIZE CHART FROM PRICE HISTORY (mid-round joins / page refresh)
   // ============================================================================
-  const priceHistoryInitialized = useRef(false);
   
   useEffect(() => {
     // Only initialize once when we first receive price history for a round
