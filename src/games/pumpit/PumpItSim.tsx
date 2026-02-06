@@ -166,6 +166,8 @@ const PumpItSim: React.FC = () => {
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [depositAmount, setDepositAmount] = useState('');
   const [promoCode, setPromoCode] = useState('');
+  const [showPromoInput, setShowPromoInput] = useState(false);
+  const [promoStatus, setPromoStatus] = useState<'idle' | 'applied' | 'invalid'>('idle');
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [isDepositing, setIsDepositing] = useState(false);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
@@ -633,6 +635,8 @@ const PumpItSim: React.FC = () => {
       if (result.success) {
         setDepositAmount('');
         setPromoCode('');
+        setShowPromoInput(false);
+        setPromoStatus('idle');
         setShowDepositModal(false);
         
         // Show bonus celebration if applicable
@@ -861,21 +865,51 @@ const PumpItSim: React.FC = () => {
                 ))}
               </div>
               
-              {/* Promo Code Input */}
-              <div className="mt-3">
-                <label className="text-gray-500 text-xs font-medium mb-1 block">Promo Code (optional)</label>
-                <input
-                  type="text"
-                  value={promoCode}
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
-                    setPromoCode(val);
-                  }}
-                  placeholder="XXXX"
-                  maxLength={4}
-                  className="w-32 bg-[#1a1f2a] border border-[#2a3441] rounded-lg px-3 py-2 text-white text-center text-lg tracking-widest uppercase focus:outline-none focus:border-[#00ff88] transition-colors font-mono"
-                />
-              </div>
+              {/* Promo Code - Expandable */}
+              {!showPromoInput ? (
+                <button
+                  onClick={() => setShowPromoInput(true)}
+                  className="mt-3 text-sm text-[#00ff88] hover:text-[#00cc6a] transition-colors underline underline-offset-2"
+                >
+                  Have a promo code?
+                </button>
+              ) : (
+                <div className="mt-3">
+                  <div className="flex gap-3">
+                    <input
+                      type="text"
+                      value={promoCode}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
+                        setPromoCode(val);
+                        setPromoStatus('idle');
+                      }}
+                      placeholder="Enter 4-digit code"
+                      maxLength={4}
+                      className="flex-1 bg-[#1a1f2a] border border-[#2a3441] rounded-xl px-4 py-4 text-white text-lg tracking-widest text-center font-mono focus:outline-none focus:border-[#00ff88] transition-colors"
+                    />
+                    <button
+                      onClick={() => {
+                        if (promoCode.length === 4) {
+                          setPromoStatus('applied');
+                        } else {
+                          setPromoStatus('invalid');
+                        }
+                      }}
+                      disabled={promoCode.length !== 4}
+                      className="px-6 py-4 bg-gradient-to-r from-[#00ff88] to-[#00cc6a] text-black font-bold rounded-xl hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-lg"
+                    >
+                      Apply
+                    </button>
+                  </div>
+                  {promoStatus === 'applied' && (
+                    <p className="mt-2 text-sm text-[#00ff88]">✅ Promo code applied — bonus will be added on deposit</p>
+                  )}
+                  {promoStatus === 'invalid' && (
+                    <p className="mt-2 text-sm text-red-400">❌ Enter a valid 4-digit promo code</p>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Divider */}
