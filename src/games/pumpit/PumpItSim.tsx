@@ -166,7 +166,6 @@ const PumpItSim: React.FC = () => {
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [depositAmount, setDepositAmount] = useState('');
   const [promoCode, setPromoCode] = useState('');
-  const [showPromoInput, setShowPromoInput] = useState(false);
   const [promoStatus, setPromoStatus] = useState<'idle' | 'applied' | 'invalid'>('idle');
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [isDepositing, setIsDepositing] = useState(false);
@@ -635,7 +634,6 @@ const PumpItSim: React.FC = () => {
       if (result.success) {
         setDepositAmount('');
         setPromoCode('');
-        setShowPromoInput(false);
         setPromoStatus('idle');
         setShowDepositModal(false);
         
@@ -824,6 +822,44 @@ const PumpItSim: React.FC = () => {
                 </div>
               </div>
             </div>
+
+            {/* Promo Code */}
+            <div className="mb-4">
+              <label className="text-white text-sm font-medium mb-2 block">Have a promo code?</label>
+              <div className="flex gap-3">
+                <input
+                  type="text"
+                  value={promoCode}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
+                    setPromoCode(val);
+                    setPromoStatus('idle');
+                  }}
+                  placeholder="Enter 4-digit code"
+                  maxLength={4}
+                  className="flex-1 bg-[#1a1f2a] border border-[#2a3441] rounded-xl px-3 py-3 text-white text-base tracking-widest text-center font-mono focus:outline-none focus:border-[#00ff88] transition-colors"
+                />
+                <button
+                  onClick={() => {
+                    if (promoCode.length === 4) {
+                      setPromoStatus('applied');
+                    } else {
+                      setPromoStatus('invalid');
+                    }
+                  }}
+                  disabled={promoCode.length !== 4}
+                  className="px-5 py-3 bg-gradient-to-r from-[#00ff88] to-[#00cc6a] text-black font-bold rounded-xl hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-base"
+                >
+                  Apply
+                </button>
+              </div>
+              {promoStatus === 'applied' && (
+                <p className="mt-2 text-sm text-[#00ff88]">✅ Promo code applied — bonus will be added on deposit</p>
+              )}
+              {promoStatus === 'invalid' && (
+                <p className="mt-2 text-sm text-red-400">❌ Enter a valid 4-digit promo code</p>
+              )}
+            </div>
             
             {/* Error Message */}
             {depositError && (
@@ -864,52 +900,6 @@ const PumpItSim: React.FC = () => {
                   </button>
                 ))}
               </div>
-              
-              {/* Promo Code - Expandable */}
-              {!showPromoInput ? (
-                <button
-                  onClick={() => setShowPromoInput(true)}
-                  className="mt-3 text-sm text-[#00ff88] hover:text-[#00cc6a] transition-colors underline underline-offset-2"
-                >
-                  Have a promo code?
-                </button>
-              ) : (
-                <div className="mt-3">
-                  <div className="flex gap-3">
-                    <input
-                      type="text"
-                      value={promoCode}
-                      onChange={(e) => {
-                        const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
-                        setPromoCode(val);
-                        setPromoStatus('idle');
-                      }}
-                      placeholder="Enter 4-digit code"
-                      maxLength={4}
-                      className="flex-1 bg-[#1a1f2a] border border-[#2a3441] rounded-xl px-4 py-4 text-white text-lg tracking-widest text-center font-mono focus:outline-none focus:border-[#00ff88] transition-colors"
-                    />
-                    <button
-                      onClick={() => {
-                        if (promoCode.length === 4) {
-                          setPromoStatus('applied');
-                        } else {
-                          setPromoStatus('invalid');
-                        }
-                      }}
-                      disabled={promoCode.length !== 4}
-                      className="px-6 py-4 bg-gradient-to-r from-[#00ff88] to-[#00cc6a] text-black font-bold rounded-xl hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-lg"
-                    >
-                      Apply
-                    </button>
-                  </div>
-                  {promoStatus === 'applied' && (
-                    <p className="mt-2 text-sm text-[#00ff88]">✅ Promo code applied — bonus will be added on deposit</p>
-                  )}
-                  {promoStatus === 'invalid' && (
-                    <p className="mt-2 text-sm text-red-400">❌ Enter a valid 4-digit promo code</p>
-                  )}
-                </div>
-              )}
             </div>
 
             {/* Divider */}

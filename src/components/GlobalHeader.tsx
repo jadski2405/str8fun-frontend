@@ -274,7 +274,7 @@ interface TransactionDropdownProps {
   isOpen: boolean;
   onClose: () => void;
   balance: number;
-  onTransaction: (amount: number) => Promise<{ success: boolean; error?: string }>;
+  onTransaction: (amount: number, promoCode?: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 const TransactionDropdown: React.FC<TransactionDropdownProps> = ({ 
@@ -288,6 +288,9 @@ const TransactionDropdown: React.FC<TransactionDropdownProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [promoCode, setPromoCode] = useState('');
+  const [promoStatus, setPromoStatus] = useState<'idle' | 'applied' | 'invalid'>('idle');
+  const [showPromoInput, setShowPromoInput] = useState(false);
   const theme = DROPDOWN_THEMES[type];
   const Icon = theme.icon;
 
@@ -308,10 +311,14 @@ const TransactionDropdown: React.FC<TransactionDropdownProps> = ({
     
     setIsProcessing(true);
     try {
-      const result = await onTransaction(amountNum);
+      const code = (type === 'deposit' && promoStatus === 'applied' && promoCode.length === 4) ? promoCode : undefined;
+      const result = await onTransaction(amountNum, code);
       if (result.success) {
         setSuccess(true);
         setAmount('');
+        setPromoCode('');
+        setPromoStatus('idle');
+        setShowPromoInput(false);
         // Auto-close after success
         setTimeout(() => {
           setSuccess(false);
@@ -340,6 +347,9 @@ const TransactionDropdown: React.FC<TransactionDropdownProps> = ({
       setError(null);
       setSuccess(false);
       setIsProcessing(false);
+      setPromoCode('');
+      setPromoStatus('idle');
+      setShowPromoInput(false);
     }
   }, [isOpen]);
 
@@ -442,6 +452,97 @@ const TransactionDropdown: React.FC<TransactionDropdownProps> = ({
                 {balance.toFixed(4)}
               </span>
             </div>
+
+            {/* Promo Code - Deposit Only */}
+            {type === 'deposit' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => setShowPromoInput(!showPromoInput)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    padding: 0,
+                    fontFamily: "'DynaPuff', sans-serif",
+                    fontSize: 12,
+                    color: 'rgb(248, 248, 252)',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'opacity 0.2s ease',
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.7'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
+                >
+                  {showPromoInput ? '▾ Have a promo code?' : '▸ Have a promo code?'}
+                </button>
+                {showPromoInput && (
+                  <>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <input
+                        type="text"
+                        value={promoCode}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
+                          setPromoCode(val);
+                          setPromoStatus('idle');
+                        }}
+                        placeholder="Enter code"
+                        maxLength={4}
+                        style={{
+                          flex: 1,
+                          height: 40,
+                          padding: '0 12px',
+                          background: 'rgb(21, 22, 29)',
+                          border: `2px solid ${promoStatus === 'applied' ? '#22c55e' : promoStatus === 'invalid' ? '#ef4444' : 'rgb(58, 61, 74)'}`,
+                          borderRadius: 8,
+                          fontFamily: "'DynaPuff', sans-serif",
+                          fontSize: 14,
+                          color: 'rgb(248, 248, 252)',
+                          outline: 'none',
+                          textAlign: 'center',
+                          letterSpacing: '0.15em',
+                          boxSizing: 'border-box',
+                          transition: 'border-color 0.2s ease',
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (promoCode.length === 4) {
+                            setPromoStatus('applied');
+                          } else {
+                            setPromoStatus('invalid');
+                          }
+                        }}
+                        disabled={promoCode.length !== 4}
+                        style={{
+                          padding: '0 16px',
+                          height: 40,
+                          background: promoCode.length === 4 ? '#22c55e' : 'rgba(255,255,255,0.1)',
+                          border: 'none',
+                          borderRadius: 8,
+                          fontFamily: "'DynaPuff', sans-serif",
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: promoCode.length === 4 ? 'rgb(21, 22, 29)' : 'rgba(248,248,252,0.4)',
+                          cursor: promoCode.length === 4 ? 'pointer' : 'not-allowed',
+                          transition: 'all 0.2s ease',
+                        }}
+                      >
+                        Apply
+                      </button>
+                    </div>
+                    {promoStatus === 'applied' && (
+                      <span style={{ fontFamily: "'DynaPuff', sans-serif", fontSize: 11, color: '#22c55e' }}>✅ Promo applied — bonus on deposit</span>
+                    )}
+                    {promoStatus === 'invalid' && (
+                      <span style={{ fontFamily: "'DynaPuff', sans-serif", fontSize: 11, color: '#ef4444' }}>❌ Enter a valid 4-digit code</span>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
 
             {/* Amount Input */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -645,7 +746,7 @@ interface MobileTransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
   balance: number;
-  onTransaction: (amount: number) => Promise<{ success: boolean; error?: string }>;
+  onTransaction: (amount: number, promoCode?: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 const MobileTransactionModal: React.FC<MobileTransactionModalProps> = ({ 
@@ -659,6 +760,9 @@ const MobileTransactionModal: React.FC<MobileTransactionModalProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [promoCode, setPromoCode] = useState('');
+  const [promoStatus, setPromoStatus] = useState<'idle' | 'applied' | 'invalid'>('idle');
+  const [showPromoInput, setShowPromoInput] = useState(false);
   const theme = DROPDOWN_THEMES[type];
   const Icon = theme.icon;
 
@@ -679,10 +783,14 @@ const MobileTransactionModal: React.FC<MobileTransactionModalProps> = ({
     
     setIsProcessing(true);
     try {
-      const result = await onTransaction(amountNum);
+      const code = (type === 'deposit' && promoStatus === 'applied' && promoCode.length === 4) ? promoCode : undefined;
+      const result = await onTransaction(amountNum, code);
       if (result.success) {
         setSuccess(true);
         setAmount('');
+        setPromoCode('');
+        setPromoStatus('idle');
+        setShowPromoInput(false);
         setTimeout(() => {
           setSuccess(false);
           onClose();
@@ -710,6 +818,9 @@ const MobileTransactionModal: React.FC<MobileTransactionModalProps> = ({
       setError(null);
       setSuccess(false);
       setIsProcessing(false);
+      setPromoCode('');
+      setPromoStatus('idle');
+      setShowPromoInput(false);
     }
   }, [isOpen]);
 
@@ -763,6 +874,95 @@ const MobileTransactionModal: React.FC<MobileTransactionModalProps> = ({
                   {balance.toFixed(4)}
                 </span>
               </div>
+
+              {/* Promo Code - Deposit Only */}
+              {type === 'deposit' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowPromoInput(!showPromoInput)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      padding: 0,
+                      fontFamily: "'DynaPuff', sans-serif",
+                      fontSize: 12,
+                      color: 'rgb(248, 248, 252)',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      transition: 'opacity 0.2s ease',
+                    }}
+                  >
+                    {showPromoInput ? '▾ Have a promo code?' : '▸ Have a promo code?'}
+                  </button>
+                  {showPromoInput && (
+                    <>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <input
+                          type="text"
+                          value={promoCode}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
+                            setPromoCode(val);
+                            setPromoStatus('idle');
+                          }}
+                          placeholder="Enter code"
+                          maxLength={4}
+                          style={{
+                            flex: 1,
+                            height: 40,
+                            padding: '0 12px',
+                            background: 'rgb(21, 22, 29)',
+                            border: `2px solid ${promoStatus === 'applied' ? '#22c55e' : promoStatus === 'invalid' ? '#ef4444' : 'rgb(58, 61, 74)'}`,
+                            borderRadius: 8,
+                            fontFamily: "'DynaPuff', sans-serif",
+                            fontSize: 14,
+                            color: 'rgb(248, 248, 252)',
+                            outline: 'none',
+                            textAlign: 'center',
+                            letterSpacing: '0.15em',
+                            boxSizing: 'border-box' as const,
+                            transition: 'border-color 0.2s ease',
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (promoCode.length === 4) {
+                              setPromoStatus('applied');
+                            } else {
+                              setPromoStatus('invalid');
+                            }
+                          }}
+                          disabled={promoCode.length !== 4}
+                          style={{
+                            padding: '0 16px',
+                            height: 40,
+                            background: promoCode.length === 4 ? '#22c55e' : 'rgba(255,255,255,0.1)',
+                            border: 'none',
+                            borderRadius: 8,
+                            fontFamily: "'DynaPuff', sans-serif",
+                            fontSize: 12,
+                            fontWeight: 600,
+                            color: promoCode.length === 4 ? 'rgb(21, 22, 29)' : 'rgba(248,248,252,0.4)',
+                            cursor: promoCode.length === 4 ? 'pointer' : 'not-allowed',
+                            transition: 'all 0.2s ease',
+                          }}
+                        >
+                          Apply
+                        </button>
+                      </div>
+                      {promoStatus === 'applied' && (
+                        <span style={{ fontFamily: "'DynaPuff', sans-serif", fontSize: 11, color: '#22c55e' }}>✅ Promo applied — bonus on deposit</span>
+                      )}
+                      {promoStatus === 'invalid' && (
+                        <span style={{ fontFamily: "'DynaPuff', sans-serif", fontSize: 11, color: '#ef4444' }}>❌ Enter a valid 4-digit code</span>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
 
               {/* Amount Input */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
