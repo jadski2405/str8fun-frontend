@@ -45,7 +45,6 @@ const COLOR_GREEN_GLOW = 'rgba(34, 197, 94, 0.6)';
 const COLOR_RED = '#EF4444';
 const COLOR_RED_GLOW = 'rgba(239, 68, 68, 0.6)';
 const COLOR_GRID = 'rgba(255, 255, 255, 0.04)';
-const COLOR_TEXT = 'rgba(255, 255, 255, 0.4)';
 
 // Animation smoothing
 const Y_AXIS_LERP_FACTOR = 0.06; // Smoother axis scaling (lower = smoother)
@@ -190,14 +189,14 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
          maxP = Math.max(maxP, c.high);
       });
       
-      // Calculate desired range with padding
-      const range = maxP - minP;
-      const minRange = startPrice * 0.05; // Ensure at least 5% range vertically
-      const effectiveRange = Math.max(range, minRange);
-      const padding = effectiveRange * 0.25; // 25% padding top/bottom
+      // Center 1.00x: make range symmetric around startPrice
+      const distAbove = maxP - startPrice;
+      const distBelow = startPrice - minP;
+      const halfSpan = Math.max(distAbove, distBelow, startPrice * 0.025); // at least 2.5% each side
+      const padding = halfSpan * 0.25; // 25% padding
       
-      targetMinRef.current = minP - padding;
-      targetMaxRef.current = maxP + padding;
+      targetMinRef.current = startPrice - halfSpan - padding;
+      targetMaxRef.current = startPrice + halfSpan + padding;
 
       // Smooth interpolation (slower for smoother feel)
       const lerpFactor = Y_AXIS_LERP_FACTOR;
@@ -267,8 +266,8 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
              ctx.stroke();
 
              // Label
-             ctx.fillStyle = COLOR_TEXT;
-             ctx.font = '9px Monaco, Consolas, monospace';
+             ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+             ctx.font = "9px 'DynaPuff', sans-serif";
              ctx.textAlign = 'left';
              ctx.textBaseline = 'middle';
              ctx.fillText(mult.toFixed(2) + 'x', width - PADDING_RIGHT + 5, y);
@@ -418,25 +417,6 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
         
         ctx.shadowBlur = 0;
         ctx.setLineDash([]);
-
-        // Price label
-        const labelX = width - PADDING_RIGHT + 3;
-        const labelWidth = PADDING_RIGHT - 5;
-        const labelHeight = 18;
-        
-        ctx.fillStyle = '#000';
-        ctx.fillRect(labelX, priceY - labelHeight / 2, labelWidth, labelHeight);
-        
-        ctx.strokeStyle = lineColor;
-        ctx.lineWidth = 1;
-        ctx.strokeRect(labelX, priceY - labelHeight / 2, labelWidth, labelHeight);
-
-        ctx.fillStyle = '#FFF';
-        ctx.font = 'bold 10px Monaco, Consolas, monospace';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        const priceText = currentPrice >= 1 ? currentPrice.toFixed(2) : currentPrice.toFixed(4);
-        ctx.fillText(priceText, labelX + labelWidth / 2, priceY);
       }
 
       // ================================================================
