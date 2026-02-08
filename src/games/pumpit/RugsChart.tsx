@@ -55,7 +55,7 @@ const Y_AXIS_LERP_FACTOR = 0.06; // Smoother axis scaling (lower = smoother)
 // ============================================================================
 // RUGS CHART COMPONENT - Canvas Based for 60fps
 // ============================================================================
-const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, positionValue = 0, unrealizedPnL = 0, hasPosition = false, tradeMarkers = [], resetView = false }) => {
+const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, positionValue: _positionValue = 0, unrealizedPnL = 0, hasPosition: _hasPosition = false, tradeMarkers = [], resetView = false }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>(0);
@@ -535,46 +535,32 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
         </div>
       </div>
       
-      {/* Position Overlay - Top Right */}
-      {hasPosition && (
+      {/* PnL Overlay - Top Right (always visible) */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '12px',
+          right: '12px',
+          pointerEvents: 'none',
+          textAlign: 'right',
+        }}
+      >
         <div
           style={{
-            position: 'absolute',
-            top: '12px',
-            right: '12px',
-            pointerEvents: 'none',
-            textAlign: 'right',
+            fontSize: '20px',
+            fontWeight: 700,
+            fontFamily: "'DynaPuff', system-ui, sans-serif",
+            color: unrealizedPnL >= 0 ? COLOR_GREEN : COLOR_RED,
+            textShadow: `0 0 10px ${unrealizedPnL >= 0 ? 'rgba(0, 255, 127, 0.5)' : 'rgba(255, 59, 59, 0.5)'}`,
+            lineHeight: 1
           }}
         >
-          <div
-            style={{
-              fontSize: '20px',
-              fontWeight: 700,
-              fontFamily: "'DynaPuff', system-ui, sans-serif",
-              color: unrealizedPnL >= 0 ? COLOR_GREEN : COLOR_RED,
-              textShadow: `0 0 10px ${unrealizedPnL >= 0 ? 'rgba(0, 255, 127, 0.5)' : 'rgba(255, 59, 59, 0.5)'}`,
-              lineHeight: 1
-            }}
-          >
-            {unrealizedPnL >= 0 
-              ? `Up ${unrealizedPnL.toFixed(4)} SOL` 
-              : `${Math.abs(unrealizedPnL).toFixed(4)} SOL left`
-            }
-          </div>
-          <div
-            style={{
-              fontSize: '12px',
-              fontWeight: 500,
-              fontFamily: "'DynaPuff', system-ui, sans-serif",
-              color: 'rgba(255, 255, 255, 0.6)',
-              marginTop: '4px',
-              lineHeight: 1
-            }}
-          >
-            Position: {positionValue.toFixed(4)} SOL
-          </div>
+          {unrealizedPnL >= 0
+            ? `+ ${unrealizedPnL.toFixed(4)} SOL`
+            : `- ${Math.abs(unrealizedPnL).toFixed(4)} SOL`
+          }
         </div>
-      )}
+      </div>
     </div>
   );
 };

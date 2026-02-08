@@ -1469,14 +1469,15 @@ body {
     display: block !important;
   }
   
-  /* Chart Stage - Mobile: Fixed 398x495 */
+  /* Chart Stage - Mobile: Full width, maintain 16:9 aspect ratio */
   #chart-stage {
-    width: 398px;
-    min-width: 398px;
-    max-width: 398px;
-    height: 495px;
-    min-height: 495px;
-    max-height: 495px;
+    width: 100%;
+    min-width: unset;
+    max-width: 100%;
+    height: auto;
+    min-height: unset;
+    max-height: unset;
+    aspect-ratio: 16 / 9;
     margin: calc(24px + 5vh) auto 0 auto;
     border-radius: 8px;
     overflow: visible;
@@ -1484,12 +1485,12 @@ body {
   
   /* Chart canvas wrapper on mobile */
   #chart-canvas-wrap {
-    width: 398px !important;
-    min-width: 398px !important;
-    max-width: 398px !important;
-    height: 495px !important;
-    min-height: 495px !important;
-    max-height: 495px !important;
+    width: 100% !important;
+    min-width: unset !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    min-height: unset !important;
+    max-height: unset !important;
   }
   
   /* Mobile Status Bar - Hidden on mobile */
