@@ -9,7 +9,8 @@ interface TradeDeckProps {
   currentPrice: number;
   onBuy: (amount: number) => void;
   onSell: (amount: number) => void;
-  tokenBalance?: number; // User's token balance for selling
+  solWagered?: number; // SOL amount in active position
+  currentValue?: number; // Current value of position
   onError?: (message: string) => void; // Callback to show error messages
 }
 
@@ -31,10 +32,11 @@ const formatSOL = (value: number): string => {
 // ============================================================================
 const TradeDeck: React.FC<TradeDeckProps> = ({
   balance,
-  currentPrice,
+  currentPrice: _currentPrice,
   onBuy,
   onSell,
-  tokenBalance = 0,
+  solWagered = 0,
+  currentValue = 0,
   onError,
 }) => {
   // ============================================================================
@@ -113,17 +115,16 @@ const TradeDeck: React.FC<TradeDeckProps> = ({
       } else {
         // percent - calculate from position value for SELLING
         // If no position, do nothing
-        if (tokenBalance <= 0) {
+        if (solWagered <= 0) {
           return prev; // Return unchanged
         }
-        const positionValueInSol = tokenBalance * currentPrice;
-        newValue = (positionValueInSol * value) / 100;
+        newValue = (currentValue * value) / 100;
       }
       
       // Format to max 3 decimals
       return newValue > 0 ? formatSOL(newValue) : '';
     });
-  }, [balance, tokenBalance, currentPrice]);
+  }, [balance, solWagered, currentValue]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -155,8 +156,8 @@ const TradeDeck: React.FC<TradeDeckProps> = ({
       onError?.('Enter an amount to sell');
       return;
     }
-    if (tokenBalance <= 0) {
-      onError?.('No tokens to sell - buy first');
+    if (solWagered <= 0) {
+      onError?.('No position to sell - buy first');
       return;
     }
     onSell(amount);
@@ -272,17 +273,19 @@ interface MobileTradeDeckProps {
   currentPrice: number;
   onBuy: (amount: number) => void;
   onSell: (amount: number) => void;
-  tokenBalance?: number;
+  solWagered?: number;
+  currentValue?: number;
   connected?: boolean;
   onError?: (message: string) => void;
 }
 
 export const MobileTradeDeck: React.FC<MobileTradeDeckProps> = ({
   balance,
-  currentPrice,
+  currentPrice: _currentPrice,
   onBuy,
   onSell,
-  tokenBalance = 0,
+  solWagered = 0,
+  currentValue = 0,
   connected: _connected = true,
   onError,
 }) => {
@@ -297,16 +300,15 @@ export const MobileTradeDeck: React.FC<MobileTradeDeckProps> = ({
 
   const adjustAmount = useCallback((_type: 'percent', value: number) => {
     // For selling - calculate from position value (like desktop)
-    if (tokenBalance > 0) {
-      const positionValueInSol = tokenBalance * currentPrice;
-      const newValue = (positionValueInSol * value) / 100;
+    if (solWagered > 0) {
+      const newValue = (currentValue * value) / 100;
       setTradeAmount(newValue > 0 ? formatSOL(newValue) : '');
     } else {
       // No position - calculate from balance for buying
       const newValue = (balance * value) / 100;
       setTradeAmount(newValue > 0 ? formatSOL(newValue) : '');
     }
-  }, [balance, tokenBalance, currentPrice]);
+  }, [balance, solWagered, currentValue]);
 
   const handleBuy = () => {
     const amount = parseFloat(tradeAmount) || 0;
@@ -327,8 +329,8 @@ export const MobileTradeDeck: React.FC<MobileTradeDeckProps> = ({
       onError?.('Enter an amount to sell');
       return;
     }
-    if (tokenBalance <= 0) {
-      onError?.('No tokens to sell - buy first');
+    if (solWagered <= 0) {
+      onError?.('No position to sell - buy first');
       return;
     }
     onSell(amount);

@@ -42,8 +42,6 @@ export interface TradeMarker {
 // ============================================================================
 const TICK_INTERVAL = 250; // ms
 const TICKS_PER_CANDLE = 5;
-const PUMP_IMPACT = 0.08; // +8% per 0.1 SOL (amplified)
-const DUMP_IMPACT = 0.06; // -6% per 0.1 SOL (amplified)
 const INITIAL_PRICE = 1.0;
 
 // Smooth animation constants
@@ -153,9 +151,6 @@ const PumpItSim: React.FC = () => {
   // Tick counter for candle generation
   const tickCount = useRef(0);
   
-  // Track pending price impacts from trades
-  const pendingImpact = useRef(0);
-  
   // Track current price in ref for candle updates
   const priceRef = useRef(INITIAL_PRICE);
   
@@ -204,12 +199,11 @@ const PumpItSim: React.FC = () => {
   // Track whether price history has been initialized for this round
   const priceHistoryInitialized = useRef(false);
   
-  // Player's own PnL tracking (TODO: Backend integration needed)
-  // For now, calculate from local position state
-  const playerPnL: PlayerPnL | null = game.tokenBalance > 0 ? {
-    entryPrice: INITIAL_PRICE, // TODO: Get from backend when position opened
+  // Player's own PnL tracking
+  const playerPnL: PlayerPnL | null = game.solWagered > 0 ? {
+    entryPrice: game.entryMultiplier,
     currentPrice: price,
-    positionSize: game.tokenBalance,
+    positionSize: game.solWagered,
   } : null;
   
   // Show username modal when needed
@@ -285,7 +279,7 @@ const PumpItSim: React.FC = () => {
   }, [usernameInput, usernameError, setUsername]);
 
   // ============================================================================
-  // SYNC PRICE FROM GAME STATE (Server tick price or AMM price)
+  // SYNC PRICE FROM GAME STATE (Server-driven only)
   // Only sync after price history has been initialized (or if no history exists)
   // This prevents the chart jumping to a mid-round price before candles are built
   // ============================================================================
@@ -297,15 +291,13 @@ const PumpItSim: React.FC = () => {
         return; // Don't sync yet — history will set the initial price
       }
       
-      // In random mode, use server tick price; in AMM mode, use pool price
-      if (game.priceMode === 'random' && game.tickPrice !== null) {
-        targetPriceRef.current = game.tickPrice;
-      } else if (game.priceMultiplier > 0) {
+      // Use server price multiplier directly — no AMM/local modes
+      if (game.priceMultiplier > 0) {
         targetPriceRef.current = game.priceMultiplier;
         priceRef.current = game.priceMultiplier;
       }
     }
-  }, [game.priceMultiplier, game.tickPrice, game.priceMode, game.roundStatus, game.priceHistory]);
+  }, [game.priceMultiplier, game.roundStatus, game.priceHistory]);
 
   // ============================================================================
   // CRASH ANIMATION - Rapid drop to 0 when round crashes
@@ -438,33 +430,11 @@ const PumpItSim: React.FC = () => {
   }, []);
 
   // ============================================================================
-  // GAME LOOP - Main tick for larger movements and new candles
+  // GAME LOOP - Main tick for new candles (price driven entirely by server)
   // ============================================================================
   useEffect(() => {
     const interval = setInterval(() => {
       tickCount.current += 1;
-
-      // Apply pending impact from trades
-      const impact = pendingImpact.current;
-      pendingImpact.current = 0;
-
-      // In random mode during active round, generate local random movement
-      // This provides chart movement until backend sends PRICE_TICK events
-      let randomMovement = 0;
-      if (game.priceMode === 'random' && game.roundStatus === 'active' && !game.isCrashed) {
-        // Random walk: -3% to +3% per tick, with slight upward bias
-        randomMovement = (Math.random() - 0.48) * 0.06;
-      }
-
-      // Calculate new price (trade impact + random movement in random mode)
-      let newPrice = priceRef.current * (1 + impact + randomMovement);
-      
-      // Clamp to prevent going negative or too high
-      newPrice = Math.max(0.1, Math.min(10.0, newPrice));
-      
-      // Update both current and target price for smooth animation
-      priceRef.current = newPrice;
-      targetPriceRef.current = newPrice;
 
       // Push new candle every N ticks
       if (tickCount.current % TICKS_PER_CANDLE === 0) {
@@ -474,13 +444,13 @@ const PumpItSim: React.FC = () => {
           // New candle opens at previous candle's close for continuity
           const prevClose = newCandles.length > 0 
             ? newCandles[newCandles.length - 1].close 
-            : newPrice;
+            : priceRef.current;
           
           newCandles.push({
             open: prevClose,
-            high: Math.max(prevClose, newPrice),
-            low: Math.min(prevClose, newPrice),
-            close: newPrice,
+            high: Math.max(prevClose, priceRef.current),
+            low: Math.min(prevClose, priceRef.current),
+            close: priceRef.current,
           });
 
           // Keep only last 100 candles for performance
@@ -494,7 +464,7 @@ const PumpItSim: React.FC = () => {
     }, TICK_INTERVAL);
 
     return () => clearInterval(interval);
-  }, [game.priceMode, game.roundStatus, game.isCrashed]);
+  }, [game.roundStatus, game.isCrashed]);
 
   // ============================================================================
   // TRADE HANDLERS - Now use deposited balance (no wallet approval per trade!)
@@ -530,9 +500,6 @@ const PumpItSim: React.FC = () => {
       const result = await game.buy(amount);
       
       if (result.success) {
-        // Apply visual price impact
-        const impactMultiplier = amount / 0.1;
-        pendingImpact.current += PUMP_IMPACT * impactMultiplier;
         console.log(`🟢 BUY: ${amount.toFixed(4)} SOL`);
         
         // Add trade marker at current price and candle
@@ -565,7 +532,7 @@ const PumpItSim: React.FC = () => {
       return;
     }
     
-    if (amount <= 0 || game.tokenBalance <= 0) {
+    if (amount <= 0 || game.solWagered <= 0) {
       console.log('❌ No position to sell');
       return;
     }
@@ -582,9 +549,6 @@ const PumpItSim: React.FC = () => {
       const result = await game.sell(amount);
       
       if (result.success) {
-        // Apply visual price impact
-        const impactMultiplier = amount / 0.1;
-        pendingImpact.current -= DUMP_IMPACT * impactMultiplier;
         console.log(`🔴 SELL: ~${amount.toFixed(4)} SOL worth`);
         
         // Add trade marker at current price and candle
@@ -692,7 +656,6 @@ const PumpItSim: React.FC = () => {
   // CALCULATED VALUES
   // ============================================================================
   const displayBalance = connected ? depositedBalance : 10.0; // Show 10 SOL for demo when not connected
-  // Token value calculation available if needed: game.tokenBalance * price
 
   // Auto-hide trade error after 5 seconds
   useEffect(() => {
@@ -992,9 +955,9 @@ const PumpItSim: React.FC = () => {
                 data={candles} 
                 currentPrice={price} 
                 startPrice={INITIAL_PRICE}
-                positionValue={game.tokenBalance * price}
+                positionValue={game.currentValue}
                 unrealizedPnL={game.unrealizedPnL}
-                hasPosition={game.tokenBalance > 0}
+                hasPosition={game.solWagered > 0}
                 tradeMarkers={tradeMarkers}
                 resetView={game.shouldResetChart || chartResetView}
               />
@@ -1033,7 +996,8 @@ const PumpItSim: React.FC = () => {
             currentPrice={price}
             onBuy={handleBuy}
             onSell={handleSell}
-            tokenBalance={game.tokenBalance}
+            solWagered={game.solWagered}
+            currentValue={game.currentValue}
             onError={setTradeError}
           />
         }
@@ -1043,7 +1007,8 @@ const PumpItSim: React.FC = () => {
             currentPrice={price}
             onBuy={handleBuy}
             onSell={handleSell}
-            tokenBalance={game.tokenBalance}
+            solWagered={game.solWagered}
+            currentValue={game.currentValue}
             connected={connected}
             onError={setTradeError}
           />
