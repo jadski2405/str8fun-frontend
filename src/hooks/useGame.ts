@@ -355,27 +355,20 @@ export function useGame(
         try {
           const data = JSON.parse(event.data);
 
-          // ROUND_UPDATE: Server tick engine sends multiplier every 250ms
-          // This is the ONLY source that drives the chart — no other event may update price
+          // ROUND_UPDATE: Round state changes (status, new round, etc.)
+          // Does NOT drive chart price — that comes from PRICE_TICK
           if (data.type === 'ROUND_UPDATE' && data.round) {
             const round = data.round;
-            // Update price multiplier from server tick
-            if (round.price_multiplier !== undefined) {
-              const newPrice = Number(round.price_multiplier);
-              setPriceMultiplier(newPrice);
-              setPriceHistory(prev => [...prev, newPrice]);
-            } else if (round.current_price !== undefined) {
-              const newPrice = Number(round.current_price);
-              setPriceMultiplier(newPrice);
-              setPriceHistory(prev => [...prev, newPrice]);
-            }
-            // Initialize full price history if provided (for mid-round joins)
-            if (round.price_history && Array.isArray(round.price_history)) {
-              setPriceHistory(round.price_history.map((p: number) => Number(p)));
-            }
             if (round.status !== 'active') {
               setRoundStatus('ended');
             }
+          }
+
+          // PRICE_TICK: Server tick engine sends price every 250ms
+          // This is the ONLY source that drives the chart multiplier
+          if (data.type === 'PRICE_TICK') {
+            const newPrice = Number(data.price);
+            setPriceMultiplier(newPrice);
           }
 
           // ROUND_CRASH: Server signals round end (rug pull!)

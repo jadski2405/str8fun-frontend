@@ -279,25 +279,14 @@ const PumpItSim: React.FC = () => {
   }, [usernameInput, usernameError, setUsername]);
 
   // ============================================================================
-  // SYNC PRICE FROM GAME STATE (Server-driven only)
-  // Only sync after price history has been initialized (or if no history exists)
-  // This prevents the chart jumping to a mid-round price before candles are built
+  // SYNC PRICE FROM GAME STATE (Server-driven via PRICE_TICK)
+  // Sets targetPriceRef so the 60fps lerp animation smoothly interpolates
   // ============================================================================
   useEffect(() => {
-    if (game.roundStatus === 'active') {
-      // Wait for price history to be initialized before syncing live prices
-      // (unless there's no history to wait for)
-      if (game.priceHistory.length > 0 && !priceHistoryInitialized.current) {
-        return; // Don't sync yet — history will set the initial price
-      }
-      
-      // Use server price multiplier directly — no AMM/local modes
-      if (game.priceMultiplier > 0) {
-        targetPriceRef.current = game.priceMultiplier;
-        priceRef.current = game.priceMultiplier;
-      }
+    if (game.roundStatus === 'active' && game.priceMultiplier > 0) {
+      targetPriceRef.current = game.priceMultiplier;
     }
-  }, [game.priceMultiplier, game.roundStatus, game.priceHistory]);
+  }, [game.priceMultiplier, game.roundStatus]);
 
   // ============================================================================
   // CRASH ANIMATION - Rapid drop to 0 when round crashes
@@ -356,7 +345,6 @@ const PumpItSim: React.FC = () => {
     // Only initialize once when we first receive price history for a round
     // and only if we haven't already initialized (to prevent overwriting ongoing chart)
     if (game.priceHistory.length > 0 && !priceHistoryInitialized.current && game.roundStatus === 'active') {
-      console.log('[PumpItSim] Initializing chart from price history:', game.priceHistory.length, 'ticks');
       
       const candlesFromHistory = generateCandlesFromHistory(game.priceHistory, TICKS_PER_CANDLE);
       setCandles(candlesFromHistory);
