@@ -39,7 +39,8 @@ export interface GameState {
   solWagered: number;        // SOL in active position
   entryMultiplier: number;   // Multiplier at entry
   currentValue: number;      // Current value of position
-  unrealizedPnL: number;     // Profit/loss
+  unrealizedPnL: number;     // Profit/loss (current position only)
+  roundPnL: number;          // Realized + unrealized PnL for entire round
 
   // Trade history
   recentTrades: Trade[];
@@ -117,6 +118,11 @@ export function useGame(
   const entryMultiplier = playerPosition?.entry_multiplier ?? 1.0;
   const currentValue = solWagered > 0 ? solWagered * (priceMultiplier / entryMultiplier) : 0;
   const unrealizedPnL = currentValue - solWagered;
+
+  // Round PnL: realized gains/losses + current unrealized
+  const totalSolIn = playerPosition?.total_sol_in ?? 0;
+  const totalSolOut = playerPosition?.total_sol_out ?? 0;
+  const roundPnL = (totalSolOut + currentValue) - totalSolIn;
 
   // ============================================================================
   // FETCH ACTIVE ROUND
@@ -680,6 +686,7 @@ export function useGame(
     entryMultiplier,
     currentValue,
     unrealizedPnL,
+    roundPnL,
 
     // Trade history
     recentTrades,

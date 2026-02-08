@@ -944,7 +944,7 @@ const PumpItSim: React.FC = () => {
                 currentPrice={price} 
                 startPrice={INITIAL_PRICE}
                 positionValue={game.currentValue}
-                unrealizedPnL={game.unrealizedPnL}
+                unrealizedPnL={game.roundPnL}
                 hasPosition={game.solWagered > 0}
                 tradeMarkers={tradeMarkers}
                 resetView={game.shouldResetChart || chartResetView}

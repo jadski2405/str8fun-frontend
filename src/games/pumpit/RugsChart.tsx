@@ -29,11 +29,9 @@ interface RugsChartProps {
 // Internal Resolution: 1600 x 900
 // CSS Display Size: 800px x 450px
 // Ratio: 16:9 aspect ratio with 2:1 internal-to-CSS for Retina sharpness
-const CANVAS_INTERNAL_WIDTH = 1600;
-const CANVAS_INTERNAL_HEIGHT = 900;
-const CANVAS_DISPLAY_WIDTH = 800;
-const CANVAS_DISPLAY_HEIGHT = 450;
-const CANVAS_SCALE = 2;              // 2x internal resolution for crisp rendering
+// Dynamic sizing — these are only fallback defaults now
+const DEFAULT_DISPLAY_WIDTH = 800;
+const DEFAULT_DISPLAY_HEIGHT = 450;
 const PADDING_TOP = 30;              // Scaled padding (1.5x)
 const PADDING_BOTTOM = 38;           // Scaled padding (1.5x)
 const PADDING_RIGHT = 68;            // Scaled padding (1.5x)
@@ -59,6 +57,11 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>(0);
+
+  // Dynamic sizing refs (updated by ResizeObserver)
+  const displayWidthRef = useRef(DEFAULT_DISPLAY_WIDTH);
+  const displayHeightRef = useRef(DEFAULT_DISPLAY_HEIGHT);
+  const dprRef = useRef(window.devicePixelRatio || 2);
   
   // Animation Targets (Dynamic Range)
   const animatedMinRef = useRef(startPrice * 0.95);
@@ -113,16 +116,31 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
   }, [currentPrice]);
 
   // ============================================================================
-  // CANVAS SETUP - Fixed dimensions with 2x retina scaling (1.5x size)
-  // Internal: 3234x1068 → Display: 1617x534 (2:1 ratio)
+  // CANVAS SETUP - Dynamic sizing via ResizeObserver with retina scaling
   // ============================================================================
   useEffect(() => {
+    const container = containerRef.current;
     const canvas = canvasRef.current;
-    if (!canvas) return;
-    
-    // Set fixed internal resolution for maximum sharpness
-    canvas.width = CANVAS_INTERNAL_WIDTH;
-    canvas.height = CANVAS_INTERNAL_HEIGHT;
+    if (!container || !canvas) return;
+
+    const resize = () => {
+      const rect = container.getBoundingClientRect();
+      const w = Math.round(rect.width) || DEFAULT_DISPLAY_WIDTH;
+      const h = Math.round(rect.height) || DEFAULT_DISPLAY_HEIGHT;
+      const dpr = window.devicePixelRatio || 2;
+
+      displayWidthRef.current = w;
+      displayHeightRef.current = h;
+      dprRef.current = dpr;
+
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+    };
+
+    resize();
+    const ro = new ResizeObserver(resize);
+    ro.observe(container);
+    return () => ro.disconnect();
   }, []);
 
   // ============================================================================
@@ -140,15 +158,16 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
     const frameInterval = 1000 / targetFps;
 
     const render = (timestamp: number) => {
-      // Use fixed display dimensions (internal / 2 for 2:1 ratio)
-      const width = CANVAS_DISPLAY_WIDTH;
-      const height = CANVAS_DISPLAY_HEIGHT;
+      // Use dynamic display dimensions from ResizeObserver
+      const width = displayWidthRef.current;
+      const height = displayHeightRef.current;
+      const dpr = dprRef.current;
       const data = dataRef.current;
       const currentPrice = currentPriceRef.current;
       const startPrice = startPriceRef.current;
       
-      // Apply 2x scale for high-DPI rendering
-      ctx.setTransform(CANVAS_SCALE, 0, 0, CANVAS_SCALE, 0, 0);
+      // Apply DPR scale for high-DPI rendering
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
       // Throttle to target FPS
       const delta = timestamp - lastTime;
@@ -493,8 +512,6 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
     >
       <canvas
         ref={canvasRef}
-        width={CANVAS_INTERNAL_WIDTH}
-        height={CANVAS_INTERNAL_HEIGHT}
         className="pumpit-chart-canvas"
         style={{
           width: '100%',
