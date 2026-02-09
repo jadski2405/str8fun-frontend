@@ -2964,80 +2964,228 @@ body {
 }
 
 /* ============================================================================
-   XP BAR STYLES
+   XP BAR STYLES — Clickable header button with dropdown panel
    ============================================================================ */
 
 .xp-bar-container {
-  display: flex;
-  align-items: center;
-  gap: 6px;
   position: relative;
-  cursor: pointer;
+  z-index: 50;
 }
 
-.xp-bar-tier-icon {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  object-fit: contain;
+.xp-bar-trigger {
+  display: flex;
+  align-items: center;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+  gap: 8px;
+  min-width: 140px;
   flex-shrink: 0;
 }
 
-.xp-bar-level {
+.xp-bar-trigger:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.xp-bar-badge {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  flex-shrink: 0;
+}
+
+.xp-bar-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+
+.xp-bar-level-text {
   font-family: 'DynaPuff', sans-serif;
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 600;
   white-space: nowrap;
 }
 
-.xp-bar-progress-wrap {
-  width: 48px;
-  height: 6px;
+.xp-bar-track {
+  width: 100%;
+  height: 5px;
   background: rgba(255, 255, 255, 0.1);
   border-radius: 3px;
   overflow: hidden;
-  flex-shrink: 0;
 }
 
-.xp-bar-progress-fill {
+.xp-bar-fill {
   height: 100%;
   border-radius: 3px;
   transition: width 0.5s ease;
 }
 
-.xp-bar-tier-name {
-  font-family: 'DynaPuff', sans-serif;
-  font-size: 10px;
-  opacity: 0.7;
-  white-space: nowrap;
-}
-
-.xp-bar-tooltip {
+/* Dropdown Panel */
+.xp-bar-dropdown {
   position: absolute;
-  bottom: calc(100% + 8px);
+  top: 100%;
   left: 50%;
   transform: translateX(-50%);
-  background: rgb(21, 22, 29);
-  border: 1px solid rgb(56, 57, 67);
-  border-radius: 8px;
-  padding: 8px 12px;
-  white-space: nowrap;
-  z-index: 100;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-  font-family: 'DynaPuff', sans-serif;
-  font-size: 11px;
-  color: rgba(248, 248, 252, 0.8);
-  line-height: 1.6;
-  animation: xpTooltipIn 0.15s ease;
+  margin-top: 8px;
+  background: rgb(30, 32, 42);
+  border: 1px solid rgb(58, 61, 74);
+  border-radius: 12px;
+  width: 300px;
+  z-index: 1000;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  color: #fff;
+  overflow: hidden;
+  animation: xpDropdownIn 0.15s ease;
 }
 
-@keyframes xpTooltipIn {
-  from { opacity: 0; transform: translateX(-50%) translateY(4px); }
+@keyframes xpDropdownIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(-4px); }
   to { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
+.xp-bar-dropdown-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid rgb(58, 61, 74);
+}
+
+.xp-bar-dropdown-title {
+  margin: 0;
+  font-family: 'DynaPuff', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  background: linear-gradient(90deg, #FFC700, #EF7104);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.xp-bar-dropdown-badge-wrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.xp-bar-badge-small {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.xp-bar-dropdown-badge-level {
+  font-family: 'DynaPuff', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(248, 248, 252, 0.8);
+}
+
+.xp-bar-dropdown-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.xp-bar-dropdown-progress-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.xp-bar-dropdown-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.xp-dd-label {
+  font-size: 13px;
+  color: rgba(248, 248, 252, 0.55);
+}
+
+.xp-dd-value {
+  font-family: 'DynaPuff', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.xp-bar-dropdown-xp-count {
+  font-family: 'DynaPuff', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.xp-bar-dropdown-track {
+  width: 100%;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.xp-bar-dropdown-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+.xp-bar-dropdown-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.xp-bar-stat-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.xp-bar-dropdown-info {
+  font-size: 13px;
+  color: rgba(248, 248, 252, 0.6);
+  line-height: 1.5;
+}
+
+.xp-bar-dropdown-info strong {
+  color: #fff;
+}
+
+.xp-dd-caption {
+  display: block;
+  font-size: 11px;
+  color: rgba(248, 248, 252, 0.35);
+  margin-top: 4px;
+}
+
+/* Hide center XP on mobile */
+.header-center-xp {
+  display: block;
+}
+
 /* ============================================================================
-   REWARDS MODAL STYLES
+   REWARDS MODAL STYLES — Tabbed panel with chest strip + loot + animation
    ============================================================================ */
 
 .rewards-overlay {
@@ -3057,8 +3205,8 @@ body {
 }
 
 .rewards-modal {
-  width: min(90vw, 520px);
-  max-height: 85vh;
+  width: min(95vw, 600px);
+  max-height: 90vh;
   background: rgb(21, 22, 29);
   border: 1px solid rgb(56, 57, 67);
   border-radius: 16px;
@@ -3078,13 +3226,13 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
+  padding: 16px 20px 12px;
   border-bottom: 1px solid rgb(56, 57, 67);
 }
 
 .rewards-modal-title {
   font-family: 'DynaPuff', sans-serif;
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 700;
   color: #FFD700;
 }
@@ -3102,6 +3250,38 @@ body {
 .rewards-modal-close:hover {
   background: rgba(255, 255, 255, 0.1);
   color: #fff;
+}
+
+/* Tab Bar */
+.rewards-tabs {
+  display: flex;
+  border-bottom: 1px solid rgb(56, 57, 67);
+  padding: 0 16px;
+}
+
+.rewards-tab {
+  flex: 1;
+  padding: 10px 0;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font-family: 'DynaPuff', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(248, 248, 252, 0.45);
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.rewards-tab:hover {
+  color: rgba(248, 248, 252, 0.7);
+}
+
+.rewards-tab.active {
+  color: #FFD700;
+  border-bottom-color: #FFD700;
 }
 
 .rewards-modal-body {
@@ -3134,131 +3314,722 @@ body {
   padding: 0 0 0 8px;
 }
 
-/* Reward reveal banner */
-.chest-reveal-banner {
-  text-align: center;
-  padding: 16px;
-  margin-bottom: 14px;
-  background: rgba(0, 255, 163, 0.08);
-  border: 1px solid rgba(0, 255, 163, 0.3);
-  border-radius: 12px;
-  cursor: pointer;
-  animation: chestRevealIn 0.4s ease;
-}
+/* ═══════ HORIZONTAL CHEST STRIP ═══════ */
 
-.chest-reveal-banner.jackpot {
-  background: rgba(255, 215, 0, 0.1);
-  border-color: rgba(255, 215, 0, 0.4);
-  box-shadow: 0 0 30px rgba(255, 215, 0, 0.15);
-}
-
-@keyframes chestRevealIn {
-  from { opacity: 0; transform: scale(0.9); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-.chest-reveal-jackpot-label {
-  font-family: 'DynaPuff', sans-serif;
-  font-size: 14px;
-  font-weight: 700;
-  color: #FFD700;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  margin-bottom: 4px;
-}
-
-.chest-reveal-amount {
-  font-family: 'DynaPuff', sans-serif;
-  font-size: 24px;
-  font-weight: 700;
-  color: #00FFA3;
-}
-
-.chest-reveal-dismiss {
-  font-family: 'DynaPuff', sans-serif;
-  font-size: 11px;
-  color: rgba(248, 248, 252, 0.35);
-  margin-top: 6px;
-}
-
-/* Chest grid - mini cards matching rank layout */
-.chest-grid-mini {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-}
-
-.chest-card-mini {
+.chest-strip {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
+  gap: 8px;
+  padding: 4px 0 16px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.chest-strip::-webkit-scrollbar {
+  display: none;
+}
+
+.chest-strip-card {
+  position: relative;
+  width: 64px;
+  min-width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
   background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
+  cursor: pointer;
   transition: all 0.2s ease;
-}
-
-.chest-card-mini:not(.locked):hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 215, 0, 0.4);
-  transform: translateY(-1px);
-}
-
-.chest-card-mini.locked {
-  opacity: 0.4;
-  cursor: not-allowed !important;
-}
-
-.chest-card-mini.opening {
-  animation: chestShake 0.4s ease infinite;
-  border-color: #FFD700;
-}
-
-@keyframes chestShake {
-  0%, 100% { transform: translateX(0) rotate(0deg); }
-  25% { transform: translateX(-3px) rotate(-2deg); }
-  75% { transform: translateX(3px) rotate(2deg); }
-}
-
-.chest-icon-mini {
-  flex-shrink: 0;
-  width: 44px;
-  height: 44px;
+  scroll-snap-align: center;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 0;
 }
 
-.chest-icon-image {
-  width: 100%;
-  height: 100%;
+.chest-strip-card:hover:not(.locked) {
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateY(-2px);
+}
+
+.chest-strip-card.selected {
+  border-width: 2px;
+}
+
+.chest-strip-card.locked {
+  opacity: 0.3;
+  filter: grayscale(0.8);
+  cursor: default;
+}
+
+.chest-strip-icon {
+  width: 40px;
+  height: 40px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+/* Key badge on each chest card */
+.chest-key-badge {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  padding: 1px 4px;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 6px;
+  z-index: 2;
+}
+
+.chest-key-count {
+  font-family: 'DynaPuff', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  color: #FFD700;
+}
+
+.chest-key-icon {
+  width: 14px;
+  height: 14px;
   object-fit: contain;
 }
 
-.chest-info-mini {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+.chest-lock-badge {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  color: rgba(248, 248, 252, 0.4);
+  z-index: 2;
 }
 
-.chest-level {
+/* ═══════ CHEST DETAIL PANEL ═══════ */
+
+.chest-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.chest-detail-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
+
+.chest-detail-icon {
+  width: 80px;
+  height: 80px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  transition: transform 0.15s;
+}
+
+.chest-burst-flash {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: chestBurstFlash 0.4s ease forwards;
+}
+
+@keyframes chestBurstFlash {
+  0% { opacity: 0; transform: translateX(-50%) scale(0.5); }
+  50% { opacity: 1; }
+  100% { opacity: 0; transform: translateX(-50%) scale(2); }
+}
+
+.chest-detail-title {
+  font-family: 'DynaPuff', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0;
+  text-align: center;
+}
+
+/* ═══════ CHEST OPENING ANIMATION ═══════ */
+
+.chest-anim-shaking {
+  animation: chestOpenShake 0.8s ease infinite;
+}
+
+@keyframes chestOpenShake {
+  0%   { transform: translateX(0) rotate(0deg); }
+  10%  { transform: translateX(-2px) rotate(-1deg); }
+  20%  { transform: translateX(2px) rotate(1deg); }
+  30%  { transform: translateX(-3px) rotate(-2deg); }
+  40%  { transform: translateX(3px) rotate(2deg); }
+  50%  { transform: translateX(-4px) rotate(-3deg); }
+  60%  { transform: translateX(4px) rotate(3deg); }
+  70%  { transform: translateX(-5px) rotate(-3deg); }
+  80%  { transform: translateX(5px) rotate(3deg); }
+  90%  { transform: translateX(-3px) rotate(-2deg); }
+  100% { transform: translateX(0) rotate(0deg); }
+}
+
+.chest-anim-bursting {
+  animation: chestBurstScale 0.4s ease forwards;
+}
+
+@keyframes chestBurstScale {
+  0% { transform: scale(1); opacity: 1; }
+  40% { transform: scale(1.2); opacity: 0.8; }
+  100% { transform: scale(0); opacity: 0; }
+}
+
+/* ═══════ REWARD REVEAL CARD ═══════ */
+
+.chest-reveal-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 28px 20px;
+  margin: 0 auto;
+  max-width: 280px;
+  width: 100%;
+  background: radial-gradient(circle, rgba(22, 21, 26, 0.8) 0%, rgba(15, 15, 15, 0.95) 100%);
+  border: 2px solid;
+  border-radius: 16px;
+  cursor: pointer;
+  animation: chestRevealIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  position: relative;
+  overflow: hidden;
+}
+
+@keyframes chestRevealIn {
+  from { opacity: 0; transform: scale(0.3); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.chest-reveal-card.jackpot {
+  animation: chestRevealIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both,
+             jackpotGlow 1.5s ease infinite;
+}
+
+@keyframes jackpotGlow {
+  0%, 100% { box-shadow: 0 0 30px rgba(255, 215, 0, 0.3); }
+  50% { box-shadow: 0 0 50px rgba(255, 215, 0, 0.6), 0 0 80px rgba(255, 215, 0, 0.2); }
+}
+
+.chest-reveal-jackpot-banner {
+  font-family: 'DynaPuff', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: #FFD700;
+  text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+  letter-spacing: 4px;
+  animation: jackpotBannerPulse 1s ease infinite;
+}
+
+@keyframes jackpotBannerPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+
+.chest-reveal-rarity {
+  font-family: 'DynaPuff', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+
+.chest-reveal-sol {
+  font-family: 'DynaPuff', sans-serif;
+  font-size: 32px;
+  font-weight: 700;
+  color: #00FFA3;
+  text-shadow: 0 0 16px rgba(0, 255, 163, 0.3);
+}
+
+.chest-reveal-sub {
+  font-size: 12px;
+  color: rgba(248, 248, 252, 0.5);
+}
+
+.chest-reveal-tap {
+  font-size: 11px;
+  color: rgba(248, 248, 252, 0.3);
+  margin-top: 4px;
+}
+
+/* Jackpot confetti (CSS-only particles) */
+.chest-confetti {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.chest-confetti::before,
+.chest-confetti::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  animation: confettiBurst 1.2s ease-out infinite;
+}
+
+.chest-confetti::before {
+  box-shadow:
+    -40px -50px 0 #FFD700,
+    30px -60px 0 #FF6B6B,
+    -60px -20px 0 #00FFA3,
+    50px -30px 0 #3B82F6,
+    -20px -70px 0 #A855F7,
+    60px -50px 0 #F97316,
+    -50px -60px 0 #06B6D4,
+    40px -70px 0 #EF4444;
+}
+
+.chest-confetti::after {
+  box-shadow:
+    -30px -40px 0 #22C55E,
+    45px -55px 0 #EAB308,
+    -55px -35px 0 #FF69B4,
+    25px -65px 0 #e6cc80,
+    -45px -55px 0 #00cccc,
+    55px -25px 0 #ff4040,
+    -15px -60px 0 #FFD700,
+    35px -45px 0 #1eff00;
+  animation-delay: 0.15s;
+}
+
+@keyframes confettiBurst {
+  0% { transform: translateY(0) scale(1); opacity: 1; }
+  100% { transform: translateY(-80px) scale(0); opacity: 0; }
+}
+
+/* ═══════ LOOT TABLE GRID ═══════ */
+
+.chest-loot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 8px;
+}
+
+.chest-loot-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 14px 8px;
+  background: radial-gradient(circle, rgba(22, 21, 26, 0.8) 0%, rgba(15, 15, 15, 0.9) 100%),
+              radial-gradient(circle, var(--loot-color-dim) 0%, transparent 70%);
+  background-blend-mode: normal, screen;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  overflow: hidden;
+  transition: all 0.2s;
+}
+
+.chest-loot-card:hover {
+  border-color: var(--loot-color);
+  transform: translateY(-1px);
+}
+
+.chest-loot-card.jackpot {
+  border-color: rgba(255, 215, 0, 0.4);
+  animation: lootJackpotRing 2s ease infinite;
+}
+
+@keyframes lootJackpotRing {
+  0%, 100% { box-shadow: 0 0 8px rgba(255, 215, 0, 0.15); }
+  50% { box-shadow: 0 0 20px rgba(255, 215, 0, 0.35), 0 0 30px rgba(255, 215, 0, 0.1); }
+}
+
+.chest-loot-sol-bg {
+  position: absolute;
+  inset: 0;
+  background-image: url('https://api.str8.fun/icons/tiers/pleb.png');
+  background-size: 50%;
+  background-repeat: no-repeat;
+  background-position: center;
+  opacity: 0.05;
+  pointer-events: none;
+}
+
+.chest-loot-amount {
+  font-family: 'DynaPuff', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  position: relative;
+}
+
+.chest-loot-rarity {
   font-family: 'DynaPuff', sans-serif;
   font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  position: relative;
 }
 
-.chest-name {
+.chest-loot-odds {
+  font-size: 11px;
+  color: rgba(248, 248, 252, 0.45);
+  position: relative;
+}
+
+.chest-loot-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 24px;
+  font-family: 'DynaPuff', sans-serif;
+  font-size: 13px;
+  color: rgba(248, 248, 252, 0.4);
+}
+
+/* ═══════ CHEST ACTION BUTTONS ═══════ */
+
+.chest-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.chest-open-btn {
+  width: 100%;
+  height: 48px;
+  border: none;
+  border-radius: 10px;
+  font-family: 'DynaPuff', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.15s;
+}
+
+.chest-open-btn.ready {
+  color: rgb(13, 14, 18);
+  box-shadow: 0 4px 0 0 rgba(0, 0, 0, 0.3);
+}
+
+.chest-open-btn.ready:hover {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 0 rgba(0, 0, 0, 0.3);
+}
+
+.chest-open-btn.ready:active {
+  transform: translateY(4px);
+  box-shadow: none;
+}
+
+.chest-btn-key-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.chest-open-btn.no-keys,
+.chest-open-btn.cooldown,
+.chest-open-btn.locked,
+.chest-open-btn.opening {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(248, 248, 252, 0.4);
+  cursor: not-allowed;
+}
+
+.chest-open-btn.cooldown {
+  color: rgba(248, 248, 252, 0.6);
+}
+
+.chest-go-back-btn {
+  width: 100%;
+  height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  background: transparent;
+  font-family: 'DynaPuff', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(248, 248, 252, 0.5);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.chest-go-back-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(248, 248, 252, 0.8);
+}
+
+/* ═══════ TIERS TAB ═══════ */
+
+.tier-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tier-row {
+  border-radius: 10px;
+  overflow: hidden;
+  transition: all 0.15s;
+}
+
+.tier-row.current {
+  border: 1px solid rgba(255, 215, 0, 0.25);
+  background: rgba(255, 215, 0, 0.04);
+}
+
+.tier-row.locked {
+  opacity: 0.5;
+}
+
+.tier-row-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #fff;
+  transition: background 0.15s;
+}
+
+.tier-row-header:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.tier-row-icon {
+  width: 32px;
+  height: 32px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  flex-shrink: 0;
+}
+
+.tier-row-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+}
+
+.tier-row-name {
   font-family: 'DynaPuff', sans-serif;
   font-size: 14px;
   font-weight: 700;
 }
 
-@media (max-width: 500px) {
-  .chest-grid-mini {
-    grid-template-columns: 1fr;
+.tier-row-levels {
+  font-size: 11px;
+  color: rgba(248, 248, 252, 0.4);
+}
+
+.tier-row-cd {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  color: rgba(248, 248, 252, 0.4);
+  flex-shrink: 0;
+}
+
+.tier-row-badge {
+  font-family: 'DynaPuff', sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.current-badge {
+  background: rgba(255, 215, 0, 0.15);
+  color: #FFD700;
+}
+
+.locked-badge {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(248, 248, 252, 0.4);
+}
+
+.tier-row-chevron {
+  font-size: 12px;
+  color: rgba(248, 248, 252, 0.3);
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+
+.tier-row-chevron.expanded {
+  transform: rotate(90deg);
+}
+
+.tier-loot-expand {
+  padding: 0 12px 12px;
+  animation: tierLootExpand 0.2s ease;
+}
+
+@keyframes tierLootExpand {
+  from { opacity: 0; max-height: 0; }
+  to { opacity: 1; max-height: 500px; }
+}
+
+.tier-loot-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'DynaPuff', sans-serif;
+  font-size: 12px;
+}
+
+.tier-loot-table th {
+  text-align: left;
+  padding: 4px 8px;
+  color: rgba(248, 248, 252, 0.4);
+  font-weight: 600;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.tier-loot-table td {
+  padding: 4px 8px;
+  color: rgba(248, 248, 252, 0.7);
+}
+
+.tier-loot-table .jackpot-row td {
+  color: #FFD700;
+  font-weight: 600;
+}
+
+/* ═══════ HISTORY TAB ═══════ */
+
+.chest-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.chest-history-empty {
+  text-align: center;
+  padding: 32px 16px;
+  font-family: 'DynaPuff', sans-serif;
+  font-size: 13px;
+  color: rgba(248, 248, 252, 0.35);
+}
+
+.chest-history-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  transition: background 0.15s;
+}
+
+.chest-history-row:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.chest-history-row.jackpot {
+  background: rgba(255, 215, 0, 0.05);
+  border: 1px solid rgba(255, 215, 0, 0.15);
+}
+
+.chest-history-icon {
+  width: 28px;
+  height: 28px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  flex-shrink: 0;
+}
+
+.chest-history-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+}
+
+.chest-history-tier {
+  font-family: 'DynaPuff', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.chest-history-time {
+  font-size: 11px;
+  color: rgba(248, 248, 252, 0.35);
+}
+
+.chest-history-reward {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.chest-history-sol {
+  font-family: 'DynaPuff', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: #00FFA3;
+}
+
+.chest-history-sol.jackpot-text {
+  color: #FFD700;
+}
+
+.chest-history-jackpot-badge {
+  font-family: 'DynaPuff', sans-serif;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(255, 215, 0, 0.15);
+  color: #FFD700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ═══════ RESPONSIVE ═══════ */
+
+@media (max-width: 600px) {
+  .chest-loot-grid {
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  }
+  
+  .chest-strip-card {
+    width: 56px;
+    min-width: 56px;
+    height: 56px;
+  }
+  
+  .chest-strip-icon {
+    width: 34px;
+    height: 34px;
   }
 }
 
@@ -3495,6 +4266,10 @@ body {
 
   /* Hide XP bar and chests button on mobile */
   .xp-bar-container {
+    display: none !important;
+  }
+  
+  .header-center-xp {
     display: none !important;
   }
   

@@ -214,7 +214,7 @@ const GlobalChatSidebar: React.FC<GlobalChatSidebarProps> = ({
           <>
             {messages.map((msg) => {
               const rankStyle = getRankStyle(msg.username);
-              const hasTier = typeof msg.tier === 'number' && msg.tier >= 1 && msg.tier <= 10;
+              const hasTier = typeof msg.tier === 'number' && msg.tier >= 0 && msg.tier <= 9;
               const tierColor = hasTier ? TIER_COLORS[msg.tier!] : undefined;
               
               return (

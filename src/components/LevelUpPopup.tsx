@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import type { LevelUpEvent } from '../types/game';
-import { TIER_COLORS, tierIconUrl, keyIconUrl, TIER_NAMES } from '../types/game';
+import { TIER_COLORS, tierIconUrl, keyIconUrl, TIER_NAMES, TIER_LEVEL_REQ } from '../types/game';
 
 interface LevelUpPopupProps {
   levelUp: LevelUpEvent | null;
@@ -17,10 +17,11 @@ const LevelUpPopup: React.FC<LevelUpPopupProps> = ({ levelUp, onDismiss }) => {
 
   if (!levelUp) return null;
 
-  const tier = levelUp.tier ?? 0;
+  const tier = typeof levelUp.tier === 'number' ? levelUp.tier : 0;
   const tierColor = TIER_COLORS[tier] || '#9CA3AF';
   const tierName = TIER_NAMES[tier] || 'Pleb';
-  const tierChanged = levelUp.old_level <= tier * 10 && levelUp.new_level > tier * 10;
+  const tierThreshold = TIER_LEVEL_REQ[tier] ?? tier * 10;
+  const tierChanged = levelUp.old_level <= tierThreshold && levelUp.new_level > tierThreshold;
 
   return (
     <div className="levelup-overlay" onClick={onDismiss}>

@@ -1139,6 +1139,8 @@ const PumpItSim: React.FC = () => {
         tiers={rewards.tiers}
         onOpenChest={rewards.openChest}
         isLoadingChests={rewards.isLoadingChests}
+        chestHistory={rewards.chestHistory}
+        fetchHistory={rewards.fetchHistory}
       />
     </>
   );

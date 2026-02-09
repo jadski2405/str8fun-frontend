@@ -1027,6 +1027,7 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
         justifyContent: 'space-between',
         padding: '0 16px',
         boxSizing: 'border-box',
+        position: 'relative',
       }}
     >
       
@@ -1036,6 +1037,18 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
         {/* Game Navigation Buttons - Desktop Only */}
         <GameNavButtons />
       </div>
+
+      {/* Center Section - XP Bar (absolutely centered) */}
+      {isConnected && xpState && (
+        <div className="header-center-xp" style={{
+          position: 'absolute',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 10,
+        }}>
+          <XpBar xpState={xpState} compact />
+        </div>
+      )}
 
       {/* Right Section - Wallet */}
       {isConnected ? (
@@ -1053,9 +1066,6 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
             boxSizing: 'border-box',
           }}
         >
-          {/* XP Bar - compact */}
-          {xpState && <XpBar xpState={xpState} compact />}
-
           {/* CHESTS Button - Golden, left of Withdraw */}
           {onOpenChests && (
             <button

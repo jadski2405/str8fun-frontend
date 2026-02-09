@@ -5,6 +5,7 @@ import type {
   ChestOpenResult,
   ChestHistoryEntry,
   TierInfo,
+  XpCurveEntry,
   XpGainEvent,
   LevelUpEvent,
   ChestRewardEvent,
@@ -34,6 +35,7 @@ export interface UseRewardsReturn {
 
   // Tier reference data
   tiers: TierInfo[];
+  xpCurve: XpCurveEntry[];
 
   // Popups / notifications
   activeLevelUp: LevelUpEvent | null;
@@ -60,6 +62,7 @@ export function useRewards(
   const [isLoadingChests, setIsLoadingChests] = useState(false);
   const [chestHistory, setChestHistory] = useState<ChestHistoryEntry[]>([]);
   const [tiers, setTiers] = useState<TierInfo[]>([]);
+  const [xpCurve, setXpCurve] = useState<XpCurveEntry[]>([]);
   const [activeLevelUp, setActiveLevelUp] = useState<LevelUpEvent | null>(null);
   const [xpGainQueue, setXpGainQueue] = useState<XpGainEvent[]>([]);
   const [lastChestReward, setLastChestReward] = useState<ChestRewardEvent | null>(null);
@@ -139,6 +142,7 @@ export function useRewards(
       if (response.ok) {
         const data = await response.json();
         setTiers(data.tiers || []);
+        if (data.xp_curve) setXpCurve(data.xp_curve);
       }
     } catch (error) {
       console.error('[useRewards] Error fetching tier data:', error);
@@ -151,7 +155,7 @@ export function useRewards(
 
   const openChest = useCallback(async (tier: number): Promise<ChestOpenResult> => {
     if (!walletAddress) {
-      return { reward_sol: 0, is_jackpot: false, tier_name: '', new_balance: 0, cooldown_ready_at: '', keys_remaining: 0, error: 'Not connected' };
+      return { reward_sol: 0, is_jackpot: false, rarity: 'Common', tier_name: '', new_balance: 0, cooldown_ready_at: '', keys_remaining: 0, error: 'Not connected' };
     }
 
     try {
@@ -182,7 +186,7 @@ export function useRewards(
       return { ...data, success: false, error: data.error || 'Failed to open chest' };
     } catch (error) {
       console.error('[useRewards] Error opening chest:', error);
-      return { reward_sol: 0, is_jackpot: false, tier_name: '', new_balance: 0, cooldown_ready_at: '', keys_remaining: 0, error: 'Failed to open chest' };
+      return { reward_sol: 0, is_jackpot: false, rarity: 'Common', tier_name: '', new_balance: 0, cooldown_ready_at: '', keys_remaining: 0, error: 'Failed to open chest' };
     }
   }, [walletAddress, getAuthToken, updateDepositedBalance, fetchChests, fetchXpState]);
 
@@ -324,6 +328,7 @@ export function useRewards(
     chestHistory,
     fetchHistory,
     tiers,
+    xpCurve,
     activeLevelUp,
     dismissLevelUp,
     xpGainQueue,

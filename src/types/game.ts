@@ -173,25 +173,52 @@ export const chestIconUrl = (tier: number): string =>
 export const keyIconUrl = (): string =>
   `https://api.str8.fun/icons/keys/key.png`;
 
+// Loot table entry (returned per tier from /api/rewards/tiers and /api/rewards/chests)
+export interface LootTableEntry {
+  rarity: string;
+  reward_sol: number;
+  odds_percent: number;
+}
+
+// Rarity name → color map
+export const RARITY_COLORS: Record<string, string> = {
+  Common:    '#9d9d9d',
+  Uncommon:  '#1eff00',
+  Rare:      '#0070ff',
+  Epic:      '#a335ee',
+  Legendary: '#ff8000',
+  Mythic:    '#ff4040',
+  Ancient:   '#00cccc',
+  Immortal:  '#e6cc80',
+  Divine:    '#ff69b4',
+  Jackpot:   '#ffd700',
+};
+
 export interface TierInfo {
   index: number;
   name: string;
   slug: string;
-  level_range: string;
+  level_range: number[];        // e.g. [1, 10]
+  cooldown_minutes: number;
+  xp_to_unlock: number;
   icon_url: string;
   chest_url: string;
   key_url: string;
-  reward_min: number;
-  reward_max: number;
-  jackpot_odds: number;
-  jackpot_max: number;
-  xp_to_unlock: number;
+  loot_table: LootTableEntry[];
+}
+
+export interface XpCurveEntry {
+  level: number;
+  xp_required: number;
+  total_xp: number;
+  tier: string;
 }
 
 export interface PlayerXpState {
   level: number;
   xp: number;
-  tier: number;
+  tier: number;           // tier_index (0-9)
+  tier_index?: number;    // alias from API
   xp_progress: number;
   xp_needed: number;
   xp_to_next: number;
@@ -202,18 +229,19 @@ export interface PlayerXpState {
 export interface ChestInfo {
   tier_index: number;
   tier_name: string;
+  slug: string;
   keys: number;
   is_ready: boolean;
   cooldown_ready_at: string | null;
   cooldown_remaining_ms: number;
-  reward_range: string;
-  jackpot_odds: number;
-  jackpot_max: number;
+  cooldown_minutes: number;
+  loot_table: LootTableEntry[];
 }
 
 export interface ChestOpenResult {
-  success?: boolean;        // may not be present if server just returns fields
+  success?: boolean;
   reward_sol: number;
+  rarity: string;
   is_jackpot: boolean;
   tier_name: string;
   new_balance: number;
@@ -223,7 +251,8 @@ export interface ChestOpenResult {
 }
 
 export interface ChestHistoryEntry {
-  tier: number;
+  tier: string;             // tier name e.g. "Pleb"
+  tier_index: number;
   reward_sol: number;
   is_jackpot: boolean;
   opened_at: string;
@@ -235,23 +264,29 @@ export interface XpGainEvent {
   xp_gained: number;
   total_xp: number;
   level: number;
-  reason: string;   // 'wager' | 'rekt' | 'daily' | etc.
+  reason: string;
+  timestamp?: number;
 }
 
 export interface LevelUpEvent {
   type: 'LEVEL_UP';
   old_level: number;
   new_level: number;
-  tier: number;                        // 0-9
-  keys_awarded: Record<string, number>; // e.g. { "Pleb": 2, "Jeet": 1 }
+  tier: number | string;               // tier name or index
+  keys_awarded: Record<string, number>;
+  xp_to_next?: number;
+  timestamp?: number;
 }
 
 export interface ChestRewardEvent {
   type: 'CHEST_REWARD';
-  tier: number;
+  tier: string;
+  tier_index: number;
+  rarity: string;
   reward_sol: number;
   is_jackpot: boolean;
   new_balance: number;
   keys_remaining: number;
   cooldown_ready_at: string;
+  timestamp?: number;
 }
