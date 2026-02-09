@@ -40,7 +40,7 @@ export interface TradeMarker {
 // ============================================================================
 // CONSTANTS
 // ============================================================================
-const TICKS_PER_CANDLE = 10; // Server ticks per candle (10 × 50ms = 0.5s candles)
+const TICKS_PER_CANDLE = 20; // Server ticks per candle (20 × 50ms = 1s candles)
 const INITIAL_PRICE = 1.0;
 
 // Smooth animation constants
