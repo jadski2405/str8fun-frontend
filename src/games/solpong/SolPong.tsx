@@ -31,7 +31,6 @@ const SolPong: React.FC = () => {
             <GlobalChatSidebar
               isCollapsed={chatCollapsed}
               onToggleCollapse={() => setChatCollapsed(!chatCollapsed)}
-              room="solpong"
               isWalletConnected={isConnected}
               walletAddress={publicKey || null}
               getAuthToken={getAuthToken}

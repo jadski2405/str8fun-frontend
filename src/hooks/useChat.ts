@@ -1,25 +1,19 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://api.str8.fun';
-const WS_URL = import.meta.env.VITE_WS_URL || 'wss://api.str8.fun';
-
 
 export interface ChatMessage {
   id: string;
-  user_id: string | null;
   username: string;
+  wallet_address: string;
   message: string;
-  room: string;
   created_at: string;
-  tier?: number;
 }
 
 interface UseChatOptions {
-  room?: string;
-  limit?: number;
   walletAddress?: string | null;
-  username?: string | null;
   getAuthToken?: () => Promise<string | null>;
+  limit?: number;
 }
 
 interface UseChatReturn {
@@ -31,13 +25,19 @@ interface UseChatReturn {
   isRateLimited: boolean;
 }
 
-export function useChat({ room = 'pumpit', limit = 50, walletAddress = null, username: _username = null, getAuthToken = undefined }: UseChatOptions = {}): UseChatReturn {
+// Format wallet for display: 7xKX...9fGh
+export function shortWallet(addr: string): string {
+  if (!addr || addr.length < 8) return addr || '';
+  return `${addr.slice(0, 4)}...${addr.slice(-4)}`;
+}
+
+export function useChat({ walletAddress = null, getAuthToken = undefined, limit = 50 }: UseChatOptions = {}): UseChatReturn {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isRateLimited, setIsRateLimited] = useState(false);
-  
-  const wsRef = useRef<WebSocket | null>(null);
+  const optimisticIdsRef = useRef<Set<string>>(new Set());
+
   const currentUserId = walletAddress;
 
   // Load initial messages
@@ -45,166 +45,121 @@ export function useChat({ room = 'pumpit', limit = 50, walletAddress = null, use
     const fetchMessages = async () => {
       setLoading(true);
       setError(null);
-
       try {
-        const response = await fetch(`${API_URL}/api/chat/${encodeURIComponent(room)}?limit=${limit}`);
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch messages');
-        }
-
+        const response = await fetch(`${API_URL}/api/chat/messages?limit=${limit}`);
+        if (!response.ok) throw new Error('Failed to fetch messages');
         const data = await response.json();
-        setMessages(data || []);
+        // API returns newest first — reverse so oldest is at top
+        const msgs: ChatMessage[] = data.messages || data || [];
+        setMessages(msgs.reverse());
       } catch (err) {
-        console.error('Error fetching messages:', err);
+        console.error('[useChat] Error fetching messages:', err);
         setError(err instanceof Error ? err.message : 'Failed to load messages');
       } finally {
         setLoading(false);
       }
     };
-
     fetchMessages();
-  }, [room, limit]);
+  }, [limit]);
 
-  // Subscribe to realtime updates via WebSocket
+  // Listen for CHAT_MESSAGE events dispatched from the game WS (useGame.ts)
   useEffect(() => {
-    let ws: WebSocket | null = null;
-    let reconnectTimeout: ReturnType<typeof setTimeout>;
-    let isMounted = true;
-    
-    const connect = () => {
-      if (!isMounted) return;
-      
-      ws = new WebSocket(`${WS_URL}/ws`);
-      wsRef.current = ws;
-      
-      ws.onopen = () => {
-        if (!isMounted) return;
-        console.log(`✅ Chat WebSocket connected to room: ${room}`);
-        // Subscribe to chat channel
-        ws?.send(JSON.stringify({
-          type: 'subscribe',
-          channels: ['chat'],
-        }));
-      };
-      
-      ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          
-          if (data.type === 'CHAT' && data.message) {
-            const newMessage = data.message as ChatMessage;
-            // Only add if it's for our room
-            if (newMessage.room === room) {
-              setMessages((prev) => {
-                // Avoid duplicates
-                if (prev.some((msg) => msg.id === newMessage.id)) {
-                  return prev;
-                }
-                // Keep only the last `limit` messages
-                const updated = [...prev, newMessage];
-                if (updated.length > limit) {
-                  return updated.slice(-limit);
-                }
-                return updated;
-              });
-            }
-          }
-        } catch (e) {
-          console.error('WebSocket message error:', e);
-        }
-      };
-      
-      ws.onerror = () => {
-        // Suppress error logging - reconnection will handle it
-      };
-      
-      ws.onclose = () => {
-        console.log('Chat WebSocket disconnected');
-        // Reconnect after 2 seconds if still mounted
-        if (isMounted) {
-          reconnectTimeout = setTimeout(connect, 2000);
-        }
-      };
-    };
-    
-    // Small delay to avoid React Strict Mode double-mount issues
-    const initTimeout = setTimeout(connect, 100);
+    const handleChatMessage = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (!detail || !detail.id) return;
 
-    return () => {
-      isMounted = false;
-      clearTimeout(initTimeout);
-      clearTimeout(reconnectTimeout);
-      if (wsRef.current) {
-        wsRef.current.close();
-      }
-    };
-  }, [room, limit]);
+      const newMsg: ChatMessage = {
+        id: detail.id,
+        username: detail.username || shortWallet(detail.wallet_address || ''),
+        wallet_address: detail.wallet_address || '',
+        message: detail.message || '',
+        created_at: detail.created_at || new Date().toISOString(),
+      };
 
-  // Send message function
+      setMessages(prev => {
+        // Skip if already present (optimistic add or duplicate)
+        if (prev.some(m => m.id === newMsg.id)) return prev;
+        const updated = [...prev, newMsg];
+        if (updated.length > limit) return updated.slice(-limit);
+        return updated;
+      });
+    };
+
+    window.addEventListener('pumpit:chat_message', handleChatMessage);
+    return () => window.removeEventListener('pumpit:chat_message', handleChatMessage);
+  }, [limit]);
+
+  // Send message
   const sendMessage = useCallback(async (text: string): Promise<boolean> => {
     const trimmedText = text.trim();
-    
-    if (!trimmedText) {
+    if (!trimmedText) return false;
+
+    if (trimmedText.length > 280) {
+      setError('Message too long (max 280 characters)');
       return false;
     }
 
-    if (trimmedText.length > 500) {
-      setError('Message too long (max 500 characters)');
-      return false;
-    }
-
-    // Must have wallet connected to send messages
     if (!walletAddress) {
       setError('Connect wallet to send messages');
       return false;
     }
 
+    // Optimistic add with temp id
+    const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const optimisticMsg: ChatMessage = {
+      id: tempId,
+      username: '',
+      wallet_address: walletAddress,
+      message: trimmedText,
+      created_at: new Date().toISOString(),
+    };
+    optimisticIdsRef.current.add(tempId);
+    setMessages(prev => [...prev, optimisticMsg]);
+
     try {
-      // Send with retry on 401 (token refresh)
-      const sendWithRetry = async (retries = 1): Promise<Response> => {
-        const token = getAuthToken ? await getAuthToken() : null;
-        const response = await fetch(`${API_URL}/api/chat`, {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            ...(token ? { 'Authorization': `Bearer ${token}`, 'x-auth-token': token } : {}),
-          },
-          body: JSON.stringify({
-            wallet_address: walletAddress,
-            message: trimmedText,
-            room,
-          }),
-        });
-        
-        // Retry on 401 - token will be refreshed on next getAuthToken() call
-        if (response.status === 401 && retries > 0) {
-          console.log('[Chat] 401 on send, refreshing token and retrying...');
-          await new Promise(r => setTimeout(r, 500));
-          return sendWithRetry(retries - 1);
-        }
-        return response;
-      };
-      
-      const response = await sendWithRetry();
+      const token = getAuthToken ? await getAuthToken() : null;
+      const response = await fetch(`${API_URL}/api/chat/message`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-wallet-address': walletAddress,
+          ...(token ? { 'Authorization': `Bearer ${token}`, 'x-auth-token': token } : {}),
+        },
+        body: JSON.stringify({ message: trimmedText }),
+      });
 
       if (!response.ok) {
         const result = await response.json();
+        // Remove optimistic message on failure
+        setMessages(prev => prev.filter(m => m.id !== tempId));
+        optimisticIdsRef.current.delete(tempId);
         setError(result.error || 'Failed to send message');
         return false;
       }
 
-      // Rate limiting - disable send for 1 second
+      const result = await response.json();
+
+      // Replace optimistic message with real one
+      if (result.message?.id) {
+        setMessages(prev =>
+          prev.map(m => m.id === tempId ? { ...result.message } : m)
+        );
+      }
+      optimisticIdsRef.current.delete(tempId);
+
+      // Rate limit: disable send for 2s
       setIsRateLimited(true);
-      setTimeout(() => setIsRateLimited(false), 1000);
+      setTimeout(() => setIsRateLimited(false), 2000);
 
       return true;
     } catch (err) {
-      console.error('Error sending message:', err);
+      console.error('[useChat] Error sending message:', err);
+      setMessages(prev => prev.filter(m => m.id !== tempId));
+      optimisticIdsRef.current.delete(tempId);
       setError('Failed to send message');
       return false;
     }
-  }, [room, walletAddress]);
+  }, [walletAddress, getAuthToken]);
 
   return {
     messages,

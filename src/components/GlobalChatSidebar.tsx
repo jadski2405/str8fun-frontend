@@ -1,48 +1,32 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Send, MessageCircle, Loader2 } from 'lucide-react';
-import { useChat } from '../hooks/useChat';
-import { TIER_COLORS, TIER_NAMES, tierIconUrl } from '../types/game';
+import { useChat, shortWallet } from '../hooks/useChat';
+import { tierIconUrl } from '../types/game';
 
 interface GlobalChatSidebarProps {
   isCollapsed: boolean;
   onToggleCollapse: () => void;
-  room?: string;
   isWalletConnected?: boolean;
   walletAddress?: string | null;
   getAuthToken?: () => Promise<string | null>;
   onlineCount?: number;
+  playerTier?: number;
 }
-
-// Fallback badge colors for users without a tier
-const BADGE_COLORS = [
-  '#facc15', '#a855f7', '#3b82f6', '#22c55e', '#ec4899',
-  '#f97316', '#06b6d4', '#ef4444', '#6366f1', '#14b8a6',
-  '#f59e0b', '#84cc16',
-];
 
 const GlobalChatSidebar: React.FC<GlobalChatSidebarProps> = ({ 
   isCollapsed: _isCollapsed, 
   onToggleCollapse: _onToggleCollapse,
-  room = 'global',
   isWalletConnected = false,
   walletAddress = null,
   getAuthToken = undefined,
-  onlineCount = 0
+  onlineCount = 0,
+  playerTier = 0,
 }) => {
   const [inputValue, setInputValue] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   
-  const { messages, loading, error, sendMessage, isRateLimited } = useChat({ room, walletAddress, getAuthToken });
-
-  // Stable color per username (hash-based, no emojis)
-  const getUserColor = useCallback((username: string): string => {
-    let hash = 0;
-    for (let i = 0; i < username.length; i++) {
-      hash = username.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    return BADGE_COLORS[Math.abs(hash) % BADGE_COLORS.length];
-  }, []);
+  const { messages, loading, error, sendMessage, isRateLimited } = useChat({ walletAddress, getAuthToken });
 
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -194,61 +178,33 @@ const GlobalChatSidebar: React.FC<GlobalChatSidebarProps> = ({
         ) : (
           <>
             {messages.map((msg) => {
-              const hasTier = typeof msg.tier === 'number' && msg.tier >= 0 && msg.tier <= 9;
-              const tierColor = hasTier ? TIER_COLORS[msg.tier!] : undefined;
-              const fallbackColor = getUserColor(msg.username);
-              const initial = (msg.username || '?')[0].toUpperCase();
+              // Current user's messages get their real tier icon, others get pleb (tier 0)
+              const isOwnMsg = walletAddress && msg.wallet_address === walletAddress;
+              const badgeTier = isOwnMsg ? playerTier : 0;
+              const displayName = msg.username || shortWallet(msg.wallet_address);
               
               return (
-                /* Chat Message Row - Badge + Content aligned */
                 <div 
                   key={msg.id} 
                   className="chat-message-row"
                 >
-                  {/* Badge Container - Fixed 40px width, centered */}
+                  {/* Tier Icon Badge */}
                   <div className="chat-badge-container">
-                    {hasTier ? (
-                      <img 
-                        src={tierIconUrl(msg.tier!)} 
-                        alt={TIER_NAMES[msg.tier!]} 
-                        className="chat-tier-badge"
-                        title={TIER_NAMES[msg.tier!]}
-                        style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'contain' }}
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = 'none';
-                        }}
-                      />
-                    ) : (
-                      <span
-                        className="chat-badge"
-                        style={{
-                          width: 24,
-                          height: 24,
-                          borderRadius: '50%',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: 11,
-                          fontWeight: 700,
-                          fontFamily: "'DynaPuff', sans-serif",
-                          background: `${fallbackColor}22`,
-                          color: fallbackColor,
-                          border: `1px solid ${fallbackColor}44`,
-                          flexShrink: 0,
-                        }}
-                      >
-                        {initial}
-                      </span>
-                    )}
+                    <img 
+                      src={tierIconUrl(badgeTier)} 
+                      alt="tier"
+                      className="chat-tier-badge"
+                      style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'contain' }}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
                   </div>
                   
                   {/* Content Container - Username + Message */}
                   <div className="chat-content">
-                    <span 
-                      className="chat-username" 
-                      style={tierColor ? { color: tierColor } : undefined}
-                    >
-                      {msg.username}
+                    <span className="chat-username">
+                      {displayName}
                     </span>
                     <span className="chat-message-text">{msg.message}</span>
                   </div>
@@ -314,7 +270,7 @@ const GlobalChatSidebar: React.FC<GlobalChatSidebarProps> = ({
               onKeyDown={handleKeyDown}
               placeholder={isRateLimited ? 'Wait...' : 'Type a message...'}
               disabled={isRateLimited}
-              maxLength={500}
+              maxLength={280}
               style={{
                 flexGrow: 1,
                 height: '100%',

@@ -970,11 +970,11 @@ const PumpItSim: React.FC = () => {
           <GlobalChatSidebar
             isCollapsed={chatCollapsed}
             onToggleCollapse={() => setChatCollapsed(!chatCollapsed)}
-            room="pumpit"
             isWalletConnected={connected}
             walletAddress={publicKey?.toString() || null}
             getAuthToken={getAuthToken}
             onlineCount={game.onlineCount}
+            playerTier={rewards.xpState?.tier ?? 0}
           />
         }
         sidebarCollapsed={chatCollapsed}

@@ -474,6 +474,11 @@ export function useGame(
           if (data.type === 'CHEST_REWARD') {
             window.dispatchEvent(new CustomEvent('pumpit:chest_reward', { detail: data }));
           }
+
+          // Chat events — bridge to useChat via CustomEvent
+          if (data.type === 'CHAT_MESSAGE') {
+            window.dispatchEvent(new CustomEvent('pumpit:chat_message', { detail: data }));
+          }
         } catch (e) {
           console.error('WebSocket message error:', e);
         }
