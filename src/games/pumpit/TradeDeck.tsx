@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import solanaLogo from '../../assets/logo_solana.png';
 
 // ============================================================================
@@ -19,7 +19,6 @@ interface TradeDeckProps {
 // CONSTANTS
 // ============================================================================
 const BUY_PERCENTAGES = [10, 25, 50, 100] as const;
-const MAX_HOLD_DURATION = 2000; // 2 seconds to fill MAX button
 
 // Helper: Format SOL to exactly 3 decimal places, 0.000 if < 0.001
 const formatSOL = (value: number): string => {
@@ -44,59 +43,6 @@ const TradeDeck: React.FC<TradeDeckProps> = ({
   // STATE
   // ============================================================================
   const [tradeAmount, setTradeAmount] = useState<string>('');
-  
-  // MAX button hold state
-  const [maxHoldProgress, setMaxHoldProgress] = useState(0);
-  const [isHoldingMax, setIsHoldingMax] = useState(false);
-  const maxHoldStartRef = useRef<number | null>(null);
-  const maxAnimationRef = useRef<number | null>(null);
-
-  // ============================================================================
-  // MAX BUTTON HOLD LOGIC - Progress bar animation
-  // ============================================================================
-  const startMaxHold = useCallback(() => {
-    if (isCountdown || solWagered <= 0) return;
-    setIsHoldingMax(true);
-    maxHoldStartRef.current = Date.now();
-    
-    const animate = () => {
-      if (maxHoldStartRef.current === null) return;
-      
-      const elapsed = Date.now() - maxHoldStartRef.current;
-      const progress = Math.min(elapsed / MAX_HOLD_DURATION, 1);
-      setMaxHoldProgress(progress);
-      
-      if (progress >= 1) {
-        // MAX triggered - sell entire position
-        onSell(currentValue);
-        endMaxHold();
-        return;
-      }
-      
-      maxAnimationRef.current = requestAnimationFrame(animate);
-    };
-    
-    maxAnimationRef.current = requestAnimationFrame(animate);
-  }, [isCountdown, solWagered, currentValue, onSell]);
-
-  const endMaxHold = useCallback(() => {
-    setIsHoldingMax(false);
-    maxHoldStartRef.current = null;
-    if (maxAnimationRef.current) {
-      cancelAnimationFrame(maxAnimationRef.current);
-      maxAnimationRef.current = null;
-    }
-    setMaxHoldProgress(0);
-  }, []);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (maxAnimationRef.current) {
-        cancelAnimationFrame(maxAnimationRef.current);
-      }
-    };
-  }, []);
 
   // ============================================================================
   // AMOUNT HELPERS
@@ -183,28 +129,13 @@ const TradeDeck: React.FC<TradeDeckProps> = ({
           >
             1/2
           </button>
+          {/* MAX Button - Sells 100% of position */}
           <button
             onClick={() => handleInstantSell(1)}
-            className="trd-sell-preset-btn"
+            className="trd-sell-preset-btn trd-max-btn"
             disabled={isCountdown}
           >
-            X2
-          </button>
-          {/* MAX Button with Hold Progress - Sells 100% of position */}
-          <button
-            className={`trd-sell-preset-btn trd-max-btn ${isHoldingMax ? 'holding' : ''}`}
-            onMouseDown={startMaxHold}
-            onMouseUp={endMaxHold}
-            onMouseLeave={endMaxHold}
-            onTouchStart={startMaxHold}
-            onTouchEnd={endMaxHold}
-            disabled={isCountdown}
-          >
-            <div 
-              className="trd-max-progress" 
-              style={{ width: `${maxHoldProgress * 100}%` }}
-            />
-            <span className="trd-max-text">MAX</span>
+            MAX
           </button>
         </div>
       </div>
