@@ -1,7 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Send, MessageCircle, Loader2 } from 'lucide-react';
 import { useChat, shortWallet } from '../hooks/useChat';
 import { tierIconUrl } from '../types/game';
+
+const API_URL = import.meta.env.VITE_API_URL || 'https://api.str8.fun';
 
 interface GlobalChatSidebarProps {
   isCollapsed: boolean;
@@ -27,6 +29,45 @@ const GlobalChatSidebar: React.FC<GlobalChatSidebarProps> = ({
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   
   const { messages, loading, error, sendMessage, isRateLimited } = useChat({ walletAddress, getAuthToken });
+
+  // Wallet → tier cache: fetch real tier for every unique wallet in chat
+  const [tierCache, setTierCache] = useState<Record<string, number>>({});
+  const pendingRef = useRef<Set<string>>(new Set());
+
+  // Seed own wallet into cache immediately
+  useEffect(() => {
+    if (walletAddress && playerTier !== undefined) {
+      setTierCache(prev => ({ ...prev, [walletAddress]: playerTier }));
+    }
+  }, [walletAddress, playerTier]);
+
+  const fetchTier = useCallback(async (wallet: string) => {
+    if (pendingRef.current.has(wallet)) return;
+    pendingRef.current.add(wallet);
+    try {
+      const res = await fetch(`${API_URL}/api/rewards/xp`, {
+        headers: { 'x-wallet-address': wallet },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const idx = typeof data.tier_index === 'number' ? data.tier_index : 0;
+        setTierCache(prev => ({ ...prev, [wallet]: idx }));
+      } else {
+        setTierCache(prev => ({ ...prev, [wallet]: 0 }));
+      }
+    } catch {
+      setTierCache(prev => ({ ...prev, [wallet]: 0 }));
+    }
+  }, []);
+
+  // Fetch tiers for any wallets not yet in cache
+  useEffect(() => {
+    const unknownWallets = messages
+      .map(m => m.wallet_address)
+      .filter(w => w && !(w in tierCache) && !pendingRef.current.has(w));
+    const unique = [...new Set(unknownWallets)];
+    unique.forEach(w => fetchTier(w));
+  }, [messages, tierCache, fetchTier]);
 
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -178,9 +219,7 @@ const GlobalChatSidebar: React.FC<GlobalChatSidebarProps> = ({
         ) : (
           <>
             {messages.map((msg) => {
-              // Current user's messages get their real tier icon, others get pleb (tier 0)
-              const isOwnMsg = walletAddress && msg.wallet_address === walletAddress;
-              const badgeTier = isOwnMsg ? playerTier : 0;
+              const badgeTier = tierCache[msg.wallet_address] ?? 0;
               const displayName = msg.username || shortWallet(msg.wallet_address);
               
               return (
