@@ -411,6 +411,8 @@ const PumpItSim: React.FC = () => {
   // ============================================================================
   useEffect(() => {
     if (game.serverTickCount <= 0) return;
+    // Only create candles when round is active
+    if (game.roundStatus !== 'active') return;
 
     const currentBoundary = Math.floor(game.serverTickCount / TICKS_PER_CANDLE);
 
@@ -451,7 +453,7 @@ const PumpItSim: React.FC = () => {
 
       return prevCandles;
     });
-  }, [game.serverTickCount]);
+  }, [game.serverTickCount, game.roundStatus]);
 
   // ============================================================================
   // TRADE HANDLERS - Now use deposited balance (no wallet approval per trade!)
@@ -932,7 +934,7 @@ const PumpItSim: React.FC = () => {
         chartBorderColor={
           game.solWagered > 0
             ? (game.roundPnL >= 0 ? '#22C55E' : '#EF4444')
-            : '#FACC15'
+            : '#FFFFFF'
         }
         chart={
           <div className="relative w-full h-full flex flex-col">
@@ -950,6 +952,7 @@ const PumpItSim: React.FC = () => {
                 positionValue={game.currentValue}
                 unrealizedPnL={game.roundPnL}
                 hasPosition={game.solWagered > 0}
+                showPnL={!game.showGetCooked && !game.isCrashed && game.roundStatus === 'active'}
                 tradeMarkers={tradeMarkers}
                 resetView={game.shouldResetChart || chartResetView}
               />

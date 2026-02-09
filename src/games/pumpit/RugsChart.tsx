@@ -18,6 +18,7 @@ interface RugsChartProps {
   positionValue?: number;   // Current value of player's position in SOL
   unrealizedPnL?: number;   // Player's unrealized profit/loss in SOL
   hasPosition?: boolean;    // Whether player has an open position
+  showPnL?: boolean;        // Whether to show PnL overlay
   tradeMarkers?: TradeMarker[]; // User's buy/sell markers
   resetView?: boolean;      // When true, instantly snap Y-axis back to 1.00x centered
 }
@@ -66,7 +67,7 @@ const Y_AXIS_LERP_ZOOM_IN = 0.03;  // Slow settle when range shrinks back
 // ============================================================================
 // RUGS CHART COMPONENT - Canvas Based for 60fps
 // ============================================================================
-const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, positionValue: _positionValue = 0, unrealizedPnL = 0, hasPosition: _hasPosition = false, tradeMarkers = [], resetView = false }) => {
+const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, positionValue: _positionValue = 0, unrealizedPnL = 0, hasPosition: _hasPosition = false, showPnL = true, tradeMarkers = [], resetView = false }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>(0);
@@ -490,7 +491,6 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
   // CALCULATE MULTIPLIER
   // ============================================================================
   const multiplier = startPrice > 0 ? currentPrice / startPrice : 1;
-  const isUp = multiplier >= 1;
   const multiplierText = multiplier.toFixed(2) + 'x';
 
   // ============================================================================
@@ -561,8 +561,8 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
             fontSize: 'clamp(16px, 3vw, 24px)',
             fontWeight: 700,
             fontFamily: "'DynaPuff', system-ui, sans-serif",
-            color: isUp ? COLOR_GREEN : COLOR_RED,
-            textShadow: `0 0 10px ${isUp ? 'rgba(0, 255, 127, 0.5)' : 'rgba(255, 59, 59, 0.5)'}`,
+            color: '#FFFFFF',
+            textShadow: '0 0 12px rgba(255, 255, 255, 0.7), 0 0 24px rgba(255, 255, 255, 0.3)',
             lineHeight: 1
           }}
         >
@@ -570,32 +570,33 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
         </div>
       </div>
       
-      {/* PnL Overlay - Top Right (always visible) */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 'clamp(6px, 2.7%, 12px)',
-          right: 'clamp(6px, 1.5%, 12px)',
-          pointerEvents: 'none',
-          textAlign: 'right',
-        }}
-      >
+      {/* PnL Overlay - Top Right (only when active and has non-zero PnL) */}
+      {showPnL && unrealizedPnL !== 0 && (
         <div
           style={{
-            fontSize: 'clamp(13px, 2.5vw, 20px)',
-            fontWeight: 700,
-            fontFamily: "'DynaPuff', system-ui, sans-serif",
-            color: unrealizedPnL >= 0 ? COLOR_GREEN : COLOR_RED,
-            textShadow: `0 0 10px ${unrealizedPnL >= 0 ? 'rgba(0, 255, 127, 0.5)' : 'rgba(255, 59, 59, 0.5)'}`,
-            lineHeight: 1
+            position: 'absolute',
+            top: 'clamp(6px, 2.7%, 12px)',
+            right: 'clamp(6px, 1.5%, 12px)',
+            pointerEvents: 'none',
+            textAlign: 'right',
           }}
         >
-          {unrealizedPnL >= 0
-            ? `+ ${unrealizedPnL.toFixed(4)} SOL`
-            : `- ${Math.abs(unrealizedPnL).toFixed(4)} SOL`
-          }
+          <div
+            style={{
+              fontSize: 'clamp(13px, 2.5vw, 20px)',
+              fontWeight: 700,
+              fontFamily: "'DynaPuff', system-ui, sans-serif",
+              color: unrealizedPnL >= 0 ? COLOR_GREEN : COLOR_RED,
+              lineHeight: 1
+            }}
+          >
+            {unrealizedPnL >= 0
+              ? `+ ${unrealizedPnL.toFixed(3)} SOL`
+              : `- ${Math.abs(unrealizedPnL).toFixed(3)} SOL`
+            }
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

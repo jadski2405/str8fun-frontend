@@ -124,9 +124,10 @@ export function useGame(
   const unrealizedPnL = currentValue - solWagered;
 
   // Round PnL: realized gains/losses + current unrealized
+  // Only compute when round is active — during countdown/presale, PnL is frozen at 0
   const totalSolIn = playerPosition?.total_sol_in ?? 0;
   const totalSolOut = playerPosition?.total_sol_out ?? 0;
-  const roundPnL = (totalSolOut + currentValue) - totalSolIn;
+  const roundPnL = roundStatus === 'active' ? (totalSolOut + currentValue) - totalSolIn : 0;
 
   // ============================================================================
   // FETCH ACTIVE ROUND

@@ -1141,7 +1141,7 @@ body {
    Positioned directly under the main chart stage (1617px)
    ============================================ */
 #trade-ctrls {
-  width: 1617px;
+  width: 800px;
   max-width: 100%;
   flex-shrink: 0;
   padding: 12px 0;
@@ -1156,7 +1156,7 @@ body {
 @media (max-width: 1680px) {
   #trade-ctrls {
     width: 100%;
-    max-width: 1617px;
+    max-width: 800px;
   }
 }
 
@@ -2258,7 +2258,7 @@ body {
 /* Main Container */
 .trade-deck {
   width: 100%;
-  max-width: 1617px;
+  max-width: 800px;
   padding: 16px;
   background: rgb(21, 22, 29);
   border: 1px solid rgb(58, 61, 74);
