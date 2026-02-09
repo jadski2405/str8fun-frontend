@@ -2290,29 +2290,62 @@ body {
   gap: 6px;
 }
 
-/* Control Buttons (Incrementors, Multipliers) */
-.trd-ctrl-btn {
+/* Buy Preset Buttons - Green with black text (autofill % of balance) */
+.trd-buy-preset-btn {
   font-family: 'DynaPuff', sans-serif;
   font-size: 12px;
   font-weight: 600;
   padding: 8px 10px;
   border-radius: 6px;
-  border: 1px solid rgb(58, 61, 74);
-  background: rgba(248, 248, 252, 0.05);
-  color: rgba(248, 248, 252, 0.7);
+  border: none;
+  background: #00ff88;
+  color: #000;
   cursor: pointer;
   transition: all 0.15s ease;
   white-space: nowrap;
+  box-shadow: 0 2px 0 0 #00b85c;
 }
 
-.trd-ctrl-btn:hover {
-  background: rgba(0, 255, 136, 0.1);
-  color: #00ff88;
-  border-color: rgba(0, 255, 136, 0.4);
-}
-
-.trd-ctrl-btn:active {
+.trd-buy-preset-btn:hover {
+  box-shadow: 0 1px 0 0 #00b85c, 0 0 12px rgba(0, 255, 136, 0.4);
   transform: translateY(1px);
+}
+
+.trd-buy-preset-btn:active {
+  box-shadow: none;
+  transform: translateY(2px);
+}
+
+/* Sell Preset Buttons - Red with white text (instant sell) */
+.trd-sell-preset-btn {
+  font-family: 'DynaPuff', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: none;
+  background: #ff4757;
+  color: white;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  box-shadow: 0 2px 0 0 #cc3844;
+}
+
+.trd-sell-preset-btn:hover:not(:disabled) {
+  box-shadow: 0 1px 0 0 #cc3844, 0 0 12px rgba(255, 71, 87, 0.4);
+  transform: translateY(1px);
+}
+
+.trd-sell-preset-btn:active:not(:disabled) {
+  box-shadow: none;
+  transform: translateY(2px);
+}
+
+.trd-sell-preset-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none !important;
 }
 
 /* Row 2: Input with SOL icon */
@@ -2377,36 +2410,7 @@ body {
   color: rgba(248, 248, 252, 0.5);
 }
 
-/* Row 3: Percentage Presets */
-.trd-row-presets {
-  justify-content: center;
-  gap: 10px;
-}
 
-.trd-preset-btn {
-  font-family: 'DynaPuff', sans-serif;
-  font-size: 13px;
-  font-weight: 600;
-  padding: 8px 16px;
-  border-radius: 6px;
-  border: 1px solid rgb(58, 61, 74);
-  background: rgba(248, 248, 252, 0.05);
-  color: rgba(248, 248, 252, 0.7);
-  cursor: pointer;
-  transition: all 0.15s ease;
-  flex: 1;
-  max-width: 80px;
-}
-
-.trd-preset-btn:hover {
-  background: rgba(0, 191, 255, 0.1);
-  color: #00bfff;
-  border-color: rgba(0, 191, 255, 0.4);
-}
-
-.trd-preset-btn:active {
-  transform: translateY(1px);
-}
 
 /* Row 4: Action Buttons (BUY/SELL) - Desktop: horizontal, Mobile: vertical */
 .trd-row-actions {
@@ -2438,23 +2442,23 @@ body {
   overflow: hidden;
   padding: 8px 14px;
   min-width: 50px;
-  background: linear-gradient(135deg, #8B5CF6 0%, #A855F7 100%);
+  background: #ff4757;
   color: white;
-  box-shadow: 0 3px 0 0 #6D28D9;
+  box-shadow: 0 2px 0 0 #cc3844;
 }
 
-.trd-max-btn:hover {
-  background: linear-gradient(135deg, #8B5CF6 0%, #A855F7 100%);
+.trd-max-btn:hover:not(:disabled) {
+  background: #ff4757;
   color: white;
   border-color: transparent;
-  box-shadow: 0 1px 0 0 #6D28D9;
-  transform: translateY(2px);
+  box-shadow: 0 1px 0 0 #cc3844;
+  transform: translateY(1px);
 }
 
-.trd-max-btn:active,
+.trd-max-btn:active:not(:disabled),
 .trd-max-btn.holding {
-  box-shadow: 0 0px 0 0 #6D28D9;
-  transform: translateY(3px);
+  box-shadow: none;
+  transform: translateY(2px);
 }
 
 .trd-max-progress {
@@ -2579,14 +2583,10 @@ body {
     gap: 10px;
   }
   
-  .trd-ctrl-btn {
+  .trd-buy-preset-btn,
+  .trd-sell-preset-btn {
     font-size: 11px;
     padding: 6px 8px;
-  }
-  
-  .trd-preset-btn {
-    font-size: 12px;
-    padding: 6px 12px;
   }
   
   .trd-action-btn {

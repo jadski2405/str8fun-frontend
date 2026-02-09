@@ -18,8 +18,7 @@ interface TradeDeckProps {
 // ============================================================================
 // CONSTANTS
 // ============================================================================
-const INCREMENTORS = [0.001, 0.01, 0.1, 1] as const;
-const PERCENTAGES = [10, 25, 50, 100] as const;
+const BUY_PERCENTAGES = [10, 25, 50, 100] as const;
 const MAX_HOLD_DURATION = 2000; // 2 seconds to fill MAX button
 
 // Helper: Format SOL to exactly 3 decimal places, 0.000 if < 0.001
@@ -56,6 +55,7 @@ const TradeDeck: React.FC<TradeDeckProps> = ({
   // MAX BUTTON HOLD LOGIC - Progress bar animation
   // ============================================================================
   const startMaxHold = useCallback(() => {
+    if (isCountdown || solWagered <= 0) return;
     setIsHoldingMax(true);
     maxHoldStartRef.current = Date.now();
     
@@ -67,8 +67,8 @@ const TradeDeck: React.FC<TradeDeckProps> = ({
       setMaxHoldProgress(progress);
       
       if (progress >= 1) {
-        // MAX triggered - set to full balance (max 3 decimals)
-        setTradeAmount(formatSOL(balance));
+        // MAX triggered - sell entire position
+        onSell(currentValue);
         endMaxHold();
         return;
       }
@@ -77,7 +77,7 @@ const TradeDeck: React.FC<TradeDeckProps> = ({
     };
     
     maxAnimationRef.current = requestAnimationFrame(animate);
-  }, [balance]);
+  }, [isCountdown, solWagered, currentValue, onSell]);
 
   const endMaxHold = useCallback(() => {
     setIsHoldingMax(false);
@@ -101,32 +101,23 @@ const TradeDeck: React.FC<TradeDeckProps> = ({
   // ============================================================================
   // AMOUNT HELPERS
   // ============================================================================
-  const adjustAmount = useCallback((type: 'add' | 'multiply' | 'percent', value: number) => {
-    setTradeAmount(prev => {
-      const current = parseFloat(prev) || 0;
-      let newValue: number;
-      
-      if (type === 'add') {
-        newValue = Math.max(0, current + value);
-        // Cap at balance for buying
-        newValue = Math.min(newValue, balance);
-      } else if (type === 'multiply') {
-        newValue = Math.max(0, current * value);
-        // Cap at balance for buying
-        newValue = Math.min(newValue, balance);
-      } else {
-        // percent - calculate from position value for SELLING
-        // If no position, do nothing
-        if (solWagered <= 0) {
-          return prev; // Return unchanged
-        }
-        newValue = (currentValue * value) / 100;
-      }
-      
-      // Format to max 3 decimals
-      return newValue > 0 ? formatSOL(newValue) : '';
-    });
-  }, [balance, solWagered, currentValue]);
+  // Buy preset: autofill input with percentage of balance
+  const handleBuyPercent = useCallback((pct: number) => {
+    const amount = (balance * pct) / 100;
+    setTradeAmount(amount > 0 ? formatSOL(amount) : '');
+  }, [balance]);
+
+  // Instant sell: sell a fraction of position immediately (no input interaction)
+  const handleInstantSell = useCallback((fraction: number) => {
+    if (isCountdown) return;
+    if (solWagered <= 0) {
+      onError?.('No position to sell');
+      return;
+    }
+    const amount = currentValue * fraction;
+    if (amount <= 0) return;
+    onSell(amount);
+  }, [isCountdown, solWagered, currentValue, onSell, onError]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -171,40 +162,43 @@ const TradeDeck: React.FC<TradeDeckProps> = ({
   return (
     <div id="trade-deck" className="trade-deck">
       
-      {/* Row 1: Incrementors + Multipliers */}
+      {/* Row 1: Buy Presets (green) + Sell Presets (red) */}
       <div className="trd-row trd-row-controls">
         <div className="trd-btn-group">
-          {INCREMENTORS.map(val => (
+          {BUY_PERCENTAGES.map(pct => (
             <button
-              key={val}
-              onClick={() => adjustAmount('add', val)}
-              className="trd-ctrl-btn"
+              key={pct}
+              onClick={() => handleBuyPercent(pct)}
+              className="trd-buy-preset-btn"
             >
-              +{val}
+              {pct}%
             </button>
           ))}
         </div>
         <div className="trd-btn-group">
           <button
-            onClick={() => adjustAmount('multiply', 0.5)}
-            className="trd-ctrl-btn"
+            onClick={() => handleInstantSell(0.5)}
+            className="trd-sell-preset-btn"
+            disabled={isCountdown}
           >
             1/2
           </button>
           <button
-            onClick={() => adjustAmount('multiply', 2)}
-            className="trd-ctrl-btn"
+            onClick={() => handleInstantSell(1)}
+            className="trd-sell-preset-btn"
+            disabled={isCountdown}
           >
             X2
           </button>
-          {/* MAX Button with Hold Progress */}
+          {/* MAX Button with Hold Progress - Sells 100% of position */}
           <button
-            className={`trd-ctrl-btn trd-max-btn ${isHoldingMax ? 'holding' : ''}`}
+            className={`trd-sell-preset-btn trd-max-btn ${isHoldingMax ? 'holding' : ''}`}
             onMouseDown={startMaxHold}
             onMouseUp={endMaxHold}
             onMouseLeave={endMaxHold}
             onTouchStart={startMaxHold}
             onTouchEnd={endMaxHold}
+            disabled={isCountdown}
           >
             <div 
               className="trd-max-progress" 
@@ -235,20 +229,7 @@ const TradeDeck: React.FC<TradeDeckProps> = ({
         </div>
       </div>
 
-      {/* Row 3: Percentage Presets */}
-      <div className="trd-row trd-row-presets">
-        {PERCENTAGES.map(pct => (
-          <button
-            key={pct}
-            onClick={() => adjustAmount('percent', pct)}
-            className="trd-preset-btn"
-          >
-            {pct}%
-          </button>
-        ))}
-      </div>
-
-      {/* Row 4: BUY and SELL Buttons */}
+      {/* Row 3: BUY and SELL Buttons */}
       <div className="trd-row trd-row-actions">
         <button
           onClick={handleBuy}
@@ -365,7 +346,7 @@ export const MobileTradeDeck: React.FC<MobileTradeDeckProps> = ({
 
       {/* Percentage Presets */}
       <div className="mobile-preset-row">
-        {PERCENTAGES.map(pct => (
+        {BUY_PERCENTAGES.map(pct => (
           <button
             key={pct}
             onClick={() => adjustAmount('percent', pct)}
