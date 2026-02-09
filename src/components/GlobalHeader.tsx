@@ -1093,7 +1093,7 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
                 e.currentTarget.style.boxShadow = '#b8960f 0px 4px 0px 0px';
               }}
             >
-              🎁 Chests
+              Chests
             </button>
           )}
 
