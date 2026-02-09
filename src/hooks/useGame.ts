@@ -145,9 +145,11 @@ export function useGame(
 
       const round = await response.json();
 
-      // Handle countdown status
+      // Handle countdown status — preserve roundId for presale trades
       if (round.status === 'countdown') {
-        setRoundId(null);
+        if (round.id) {
+          setRoundId(round.id);
+        }
         if (roundStatusRef.current !== 'countdown') {
           setCountdownRemaining(round.countdown_seconds || COUNTDOWN_SECONDS);
           setRoundStatus('countdown');
@@ -369,7 +371,15 @@ export function useGame(
           // Does NOT drive chart price — that comes from PRICE_TICK
           if (data.type === 'ROUND_UPDATE' && data.round) {
             const round = data.round;
-            if (round.status !== 'active') {
+            if (round.status === 'active') {
+              // Transition from countdown/presale into live round
+              if (round.id) setRoundId(round.id);
+              setRoundStatus('active');
+              setCountdownRemaining(0);
+              setIsCrashed(false);
+              setShowGetCooked(false);
+              setFinalMultiplier(null);
+            } else if (round.status !== 'active') {
               setRoundStatus('ended');
             }
           }
@@ -500,7 +510,7 @@ export function useGame(
   // ============================================================================
 
   const buy = useCallback(async (solAmount: number): Promise<{ success: boolean; error?: string; newBalance?: number }> => {
-    if (!roundId || !walletAddress || roundStatus !== 'active') {
+    if (!roundId || !walletAddress || (roundStatus !== 'active' && roundStatus !== 'countdown')) {
       return { success: false, error: 'Round not active or not connected' };
     }
 

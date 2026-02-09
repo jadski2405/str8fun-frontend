@@ -12,6 +12,7 @@ interface TradeDeckProps {
   solWagered?: number; // SOL amount in active position
   currentValue?: number; // Current value of position
   onError?: (message: string) => void; // Callback to show error messages
+  isCountdown?: boolean; // Presale phase — buy at 1.00x, sell disabled
 }
 
 // ============================================================================
@@ -38,6 +39,7 @@ const TradeDeck: React.FC<TradeDeckProps> = ({
   solWagered = 0,
   currentValue = 0,
   onError,
+  isCountdown = false,
 }) => {
   // ============================================================================
   // STATE
@@ -252,11 +254,13 @@ const TradeDeck: React.FC<TradeDeckProps> = ({
           onClick={handleBuy}
           className="trd-action-btn trd-buy-btn always-glow"
         >
-          BUY
+          {isCountdown ? 'BUY AT 1.00x' : 'BUY'}
         </button>
         <button
           onClick={handleSell}
           className="trd-action-btn trd-sell-btn"
+          disabled={isCountdown}
+          style={isCountdown ? { opacity: 0.4, cursor: 'not-allowed' } : {}}
         >
           SELL
         </button>
@@ -277,6 +281,7 @@ interface MobileTradeDeckProps {
   currentValue?: number;
   connected?: boolean;
   onError?: (message: string) => void;
+  isCountdown?: boolean;
 }
 
 export const MobileTradeDeck: React.FC<MobileTradeDeckProps> = ({
@@ -288,6 +293,7 @@ export const MobileTradeDeck: React.FC<MobileTradeDeckProps> = ({
   currentValue = 0,
   connected: _connected = true,
   onError,
+  isCountdown = false,
 }) => {
   const [tradeAmount, setTradeAmount] = useState<string>('');
 
@@ -376,11 +382,13 @@ export const MobileTradeDeck: React.FC<MobileTradeDeckProps> = ({
           onClick={handleBuy}
           className="mobile-action-btn buy"
         >
-          BUY
+          {isCountdown ? 'BUY AT 1.00x' : 'BUY'}
         </button>
         <button
           onClick={handleSell}
           className="mobile-action-btn sell"
+          disabled={isCountdown}
+          style={isCountdown ? { opacity: 0.4, cursor: 'not-allowed' } : {}}
         >
           SELL
         </button>

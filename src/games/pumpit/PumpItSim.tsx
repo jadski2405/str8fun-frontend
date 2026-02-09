@@ -961,16 +961,16 @@ const PumpItSim: React.FC = () => {
             )}
             {/* Round Countdown Overlay - inside chart only */}
             {game.roundStatus === 'countdown' && !game.showGetCooked && game.countdownRemaining > 0 && (
-              <div className="absolute inset-0 bg-black/70 flex items-center justify-center z-10 rounded-lg pointer-events-none">
+              <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-10 rounded-lg">
                 <div className="text-center">
                   <div className="text-6xl font-dynapuff font-bold text-yellow-400 mb-3 animate-pulse">
                     {formatTimeWithMs(game.countdownRemaining)}
                   </div>
                   <div className="text-xl font-dynapuff text-white/90">
-                    Next round starting...
+                    Presale open — buy at 1.00x!
                   </div>
                   <div className="mt-3 text-sm text-white/50 font-dynapuff">
-                    Get ready to trade!
+                    Round starts when timer hits zero
                   </div>
                 </div>
               </div>
@@ -986,6 +986,7 @@ const PumpItSim: React.FC = () => {
             solWagered={game.solWagered}
             currentValue={game.currentValue}
             onError={setTradeError}
+            isCountdown={game.roundStatus === 'countdown'}
           />
         }
         mobileTradeControls={
@@ -998,6 +999,7 @@ const PumpItSim: React.FC = () => {
             currentValue={game.currentValue}
             connected={connected}
             onError={setTradeError}
+            isCountdown={game.roundStatus === 'countdown'}
           />
         }
         leaderboard={
