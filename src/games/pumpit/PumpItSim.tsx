@@ -932,7 +932,7 @@ const PumpItSim: React.FC = () => {
         chartBorderColor={
           game.solWagered > 0
             ? (game.roundPnL >= 0 ? '#22C55E' : '#EF4444')
-            : '#22C55E'
+            : '#FACC15'
         }
         chart={
           <div className="relative w-full h-full flex flex-col">

@@ -60,7 +60,8 @@ const COLOR_GRID = 'rgba(255, 255, 255, 0.04)';
 const SHOW_GRID_LINES = false; // Set to true to re-enable grid lines & Y-axis labels
 
 // Animation smoothing
-const Y_AXIS_LERP_FACTOR = 0.06; // Smoother axis scaling (lower = smoother)
+const Y_AXIS_LERP_ZOOM_OUT = 0.15; // Fast snap when range needs to grow
+const Y_AXIS_LERP_ZOOM_IN = 0.03;  // Slow settle when range shrinks back
 
 // ============================================================================
 // RUGS CHART COMPONENT - Canvas Based for 60fps
@@ -234,10 +235,11 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
       targetMinRef.current = startPrice - halfSpan - rangePad;
       targetMaxRef.current = startPrice + halfSpan + rangePad;
 
-      // Smooth interpolation (slower for smoother feel)
-      const lerpFactor = Y_AXIS_LERP_FACTOR;
-      animatedMinRef.current += (targetMinRef.current - animatedMinRef.current) * lerpFactor;
-      animatedMaxRef.current += (targetMaxRef.current - animatedMaxRef.current) * lerpFactor;
+      // Asymmetric zoom: fast zoom-out (nothing clips), slow zoom-in (no jitter)
+      const minLerp = targetMinRef.current < animatedMinRef.current ? Y_AXIS_LERP_ZOOM_OUT : Y_AXIS_LERP_ZOOM_IN;
+      const maxLerp = targetMaxRef.current > animatedMaxRef.current ? Y_AXIS_LERP_ZOOM_OUT : Y_AXIS_LERP_ZOOM_IN;
+      animatedMinRef.current += (targetMinRef.current - animatedMinRef.current) * minLerp;
+      animatedMaxRef.current += (targetMaxRef.current - animatedMaxRef.current) * maxLerp;
       
       const minVal = animatedMinRef.current;
       const maxVal = animatedMaxRef.current;

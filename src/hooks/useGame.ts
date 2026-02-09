@@ -153,6 +153,10 @@ export function useGame(
         if (roundStatusRef.current !== 'countdown') {
           setCountdownRemaining(round.countdown_seconds || COUNTDOWN_SECONDS);
           setRoundStatus('countdown');
+          // Reset position and price for the new round
+          setPlayerPosition(null);
+          setPriceMultiplier(1.0);
+          setServerTickCount(0);
         }
         setErrorMessage(null);
         return;
@@ -386,7 +390,8 @@ export function useGame(
 
           // PRICE_TICK: Server tick engine sends price every 50ms
           // This is the ONLY source that drives the chart multiplier
-          if (data.type === 'PRICE_TICK') {
+          // Only process during active rounds — ignore during countdown
+          if (data.type === 'PRICE_TICK' && roundStatusRef.current === 'active') {
             const newPrice = Number(data.price);
             setPriceMultiplier(newPrice);
             if (data.tick_count !== undefined) {
