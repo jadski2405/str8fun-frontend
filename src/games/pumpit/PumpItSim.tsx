@@ -564,6 +564,48 @@ const PumpItSim: React.FC = () => {
     }
   }, [connected, game, login, refreshDepositedBalance, updateDepositedBalance]);
 
+  // Sell entire position via dedicated sell-all endpoint
+  const handleSellAll = useCallback(async () => {
+    if (!connected) {
+      login();
+      return;
+    }
+    
+    if (game.solWagered <= 0) {
+      console.log('❌ No position to sell');
+      return;
+    }
+    
+    setIsProcessingTrade(true);
+    
+    try {
+      const result = await game.sellAll();
+      
+      if (result.success) {
+        console.log('🔴 SELL ALL: entire position closed');
+        
+        setTradeMarkers(prev => [...prev, {
+          type: 'sell',
+          price: priceRef.current,
+          candleIndex: candles.length - 1,
+        }]);
+        
+        if (result.newBalance !== undefined) {
+          updateDepositedBalance(result.newBalance);
+        } else {
+          refreshDepositedBalance();
+        }
+      } else {
+        console.log(`❌ Sell-all failed: ${result.error}`);
+        setTradeError(result.error || 'Sell failed');
+      }
+    } catch (error) {
+      console.error('Error executing sell-all:', error);
+    } finally {
+      setIsProcessingTrade(false);
+    }
+  }, [connected, game, login, refreshDepositedBalance, updateDepositedBalance]);
+
   // ============================================================================
   // DEPOSIT/WITHDRAW HANDLERS
   // ============================================================================
@@ -991,6 +1033,7 @@ const PumpItSim: React.FC = () => {
             currentPrice={price}
             onBuy={handleBuy}
             onSell={handleSell}
+            onSellAll={handleSellAll}
             solWagered={game.solWagered}
             currentValue={game.currentValue}
             onError={setTradeError}

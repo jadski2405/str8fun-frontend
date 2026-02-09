@@ -9,6 +9,7 @@ interface TradeDeckProps {
   currentPrice: number;
   onBuy: (amount: number) => void;
   onSell: (amount: number) => void;
+  onSellAll?: () => void; // Sell entire position via dedicated endpoint
   solWagered?: number; // SOL amount in active position
   currentValue?: number; // Current value of position
   onError?: (message: string) => void; // Callback to show error messages
@@ -34,6 +35,7 @@ const TradeDeck: React.FC<TradeDeckProps> = ({
   currentPrice: _currentPrice,
   onBuy,
   onSell,
+  onSellAll,
   solWagered = 0,
   currentValue = 0,
   onError,
@@ -64,6 +66,16 @@ const TradeDeck: React.FC<TradeDeckProps> = ({
     if (amount <= 0) return;
     onSell(amount);
   }, [isCountdown, solWagered, currentValue, onSell, onError]);
+
+  // Sell all: sell entire position via dedicated endpoint
+  const handleSellAllClick = useCallback(() => {
+    if (isCountdown) return;
+    if (solWagered <= 0) {
+      onError?.('No position to sell');
+      return;
+    }
+    onSellAll?.();
+  }, [isCountdown, solWagered, onSellAll, onError]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -129,9 +141,9 @@ const TradeDeck: React.FC<TradeDeckProps> = ({
           >
             1/2
           </button>
-          {/* MAX Button - Sells 100% of position */}
+          {/* MAX Button - Sells 100% of position via sell-all endpoint */}
           <button
-            onClick={() => handleInstantSell(1)}
+            onClick={handleSellAllClick}
             className="trd-sell-preset-btn trd-max-btn"
             disabled={isCountdown}
           >
