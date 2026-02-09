@@ -32,11 +32,21 @@ interface RugsChartProps {
 // Dynamic sizing — these are only fallback defaults now
 const DEFAULT_DISPLAY_WIDTH = 800;
 const DEFAULT_DISPLAY_HEIGHT = 450;
-const PADDING_TOP = 30;              // Scaled padding (1.5x)
-const PADDING_BOTTOM = 38;           // Scaled padding (1.5x)
-const PADDING_RIGHT = 68;            // Scaled padding (1.5x)
-const PADDING_LEFT = 15;             // Scaled padding (1.5x)
-const FIXED_CANDLE_COUNT = 60;       // Fixed number of candle slots to display
+
+// Reference geometry (desktop 800×450)
+// Padding and candle count are now computed proportionally inside the render loop
+const REF_WIDTH = 800;
+const REF_HEIGHT = 450;
+const REF_PADDING_TOP = 30;
+const REF_PADDING_BOTTOM = 38;
+const REF_PADDING_RIGHT = 68;
+const REF_PADDING_LEFT = 15;
+const REF_CANDLE_COUNT = 60;          // Desktop candle count
+const MIN_CANDLE_WIDTH = 8;           // Minimum candle body width in px
+// Reference aspect = drawingHeight / drawingWidth at 800×450
+const REF_DRAWING_H = REF_HEIGHT - REF_PADDING_TOP - REF_PADDING_BOTTOM; // 382
+const REF_DRAWING_W = REF_WIDTH - REF_PADDING_LEFT - REF_PADDING_RIGHT;  // 717
+const REF_ASPECT = REF_DRAWING_H / REF_DRAWING_W; // ~0.533
 
 // Colors - matching site background (grey panels)
 const COLOR_BG = '#15161D';
@@ -177,6 +187,18 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
       lastTime = timestamp - (delta % frameInterval);
 
       // ================================================================
+      // PROPORTIONAL PADDING (scale with container size)
+      // ================================================================
+      const PADDING_TOP = Math.round(height * (REF_PADDING_TOP / REF_HEIGHT));
+      const PADDING_BOTTOM = Math.round(height * (REF_PADDING_BOTTOM / REF_HEIGHT));
+      const PADDING_RIGHT = Math.round(width * (REF_PADDING_RIGHT / REF_WIDTH));
+      const PADDING_LEFT = Math.round(width * (REF_PADDING_LEFT / REF_WIDTH));
+
+      // Dynamic candle count — ensure candles stay readable (≥ MIN_CANDLE_WIDTH px)
+      const chartAreaWidth = width - PADDING_LEFT - PADDING_RIGHT;
+      const FIXED_CANDLE_COUNT = Math.max(20, Math.min(REF_CANDLE_COUNT, Math.floor(chartAreaWidth / MIN_CANDLE_WIDTH)));
+
+      // ================================================================
       // 1. CALCULATE AUTO-SCALING (Centered View)
       // ================================================================
       const visibleCandles = data.slice(-FIXED_CANDLE_COUNT);
@@ -192,11 +214,22 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
       // Center 1.00x: make range symmetric around startPrice
       const distAbove = maxP - startPrice;
       const distBelow = startPrice - minP;
-      const halfSpan = Math.max(distAbove, distBelow, startPrice * 0.025); // at least 2.5% each side
-      const padding = halfSpan * 0.25; // 25% padding
+      let halfSpan = Math.max(distAbove, distBelow, startPrice * 0.025); // at least 2.5% each side
+
+      // Aspect-ratio normalization: scale Y range so price movement looks
+      // the same fraction of the chart on any container shape.
+      // A taller container (higher currentAspect) gets a proportionally
+      // wider price range, preventing amplified visual movement.
+      const drawingH = height - PADDING_TOP - PADDING_BOTTOM;
+      const drawingW = chartAreaWidth;
+      const currentAspect = drawingW > 0 ? drawingH / drawingW : REF_ASPECT;
+      const aspectScale = currentAspect / REF_ASPECT;
+      halfSpan *= aspectScale;
+
+      const rangePad = halfSpan * 0.25; // 25% padding
       
-      targetMinRef.current = startPrice - halfSpan - padding;
-      targetMaxRef.current = startPrice + halfSpan + padding;
+      targetMinRef.current = startPrice - halfSpan - rangePad;
+      targetMaxRef.current = startPrice + halfSpan + rangePad;
 
       // Smooth interpolation (slower for smoother feel)
       const lerpFactor = Y_AXIS_LERP_FACTOR;
@@ -210,8 +243,7 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
       // Coordinate Helper
       const getNormY = (price: number) => {
           const ratio = (price - minVal) / drawRange;
-          const drawingHeight = height - PADDING_TOP - PADDING_BOTTOM;
-          return PADDING_TOP + drawingHeight * (1 - ratio);
+          return PADDING_TOP + drawingH * (1 - ratio);
       };
 
       // Camera Offset Decay
@@ -265,19 +297,19 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
              ctx.lineTo(width - PADDING_RIGHT, y);
              ctx.stroke();
 
-             // Label
+             // Label (font scales with container width)
+             const labelFontSize = Math.max(8, Math.round(width * 0.011));
              ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-             ctx.font = "9px 'DynaPuff', sans-serif";
+             ctx.font = `${labelFontSize}px 'DynaPuff', sans-serif`;
              ctx.textAlign = 'left';
              ctx.textBaseline = 'middle';
-             ctx.fillText(mult.toFixed(2) + 'x', width - PADDING_RIGHT + 5, y);
+             ctx.fillText(mult.toFixed(2) + 'x', width - PADDING_RIGHT + 4, y);
          }
       }
 
       // ================================================================
       // DRAW CANDLES
       // ================================================================
-      const chartAreaWidth = width - PADDING_LEFT - PADDING_RIGHT;
       const candleWidth = Math.floor(chartAreaWidth / FIXED_CANDLE_COUNT);
       const totalCandlesWidth = candleWidth * FIXED_CANDLE_COUNT;
       const startOffset = PADDING_LEFT + Math.floor((chartAreaWidth - totalCandlesWidth) / 2);
@@ -300,7 +332,7 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
         const adjustedBodyTop = rawHeight < 6 ? bodyTop - (6 - rawHeight) / 2 : bodyTop;
         
         // DynaPuff style: extra chunky, thicc candles
-        const bodyWidth = Math.max(candleWidth * 0.95, 8);
+        const bodyWidth = Math.max(candleWidth * 0.95, MIN_CANDLE_WIDTH);
         const bodyX = x + (candleWidth - bodyWidth) / 2;
         
         // Solid colors - full opacity
@@ -346,13 +378,14 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
           
           candleMarkers.forEach((marker, stackIndex) => {
             const markerY = getNormY(marker.price);
-            // Offset vertically for stacking (20px apart in display coords, so 40 in internal)
-            const yOffset = stackIndex * 40;
+            // Offset vertically for stacking (proportional to container)
+            const markerScale = width / REF_WIDTH;
+            const yOffset = stackIndex * Math.round(40 * markerScale);
             const finalY = markerY - yOffset;
             
             const isBuy = marker.type === 'buy';
             const markerColor = isBuy ? COLOR_GREEN : COLOR_RED;
-            const markerRadius = 14;
+            const markerRadius = Math.max(8, Math.round(14 * markerScale));
             
             // Draw circle with glow
             ctx.shadowColor = markerColor;
@@ -369,8 +402,9 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
             ctx.stroke();
             
             // Draw letter (B or S)
+            const markerFontSize = Math.max(9, Math.round(14 * markerScale));
             ctx.fillStyle = '#fff';
-            ctx.font = 'bold 14px DynaPuff, sans-serif';
+            ctx.font = `bold ${markerFontSize}px DynaPuff, sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(isBuy ? 'B' : 'S', x, finalY + 1);
@@ -513,14 +547,14 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
       <div
         style={{
           position: 'absolute',
-          top: '12px',
-          left: '12px',
+          top: 'clamp(6px, 2.7%, 12px)',
+          left: 'clamp(6px, 1.5%, 12px)',
           pointerEvents: 'none',
         }}
       >
         <div
           style={{
-            fontSize: '24px',
+            fontSize: 'clamp(16px, 3vw, 24px)',
             fontWeight: 700,
             fontFamily: "'DynaPuff', system-ui, sans-serif",
             color: isUp ? COLOR_GREEN : COLOR_RED,
@@ -536,15 +570,15 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
       <div
         style={{
           position: 'absolute',
-          top: '12px',
-          right: '12px',
+          top: 'clamp(6px, 2.7%, 12px)',
+          right: 'clamp(6px, 1.5%, 12px)',
           pointerEvents: 'none',
           textAlign: 'right',
         }}
       >
         <div
           style={{
-            fontSize: '20px',
+            fontSize: 'clamp(13px, 2.5vw, 20px)',
             fontWeight: 700,
             fontFamily: "'DynaPuff', system-ui, sans-serif",
             color: unrealizedPnL >= 0 ? COLOR_GREEN : COLOR_RED,
