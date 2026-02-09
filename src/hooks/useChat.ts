@@ -118,7 +118,7 @@ export function useChat({ walletAddress = null, getAuthToken = undefined, limit 
 
     try {
       const token = getAuthToken ? await getAuthToken() : null;
-      const response = await fetch(`${API_URL}/api/chat/message`, {
+      const response = await fetch(`${API_URL}/api/chat/send`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
