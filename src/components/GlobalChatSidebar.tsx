@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Send, MessageCircle, Loader2 } from 'lucide-react';
-import { useChat, shortWallet } from '../hooks/useChat';
+import { useChat } from '../hooks/useChat';
 import { tierIconUrl } from '../types/game';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://api.str8.fun';
@@ -220,7 +220,7 @@ const GlobalChatSidebar: React.FC<GlobalChatSidebarProps> = ({
           <>
             {messages.map((msg) => {
               const badgeTier = tierCache[msg.wallet_address] ?? 0;
-              const displayName = msg.username || shortWallet(msg.wallet_address);
+              const displayName = msg.username || 'Anon';
               
               return (
                 <div 
