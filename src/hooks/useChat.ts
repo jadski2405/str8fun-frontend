@@ -1,10 +1,8 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://api.str8.fun';
 const WS_URL = import.meta.env.VITE_WS_URL || 'wss://api.str8.fun';
 
-// Messages older than 10 minutes are auto-deleted
-const MESSAGE_TTL_MS = 10 * 60 * 1000; // 10 minutes in milliseconds
 
 export interface ChatMessage {
   id: string;
@@ -33,45 +31,14 @@ interface UseChatReturn {
   isRateLimited: boolean;
 }
 
-// Helper: Check if message is within TTL (not expired)
-const isMessageValid = (msg: ChatMessage): boolean => {
-  const messageTime = new Date(msg.created_at).getTime();
-  const now = Date.now();
-  return (now - messageTime) < MESSAGE_TTL_MS;
-};
-
 export function useChat({ room = 'pumpit', limit = 50, walletAddress = null, username: _username = null, getAuthToken = undefined }: UseChatOptions = {}): UseChatReturn {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isRateLimited, setIsRateLimited] = useState(false);
-  const [, setCleanupTick] = useState(0); // Force re-render for cleanup
   
   const wsRef = useRef<WebSocket | null>(null);
   const currentUserId = walletAddress;
-
-  // Filter out expired messages (older than 10 minutes)
-  const validMessages = useMemo(() => {
-    return messages.filter(isMessageValid);
-  }, [messages]);
-
-  // Periodic cleanup: Remove expired messages every 30 seconds
-  useEffect(() => {
-    const cleanupInterval = setInterval(() => {
-      setMessages(prev => {
-        const filtered = prev.filter(isMessageValid);
-        // Only update if something was removed
-        if (filtered.length !== prev.length) {
-          return filtered;
-        }
-        return prev;
-      });
-      // Force a re-render tick for useMemo recalculation
-      setCleanupTick(t => t + 1);
-    }, 30000); // Check every 30 seconds
-
-    return () => clearInterval(cleanupInterval);
-  }, []);
 
   // Load initial messages
   useEffect(() => {
@@ -87,9 +54,7 @@ export function useChat({ room = 'pumpit', limit = 50, walletAddress = null, use
         }
 
         const data = await response.json();
-        // Filter out expired messages on load
-        const validData = (data || []).filter(isMessageValid);
-        setMessages(validData);
+        setMessages(data || []);
       } catch (err) {
         console.error('Error fetching messages:', err);
         setError(err instanceof Error ? err.message : 'Failed to load messages');
@@ -242,7 +207,7 @@ export function useChat({ room = 'pumpit', limit = 50, walletAddress = null, use
   }, [room, walletAddress]);
 
   return {
-    messages: validMessages,
+    messages,
     loading,
     error,
     sendMessage,

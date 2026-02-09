@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { X, Clock, Lock } from 'lucide-react';
-import type { ChestInfo, ChestOpenResult, ChestHistoryEntry, PlayerXpState, TierInfo, LootTableEntry } from '../types/game';
+import type { ChestInfo, ChestOpenResult, PlayerXpState, TierInfo, LootTableEntry } from '../types/game';
 import {
   TIER_COLORS, tierIconUrl, chestIconUrl, keyIconUrl,
   TIER_NAMES, TIER_LEVEL_REQ, RARITY_COLORS,
@@ -14,11 +14,10 @@ interface RewardsModalProps {
   tiers: TierInfo[];
   onOpenChest: (tier: number) => Promise<ChestOpenResult>;
   isLoadingChests: boolean;
-  chestHistory?: ChestHistoryEntry[];
+  chestHistory?: unknown[];
   fetchHistory?: () => Promise<void>;
 }
 
-type Tab = 'chests' | 'tiers' | 'history';
 type AnimPhase = 'idle' | 'shaking' | 'bursting' | 'revealing';
 
 // Format cooldown ms to human string
@@ -50,15 +49,13 @@ const RewardsModal: React.FC<RewardsModalProps> = ({
   tiers,
   onOpenChest,
   isLoadingChests,
-  chestHistory = [],
-  fetchHistory,
+  chestHistory: _chestHistory = [],
+  fetchHistory: _fetchHistory,
 }) => {
-  const [activeTab, setActiveTab] = useState<Tab>('chests');
   const [selectedTier, setSelectedTier] = useState<number>(0);
   const [animPhase, setAnimPhase] = useState<AnimPhase>('idle');
   const [revealedReward, setRevealedReward] = useState<ChestOpenResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [expandedTierRow, setExpandedTierRow] = useState<number | null>(null);
   const animTimeoutRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const stripRef = useRef<HTMLDivElement>(null);
 
@@ -72,17 +69,8 @@ const RewardsModal: React.FC<RewardsModalProps> = ({
       setAnimPhase('idle');
       setRevealedReward(null);
       setError(null);
-      setActiveTab('chests');
-      setExpandedTierRow(null);
     }
   }, [isOpen, playerTier]);
-
-  // Fetch history when tab changes
-  useEffect(() => {
-    if (activeTab === 'history' && fetchHistory) {
-      fetchHistory();
-    }
-  }, [activeTab, fetchHistory]);
 
   // Cleanup anim timeouts
   useEffect(() => {
@@ -163,24 +151,8 @@ const RewardsModal: React.FC<RewardsModalProps> = ({
           </button>
         </div>
 
-        {/* Tab Bar */}
-        <div className="rewards-tabs">
-          {(['chests', 'tiers', 'history'] as Tab[]).map(tab => (
-            <button
-              key={tab}
-              className={`rewards-tab ${activeTab === tab ? 'active' : ''}`}
-              onClick={() => setActiveTab(tab)}
-            >
-              {tab === 'chests' ? 'Chests' : tab === 'tiers' ? 'Tiers' : 'History'}
-            </button>
-          ))}
-        </div>
-
         {/* Body */}
         <div className="rewards-modal-body">
-          {/* ═══════ TAB: CHESTS ═══════ */}
-          {activeTab === 'chests' && (
-            <>
               {/* Error banner */}
               {error && (
                 <div className="chest-error-banner">
@@ -336,113 +308,10 @@ const RewardsModal: React.FC<RewardsModalProps> = ({
                   </button>
                 </div>
               </div>
-            </>
-          )}
-
-          {/* ═══════ TAB: TIERS ═══════ */}
-          {activeTab === 'tiers' && (
-            <div className="tier-list">
-              {Array.from({ length: 10 }, (_, i) => i).map(tier => {
-                const locked = playerLevel < (TIER_LEVEL_REQ[tier] || 0);
-                const isCurrent = playerTier === tier;
-                const tc = TIER_COLORS[tier] || '#9CA3AF';
-                const tierInfo = tiers.find(t => t.index === tier);
-                const levelRange = tierInfo?.level_range
-                  ? `${tierInfo.level_range[0]}–${tierInfo.level_range[1]}`
-                  : `${TIER_LEVEL_REQ[tier] + 1}–${(TIER_LEVEL_REQ[tier + 1] || 100)}`;
-                const cooldownMin = tierInfo?.cooldown_minutes;
-                const loot = getLootTable(tier, chests, tiers);
-
-                return (
-                  <div key={tier} className={`tier-row${isCurrent ? ' current' : ''}${locked ? ' locked' : ''}`}>
-                    <button
-                      className="tier-row-header"
-                      onClick={() => setExpandedTierRow(expandedTierRow === tier ? null : tier)}
-                    >
-                      <div className="tier-row-icon" style={{ backgroundImage: `url(${tierIconUrl(tier)})` }} />
-                      <div className="tier-row-info">
-                        <span className="tier-row-name" style={{ color: locked ? 'rgba(248,248,252,0.4)' : tc }}>
-                          {TIER_NAMES[tier]}
-                        </span>
-                        <span className="tier-row-levels">Levels {levelRange}</span>
-                      </div>
-                      {cooldownMin !== undefined && (
-                        <span className="tier-row-cd">
-                          <Clock size={12} /> {cooldownMin >= 60 ? `${cooldownMin / 60}h` : `${cooldownMin}m`}
-                        </span>
-                      )}
-                      {isCurrent && <span className="tier-row-badge current-badge">CURRENT</span>}
-                      {locked && <span className="tier-row-badge locked-badge">Lv.{TIER_LEVEL_REQ[tier]}</span>}
-                      <span className={`tier-row-chevron ${expandedTierRow === tier ? 'expanded' : ''}`}>▸</span>
-                    </button>
-                    {expandedTierRow === tier && loot.length > 0 && (
-                      <div className="tier-loot-expand">
-                        <table className="tier-loot-table">
-                          <thead>
-                            <tr><th>Rarity</th><th>SOL</th><th>Odds</th></tr>
-                          </thead>
-                          <tbody>
-                            {loot.map((entry, i) => (
-                              <tr key={i} className={entry.rarity === 'Jackpot' ? 'jackpot-row' : ''}>
-                                <td style={{ color: RARITY_COLORS[entry.rarity] || '#9d9d9d' }}>{entry.rarity}</td>
-                                <td>{entry.reward_sol}</td>
-                                <td>{entry.odds_percent}%</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* ═══════ TAB: HISTORY ═══════ */}
-          {activeTab === 'history' && (
-            <div className="chest-history-list">
-              {chestHistory.length === 0 ? (
-                <div className="chest-history-empty">No chest opens yet. Start playing to earn keys!</div>
-              ) : (
-                chestHistory.map((entry, i) => {
-                  const tierIdx = entry.tier_index ?? 0;
-                  const tc = TIER_COLORS[tierIdx] || '#9CA3AF';
-                  const timeAgo = getTimeAgo(entry.opened_at);
-                  return (
-                    <div key={i} className={`chest-history-row${entry.is_jackpot ? ' jackpot' : ''}`}>
-                      <div className="chest-history-icon" style={{ backgroundImage: `url(${tierIconUrl(tierIdx)})` }} />
-                      <div className="chest-history-info">
-                        <span className="chest-history-tier" style={{ color: tc }}>{entry.tier || TIER_NAMES[tierIdx]}</span>
-                        <span className="chest-history-time">{timeAgo}</span>
-                      </div>
-                      <div className="chest-history-reward">
-                        <span className={`chest-history-sol${entry.is_jackpot ? ' jackpot-text' : ''}`}>
-                          +{entry.reward_sol} SOL
-                        </span>
-                        {entry.is_jackpot && <span className="chest-history-jackpot-badge">JACKPOT</span>}
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          )}
         </div>
       </div>
     </div>
   );
 };
-
-function getTimeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'Just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  return `${days}d ago`;
-}
 
 export default RewardsModal;

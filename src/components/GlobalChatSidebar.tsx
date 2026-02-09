@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Send, MessageCircle, Loader2 } from 'lucide-react';
 import { useChat } from '../hooks/useChat';
 import { TIER_COLORS, TIER_NAMES, tierIconUrl } from '../types/game';
@@ -13,20 +13,11 @@ interface GlobalChatSidebarProps {
   onlineCount?: number;
 }
 
-// Badge styles - enough variety to avoid duplicates in typical chat
-const BADGE_STYLES = [
-  { bg: 'bg-yellow-500/20', text: 'text-yellow-400', border: 'border-yellow-500/30', label: '👑', color: '#facc15' },
-  { bg: 'bg-purple-500/20', text: 'text-purple-400', border: 'border-purple-500/30', label: '💎', color: '#a855f7' },
-  { bg: 'bg-blue-500/20', text: 'text-blue-400', border: 'border-blue-500/30', label: '⚡', color: '#3b82f6' },
-  { bg: 'bg-green-500/20', text: 'text-green-400', border: 'border-green-500/30', label: '🌿', color: '#22c55e' },
-  { bg: 'bg-pink-500/20', text: 'text-pink-400', border: 'border-pink-500/30', label: '🌸', color: '#ec4899' },
-  { bg: 'bg-orange-500/20', text: 'text-orange-400', border: 'border-orange-500/30', label: '🔥', color: '#f97316' },
-  { bg: 'bg-cyan-500/20', text: 'text-cyan-400', border: 'border-cyan-500/30', label: '❄️', color: '#06b6d4' },
-  { bg: 'bg-red-500/20', text: 'text-red-400', border: 'border-red-500/30', label: '♦️', color: '#ef4444' },
-  { bg: 'bg-indigo-500/20', text: 'text-indigo-400', border: 'border-indigo-500/30', label: '🔮', color: '#6366f1' },
-  { bg: 'bg-teal-500/20', text: 'text-teal-400', border: 'border-teal-500/30', label: '🍀', color: '#14b8a6' },
-  { bg: 'bg-amber-500/20', text: 'text-amber-400', border: 'border-amber-500/30', label: '⭐', color: '#f59e0b' },
-  { bg: 'bg-lime-500/20', text: 'text-lime-400', border: 'border-lime-500/30', label: '🥝', color: '#84cc16' },
+// Fallback badge colors for users without a tier
+const BADGE_COLORS = [
+  '#facc15', '#a855f7', '#3b82f6', '#22c55e', '#ec4899',
+  '#f97316', '#06b6d4', '#ef4444', '#6366f1', '#14b8a6',
+  '#f59e0b', '#84cc16',
 ];
 
 const GlobalChatSidebar: React.FC<GlobalChatSidebarProps> = ({ 
@@ -44,24 +35,14 @@ const GlobalChatSidebar: React.FC<GlobalChatSidebarProps> = ({
   
   const { messages, loading, error, sendMessage, isRateLimited } = useChat({ room, walletAddress, getAuthToken });
 
-  // Build a map of unique usernames to unique badge styles
-  // This ensures no two users share the same badge in the current message list
-  const userStyleMap = useMemo(() => {
-    const uniqueUsers = [...new Set(messages.map(m => m.username))];
-    const styleMap = new Map<string, typeof BADGE_STYLES[0]>();
-    
-    uniqueUsers.forEach((username, index) => {
-      // Assign badge in order of first appearance, cycling through available styles
-      styleMap.set(username, BADGE_STYLES[index % BADGE_STYLES.length]);
-    });
-    
-    return styleMap;
-  }, [messages]);
-
-  // Get style for a username (guaranteed unique within current messages)
-  const getRankStyle = (username: string) => {
-    return userStyleMap.get(username) || BADGE_STYLES[0];
-  };
+  // Stable color per username (hash-based, no emojis)
+  const getUserColor = useCallback((username: string): string => {
+    let hash = 0;
+    for (let i = 0; i < username.length; i++) {
+      hash = username.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return BADGE_COLORS[Math.abs(hash) % BADGE_COLORS.length];
+  }, []);
 
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -213,9 +194,10 @@ const GlobalChatSidebar: React.FC<GlobalChatSidebarProps> = ({
         ) : (
           <>
             {messages.map((msg) => {
-              const rankStyle = getRankStyle(msg.username);
               const hasTier = typeof msg.tier === 'number' && msg.tier >= 0 && msg.tier <= 9;
               const tierColor = hasTier ? TIER_COLORS[msg.tier!] : undefined;
+              const fallbackColor = getUserColor(msg.username);
+              const initial = (msg.username || '?')[0].toUpperCase();
               
               return (
                 /* Chat Message Row - Badge + Content aligned */
@@ -233,16 +215,29 @@ const GlobalChatSidebar: React.FC<GlobalChatSidebarProps> = ({
                         title={TIER_NAMES[msg.tier!]}
                         style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'contain' }}
                         onError={(e) => {
-                          // Fallback to emoji badge on icon load failure
-                          const parent = (e.target as HTMLImageElement).parentElement;
-                          if (parent) {
-                            parent.innerHTML = `<span class="chat-badge ${rankStyle.bg} ${rankStyle.text} border ${rankStyle.border}">${rankStyle.label}</span>`;
-                          }
+                          (e.target as HTMLImageElement).style.display = 'none';
                         }}
                       />
                     ) : (
-                      <span className={`chat-badge ${rankStyle.bg} ${rankStyle.text} border ${rankStyle.border}`}>
-                        {rankStyle.label}
+                      <span
+                        className="chat-badge"
+                        style={{
+                          width: 24,
+                          height: 24,
+                          borderRadius: '50%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: 11,
+                          fontWeight: 700,
+                          fontFamily: "'DynaPuff', sans-serif",
+                          background: `${fallbackColor}22`,
+                          color: fallbackColor,
+                          border: `1px solid ${fallbackColor}44`,
+                          flexShrink: 0,
+                        }}
+                      >
+                        {initial}
                       </span>
                     )}
                   </div>

@@ -1484,6 +1484,42 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
             </button>
           </div>
 
+          {/* Chests Button - Mobile */}
+          {onOpenChests && (
+            <button
+              type="button"
+              onClick={() => {
+                setShowMobileNav(false);
+                onOpenChests();
+              }}
+              style={{
+                width: 'calc(100% - 32px)',
+                height: 44,
+                margin: '8px 16px 0',
+                borderRadius: 8,
+                background: '#FFD700',
+                border: 'none',
+                boxShadow: '#b8960f 0px 4px 0px 0px',
+                boxSizing: 'border-box',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                fontFamily: "'DynaPuff', sans-serif",
+                fontSize: 14,
+                fontWeight: 600,
+                textTransform: 'uppercase',
+                color: 'rgb(13, 14, 18)',
+                cursor: 'pointer',
+                userSelect: 'none',
+                WebkitFontSmoothing: 'antialiased',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              Chests
+            </button>
+          )}
+
           {/* Disconnect Button */}
           <button
             className="mobile-nav-disconnect"
