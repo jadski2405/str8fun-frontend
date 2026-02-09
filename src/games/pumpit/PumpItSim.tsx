@@ -47,23 +47,11 @@ const INITIAL_PRICE = 1.0;
 const PRICE_LERP_SPEED = 0.08; // Smooth interpolation speed (lower = smoother)
 
 // ============================================================================
-// HELPER: Generate flat candles
-// ============================================================================
-function generateFlatCandles(count: number, price: number): Candle[] {
-  return Array.from({ length: count }, () => ({
-    open: price,
-    high: price * 1.001,
-    low: price * 0.999,
-    close: price,
-  }));
-}
-
-// ============================================================================
 // HELPER: Generate candles from price history array
 // ============================================================================
 function generateCandlesFromHistory(priceHistory: number[], ticksPerCandle: number = TICKS_PER_CANDLE): Candle[] {
   if (!priceHistory || priceHistory.length === 0) {
-    return generateFlatCandles(10, INITIAL_PRICE);
+    return [];
   }
   
   const candles: Candle[] = [];
@@ -82,14 +70,6 @@ function generateCandlesFromHistory(priceHistory: number[], ticksPerCandle: numb
       low: Math.min(prevClose, ...chunk),
       close: chunk[chunk.length - 1],
     });
-  }
-  
-  // Ensure at least 10 candles for visual consistency
-  // Padding always uses INITIAL_PRICE (1.0) so the chart visually starts at 1.00x
-  if (candles.length < 10) {
-    const paddingNeeded = 10 - candles.length;
-    const padding = generateFlatCandles(paddingNeeded, INITIAL_PRICE);
-    return [...padding, ...candles];
   }
   
   return candles;
@@ -145,7 +125,7 @@ const PumpItSim: React.FC = () => {
   
   // Local simulation state (visual chart)
   const [price, setPrice] = useState(INITIAL_PRICE);
-  const [candles, setCandles] = useState<Candle[]>(() => generateFlatCandles(10, INITIAL_PRICE));
+  const [candles, setCandles] = useState<Candle[]>([]);
   
   // Server-driven candle boundary tracker
   const lastCandleBoundary = useRef(0);
@@ -308,7 +288,7 @@ const PumpItSim: React.FC = () => {
     // Detect when Get Rinsed overlay goes away (true → false)
     if (prevShowGetCooked.current && !game.showGetCooked) {
       console.log('[PumpItSim] Get Rinsed ended, resetting chart to 1.00x');
-      setCandles(generateFlatCandles(10, INITIAL_PRICE));
+      setCandles([]);
       priceRef.current = INITIAL_PRICE;
       targetPriceRef.current = INITIAL_PRICE;
       velocityRef.current = 0;
@@ -326,7 +306,7 @@ const PumpItSim: React.FC = () => {
   // ============================================================================
   useEffect(() => {
     if (game.shouldResetChart) {
-      setCandles(generateFlatCandles(10, INITIAL_PRICE));
+      setCandles([]);
       priceRef.current = INITIAL_PRICE;
       targetPriceRef.current = INITIAL_PRICE;
       velocityRef.current = 0;
