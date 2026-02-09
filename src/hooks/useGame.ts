@@ -379,6 +379,7 @@ export function useGame(
               // Transition from countdown/presale into live round
               if (round.id) setRoundId(round.id);
               setRoundStatus('active');
+              roundStatusRef.current = 'active'; // Sync immediately so PRICE_TICK gate passes in same event loop
               setCountdownRemaining(0);
               setIsCrashed(false);
               setShowGetCooked(false);
@@ -390,12 +391,28 @@ export function useGame(
 
           // PRICE_TICK: Server tick engine sends price every 50ms
           // This is the ONLY source that drives the chart multiplier
-          // Only process during active rounds — ignore during countdown
-          if (data.type === 'PRICE_TICK' && roundStatusRef.current === 'active') {
-            const newPrice = Number(data.price);
-            setPriceMultiplier(newPrice);
-            if (data.tick_count !== undefined) {
-              setServerTickCount(Number(data.tick_count));
+          if (data.type === 'PRICE_TICK') {
+            // If we're in countdown but receiving early ticks, the round has
+            // started on the server — auto-transition to active immediately
+            if (roundStatusRef.current === 'countdown') {
+              const tickCount = data.tick_count !== undefined ? Number(data.tick_count) : -1;
+              if (tickCount >= 0 && tickCount <= 10) {
+                console.log('[WebSocket] Early PRICE_TICK during countdown — auto-activating round');
+                setRoundStatus('active');
+                roundStatusRef.current = 'active';
+                setCountdownRemaining(0);
+                setIsCrashed(false);
+                setShowGetCooked(false);
+                setFinalMultiplier(null);
+              }
+            }
+
+            if (roundStatusRef.current === 'active') {
+              const newPrice = Number(data.price);
+              setPriceMultiplier(newPrice);
+              if (data.tick_count !== undefined) {
+                setServerTickCount(Number(data.tick_count));
+              }
             }
           }
 
