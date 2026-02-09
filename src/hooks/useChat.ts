@@ -129,22 +129,28 @@ export function useChat({ walletAddress = null, getAuthToken = undefined, limit 
       });
 
       if (!response.ok) {
-        const result = await response.json();
-        // Remove optimistic message on failure
+        // Server may return HTML (proxy error pages) — parse safely
+        let errorMsg = `Send failed (${response.status})`;
+        try {
+          const text = await response.text();
+          const parsed = JSON.parse(text);
+          if (parsed.error) errorMsg = parsed.error;
+        } catch { /* non-JSON response, use default */ }
         setMessages(prev => prev.filter(m => m.id !== tempId));
         optimisticIdsRef.current.delete(tempId);
-        setError(result.error || 'Failed to send message');
+        setError(errorMsg);
         return false;
       }
 
-      const result = await response.json();
-
-      // Replace optimistic message with real one
-      if (result.message?.id) {
-        setMessages(prev =>
-          prev.map(m => m.id === tempId ? { ...result.message } : m)
-        );
-      }
+      // Parse success response safely
+      try {
+        const result = await response.json();
+        if (result.message?.id) {
+          setMessages(prev =>
+            prev.map(m => m.id === tempId ? { ...result.message } : m)
+          );
+        }
+      } catch { /* non-JSON 200 — keep optimistic msg as-is */ }
       optimisticIdsRef.current.delete(tempId);
 
       // Rate limit: disable send for 2s
