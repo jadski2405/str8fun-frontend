@@ -6,12 +6,14 @@ interface XpToastProps {
   onClear: (index: number) => void;
 }
 
-const SOURCE_ICONS: Record<string, string> = {
+const REASON_ICONS: Record<string, string> = {
   wager: '💰',
   rekt: '💀',
   daily: '⭐',
   trade: '📈',
   win: '🏆',
+  round: '🎮',
+  bonus: '⭐',
 };
 
 const XpToast: React.FC<XpToastProps> = ({ gains, onClear }) => {
@@ -32,18 +34,18 @@ const XpToast: React.FC<XpToastProps> = ({ gains, onClear }) => {
   return (
     <div className="xp-toast-stack">
       {visible.map((gain, i) => {
-        const icon = SOURCE_ICONS[gain.source || ''] || '✨';
+        const icon = REASON_ICONS[gain.reason || ''] || '✨';
         return (
           <div
-            key={`${gain.xp_awarded}-${i}`}
+            key={`${gain.xp_gained}-${i}`}
             className="xp-toast-item"
             style={{ animationDelay: `${i * 0.1}s` }}
             onClick={() => onClear(gains.length - visible.length + i)}
           >
             <span className="xp-toast-icon">{icon}</span>
-            <span className="xp-toast-amount">+{gain.xp_awarded} XP</span>
-            {gain.source && (
-              <span className="xp-toast-source">{gain.source}</span>
+            <span className="xp-toast-amount">+{gain.xp_gained} XP</span>
+            {gain.reason && (
+              <span className="xp-toast-source">{gain.reason}</span>
             )}
           </div>
         );

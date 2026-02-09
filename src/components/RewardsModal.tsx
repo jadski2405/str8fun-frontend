@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { X } from 'lucide-react';
 import type { ChestInfo, ChestOpenResult, PlayerXpState, TierInfo } from '../types/game';
-import { TIER_COLORS, tierIconUrl, TIER_NAMES } from '../types/game';
+import { TIER_COLORS, tierIconUrl, TIER_NAMES, TIER_LEVEL_REQ } from '../types/game';
 
 interface RewardsModalProps {
   isOpen: boolean;
@@ -12,9 +12,6 @@ interface RewardsModalProps {
   onOpenChest: (tier: number) => Promise<ChestOpenResult>;
   isLoadingChests: boolean;
 }
-
-// Level thresholds for each tier (index = tier number 1-10)
-const TIER_LEVEL_REQ = [0, 0, 10, 20, 30, 40, 50, 60, 70, 80, 90];
 
 const RewardsModal: React.FC<RewardsModalProps> = ({
   isOpen,
@@ -97,7 +94,7 @@ const RewardsModal: React.FC<RewardsModalProps> = ({
 
           {/* Chest Grid */}
           <div className="chest-grid-mini">
-            {Array.from({ length: 10 }, (_, i) => i + 1).map(tier => {
+            {Array.from({ length: 10 }, (_, i) => i).map(tier => {
               const requiredLevel = TIER_LEVEL_REQ[tier] || 0;
               const isLocked = playerLevel < requiredLevel;
               const isOpening = openingTier === tier;

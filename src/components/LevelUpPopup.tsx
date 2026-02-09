@@ -17,10 +17,10 @@ const LevelUpPopup: React.FC<LevelUpPopupProps> = ({ levelUp, onDismiss }) => {
 
   if (!levelUp) return null;
 
-  const tier = levelUp.tier || 1;
+  const tier = levelUp.tier ?? 0;
   const tierColor = TIER_COLORS[tier] || '#9CA3AF';
-  const tierName = levelUp.tier_name || TIER_NAMES[tier] || 'Pleb';
-  const tierChanged = levelUp.old_level <= (tier - 1) * 10 && levelUp.new_level > (tier - 1) * 10;
+  const tierName = TIER_NAMES[tier] || 'Pleb';
+  const tierChanged = levelUp.old_level <= tier * 10 && levelUp.new_level > tier * 10;
 
   return (
     <div className="levelup-overlay" onClick={onDismiss}>
@@ -57,22 +57,22 @@ const LevelUpPopup: React.FC<LevelUpPopupProps> = ({ levelUp, onDismiss }) => {
         )}
 
         {/* Key Grants */}
-        {levelUp.keys_granted && levelUp.keys_granted.length > 0 && (
+        {levelUp.keys_awarded && Object.keys(levelUp.keys_awarded).length > 0 && (
           <div className="levelup-keys">
-            {levelUp.keys_granted.map((grant, i) => (
+            {Object.entries(levelUp.keys_awarded).map(([tierName, count], i) => (
               <div
-                key={grant.tier}
+                key={tierName}
                 className="levelup-key-item"
                 style={{ animationDelay: `${0.3 + i * 0.3}s` }}
               >
                 <img
-                  src={keyIconUrl(grant.tier)}
+                  src={keyIconUrl()}
                   alt="key"
                   className="levelup-key-icon"
                   onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                 />
-                <span style={{ color: TIER_COLORS[grant.tier] || '#fff' }}>
-                  +{grant.count} {TIER_NAMES[grant.tier]} Key{grant.count > 1 ? 's' : ''}
+                <span style={{ color: '#FFD700' }}>
+                  +{count} {tierName} Key{count > 1 ? 's' : ''}
                 </span>
               </div>
             ))}

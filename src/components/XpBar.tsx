@@ -12,9 +12,9 @@ const XpBar: React.FC<XpBarProps> = ({ xpState, compact = false }) => {
 
   if (!xpState) return null;
 
-  const tier = xpState.tier || 1;
+  const tier = xpState.tier ?? 0;
   const tierColor = TIER_COLORS[tier] || '#9CA3AF';
-  const tierName = xpState.tier_name || TIER_NAMES[tier] || 'Pleb';
+  const tierName = TIER_NAMES[tier] || 'Pleb';
   const progressPercent = Math.min(100, Math.max(0, xpState.progress_percent || 0));
 
   return (
@@ -57,11 +57,11 @@ const XpBar: React.FC<XpBarProps> = ({ xpState, compact = false }) => {
         <div className="xp-bar-tooltip">
           <div className="xp-tooltip-row">
             <span>XP</span>
-            <span>{xpState.progress_xp?.toLocaleString()} / {xpState.needed_xp?.toLocaleString()}</span>
+            <span>{xpState.xp_progress?.toLocaleString()} / {xpState.xp_needed?.toLocaleString()}</span>
           </div>
           <div className="xp-tooltip-row">
             <span>Next Level</span>
-            <span>{xpState.xp_to_next_level?.toLocaleString()} XP</span>
+            <span>{xpState.xp_to_next?.toLocaleString()} XP</span>
           </div>
           <div className="xp-tooltip-row">
             <span>Total XP</span>

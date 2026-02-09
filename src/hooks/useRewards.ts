@@ -14,6 +14,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'https://api.str8.fun';
 
 // ============================================================================
 // useRewards — XP, levels, keys, chests
+// All endpoints use x-wallet-address header (no wallet in URL path)
 // ============================================================================
 
 export interface UseRewardsReturn {
@@ -67,6 +68,17 @@ export function useRewards(
   const cooldownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ============================================================================
+  // HELPERS
+  // ============================================================================
+
+  // Build headers with wallet address
+  const walletHeaders = useCallback((): Record<string, string> => {
+    const h: Record<string, string> = {};
+    if (walletAddress) h['x-wallet-address'] = walletAddress;
+    return h;
+  }, [walletAddress]);
+
+  // ============================================================================
   // API FETCHERS
   // ============================================================================
 
@@ -74,7 +86,9 @@ export function useRewards(
     if (!walletAddress) return;
     setIsLoadingXp(true);
     try {
-      const response = await fetch(`${API_URL}/api/rewards/xp/${walletAddress}`);
+      const response = await fetch(`${API_URL}/api/rewards/xp`, {
+        headers: walletHeaders(),
+      });
       if (response.ok) {
         const data = await response.json();
         setXpState(data);
@@ -84,13 +98,15 @@ export function useRewards(
     } finally {
       setIsLoadingXp(false);
     }
-  }, [walletAddress]);
+  }, [walletAddress, walletHeaders]);
 
   const fetchChests = useCallback(async () => {
     if (!walletAddress) return;
     setIsLoadingChests(true);
     try {
-      const response = await fetch(`${API_URL}/api/rewards/chests/${walletAddress}`);
+      const response = await fetch(`${API_URL}/api/rewards/chests`, {
+        headers: walletHeaders(),
+      });
       if (response.ok) {
         const data = await response.json();
         setChests(data.chests || []);
@@ -100,12 +116,14 @@ export function useRewards(
     } finally {
       setIsLoadingChests(false);
     }
-  }, [walletAddress]);
+  }, [walletAddress, walletHeaders]);
 
   const fetchHistory = useCallback(async () => {
     if (!walletAddress) return;
     try {
-      const response = await fetch(`${API_URL}/api/rewards/chest/history/${walletAddress}?limit=20`);
+      const response = await fetch(`${API_URL}/api/rewards/chest/history`, {
+        headers: walletHeaders(),
+      });
       if (response.ok) {
         const data = await response.json();
         setChestHistory(data.history || []);
@@ -113,7 +131,7 @@ export function useRewards(
     } catch (error) {
       console.error('[useRewards] Error fetching chest history:', error);
     }
-  }, [walletAddress]);
+  }, [walletAddress, walletHeaders]);
 
   const fetchTiers = useCallback(async () => {
     try {
@@ -133,7 +151,7 @@ export function useRewards(
 
   const openChest = useCallback(async (tier: number): Promise<ChestOpenResult> => {
     if (!walletAddress) {
-      return { success: false, error: 'Not connected' };
+      return { reward_sol: 0, is_jackpot: false, tier_name: '', new_balance: 0, cooldown_ready_at: '', keys_remaining: 0, error: 'Not connected' };
     }
 
     try {
@@ -148,23 +166,23 @@ export function useRewards(
         body: JSON.stringify({ tier }),
       });
 
-      const data = await response.json();
+      const data: ChestOpenResult = await response.json();
 
-      if (data.success) {
+      if (response.ok && data.reward_sol !== undefined) {
         // Update balance immediately
         if (data.new_balance !== undefined && updateDepositedBalance) {
           updateDepositedBalance(data.new_balance);
         }
         // Re-fetch chests to get updated cooldowns/keys
         fetchChests();
-        // Re-fetch XP state (keys changed)
         fetchXpState();
+        return { ...data, success: true };
       }
 
-      return data;
+      return { ...data, success: false, error: data.error || 'Failed to open chest' };
     } catch (error) {
       console.error('[useRewards] Error opening chest:', error);
-      return { success: false, error: 'Failed to open chest' };
+      return { reward_sol: 0, is_jackpot: false, tier_name: '', new_balance: 0, cooldown_ready_at: '', keys_remaining: 0, error: 'Failed to open chest' };
     }
   }, [walletAddress, getAuthToken, updateDepositedBalance, fetchChests, fetchXpState]);
 
@@ -195,29 +213,24 @@ export function useRewards(
   useEffect(() => {
     const handleXpGain = (e: Event) => {
       const data = (e as CustomEvent<XpGainEvent>).detail;
-      // Add to toast queue (max 5)
       setXpGainQueue(prev => [...prev.slice(-4), data]);
-      // Update XP state inline for instant feedback
+      // Inline update for instant feedback
       setXpState(prev => prev ? {
         ...prev,
         xp: data.total_xp,
         level: data.level,
-        xp_to_next_level: data.xp_to_next,
       } : prev);
-      // Full refresh for accurate progress bar
       fetchXpState();
     };
 
     const handleLevelUp = (e: Event) => {
       const data = (e as CustomEvent<LevelUpEvent>).detail;
       setActiveLevelUp(data);
-      // Auto-dismiss after 5 seconds
       if (levelUpTimeoutRef.current) clearTimeout(levelUpTimeoutRef.current);
       levelUpTimeoutRef.current = setTimeout(() => {
         setActiveLevelUp(null);
         levelUpTimeoutRef.current = null;
       }, 5000);
-      // Refresh XP + chests (keys changed)
       fetchXpState();
       fetchChests();
     };
@@ -225,11 +238,9 @@ export function useRewards(
     const handleChestReward = (e: Event) => {
       const data = (e as CustomEvent<ChestRewardEvent>).detail;
       setLastChestReward(data);
-      // Update balance
       if (data.new_balance !== undefined && updateDepositedBalance) {
         updateDepositedBalance(data.new_balance);
       }
-      // Refresh chests
       fetchChests();
     };
 
@@ -264,20 +275,18 @@ export function useRewards(
   // ============================================================================
 
   useEffect(() => {
-    // Tick every second to update cooldown_remaining_ms
     cooldownIntervalRef.current = setInterval(() => {
       setChests(prev => {
-        const now = Date.now();
         let changed = false;
         const updated = prev.map(chest => {
-          if (chest.next_available_at && chest.cooldown_remaining_ms > 0) {
-            const remaining = Math.max(0, chest.next_available_at - now);
+          if (chest.cooldown_ready_at && chest.cooldown_remaining_ms > 0) {
+            const remaining = Math.max(0, new Date(chest.cooldown_ready_at).getTime() - Date.now());
             if (remaining !== chest.cooldown_remaining_ms) {
               changed = true;
               return {
                 ...chest,
                 cooldown_remaining_ms: remaining,
-                is_available: remaining === 0 && !chest.is_level_locked && chest.keys_balance > 0,
+                is_ready: remaining === 0 && chest.keys > 0,
               };
             }
           }
