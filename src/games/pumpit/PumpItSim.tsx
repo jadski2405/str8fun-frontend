@@ -405,6 +405,9 @@ const PumpItSim: React.FC = () => {
   // Candle boundaries are determined by the server's tick_count, not a local timer.
   // New candle is pushed when tick_count crosses a TICKS_PER_CANDLE boundary.
   // This ensures every client shows identical candles regardless of join time.
+  // NOTE: lastCandleBoundary ref MUST be updated inside the setCandles callback
+  // because React 18 defers functional updaters — if updated outside, the ref
+  // is already mutated by the time the callback runs, making the comparison stale.
   // ============================================================================
   useEffect(() => {
     if (game.serverTickCount <= 0) return;
@@ -415,6 +418,7 @@ const PumpItSim: React.FC = () => {
       // Seed the very first candle when the first tick arrives.
       // This gives the 60fps animation loop a candle to update immediately.
       if (prevCandles.length === 0) {
+        lastCandleBoundary.current = currentBoundary;
         return [{
           open: priceRef.current,
           high: priceRef.current,
@@ -425,6 +429,8 @@ const PumpItSim: React.FC = () => {
 
       // If we've crossed into a new candle boundary, push a new candle
       if (currentBoundary > lastCandleBoundary.current) {
+        lastCandleBoundary.current = currentBoundary;
+
         const newCandles = [...prevCandles];
         const prevClose = newCandles[newCandles.length - 1].close;
 
@@ -445,8 +451,6 @@ const PumpItSim: React.FC = () => {
 
       return prevCandles;
     });
-
-    lastCandleBoundary.current = currentBoundary;
   }, [game.serverTickCount]);
 
   // ============================================================================
