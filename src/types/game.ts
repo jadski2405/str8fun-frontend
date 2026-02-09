@@ -131,5 +131,5 @@ export type TradeErrorCode = keyof typeof TradeErrors;
 export const GAME_CONSTANTS = {
   MIN_TRADE_SOL: 0.001,
   BUY_FEE_PERCENT: 0.5,       // 0.5% fee on buy only
-  TICK_INTERVAL_MS: 250,       // Server sends price every 250ms
+  TICK_INTERVAL_MS: 50,        // Server sends price every 50ms (20 ticks/sec)
 } as const;

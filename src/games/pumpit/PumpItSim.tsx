@@ -40,8 +40,7 @@ export interface TradeMarker {
 // ============================================================================
 // CONSTANTS
 // ============================================================================
-const TICK_INTERVAL = 250; // ms
-const TICKS_PER_CANDLE = 5;
+const TICKS_PER_CANDLE = 10; // Server ticks per candle (10 × 50ms = 0.5s candles)
 const INITIAL_PRICE = 1.0;
 
 // Smooth animation constants
@@ -148,8 +147,8 @@ const PumpItSim: React.FC = () => {
   const [price, setPrice] = useState(INITIAL_PRICE);
   const [candles, setCandles] = useState<Candle[]>(() => generateFlatCandles(10, INITIAL_PRICE));
   
-  // Tick counter for candle generation
-  const tickCount = useRef(0);
+  // Server-driven candle boundary tracker
+  const lastCandleBoundary = useRef(0);
   
   // Track current price in ref for candle updates
   const priceRef = useRef(INITIAL_PRICE);
@@ -355,12 +354,16 @@ const PumpItSim: React.FC = () => {
       targetPriceRef.current = lastPrice;
       setPrice(lastPrice);
       
+      // Sync candle boundary to server state so subsequent ticks create candles at the right time
+      lastCandleBoundary.current = Math.floor(game.priceHistory.length / TICKS_PER_CANDLE);
+      
       priceHistoryInitialized.current = true;
     }
     
     // Reset the initialized flag when round changes
     if (game.shouldResetChart) {
       priceHistoryInitialized.current = false;
+      lastCandleBoundary.current = 0;
     }
   }, [game.priceHistory, game.roundStatus, game.shouldResetChart]);
 
@@ -418,41 +421,44 @@ const PumpItSim: React.FC = () => {
   }, []);
 
   // ============================================================================
-  // GAME LOOP - Main tick for new candles (price driven entirely by server)
+  // SERVER-DRIVEN CANDLE CREATION
+  // Candle boundaries are determined by the server's tick_count, not a local timer.
+  // New candle is pushed when tick_count crosses a TICKS_PER_CANDLE boundary.
+  // This ensures every client shows identical candles regardless of join time.
   // ============================================================================
   useEffect(() => {
-    const interval = setInterval(() => {
-      tickCount.current += 1;
+    if (game.serverTickCount <= 0) return;
 
-      // Push new candle every N ticks
-      if (tickCount.current % TICKS_PER_CANDLE === 0) {
-        setCandles(prevCandles => {
-          const newCandles = [...prevCandles];
-          
-          // New candle opens at previous candle's close for continuity
-          const prevClose = newCandles.length > 0 
-            ? newCandles[newCandles.length - 1].close 
-            : priceRef.current;
-          
-          newCandles.push({
-            open: prevClose,
-            high: Math.max(prevClose, priceRef.current),
-            low: Math.min(prevClose, priceRef.current),
-            close: priceRef.current,
-          });
+    const currentBoundary = Math.floor(game.serverTickCount / TICKS_PER_CANDLE);
 
-          // Keep only last 100 candles for performance
-          if (newCandles.length > 100) {
-            newCandles.shift();
-          }
-          
-          return newCandles;
+    // If we've crossed into a new candle boundary, push a new candle
+    if (currentBoundary > lastCandleBoundary.current && lastCandleBoundary.current > 0) {
+      setCandles(prevCandles => {
+        const newCandles = [...prevCandles];
+
+        // New candle opens at previous candle's close for continuity
+        const prevClose = newCandles.length > 0
+          ? newCandles[newCandles.length - 1].close
+          : priceRef.current;
+
+        newCandles.push({
+          open: prevClose,
+          high: Math.max(prevClose, priceRef.current),
+          low: Math.min(prevClose, priceRef.current),
+          close: priceRef.current,
         });
-      }
-    }, TICK_INTERVAL);
 
-    return () => clearInterval(interval);
-  }, [game.roundStatus, game.isCrashed]);
+        // Keep only last 200 candles for performance
+        if (newCandles.length > 200) {
+          newCandles.shift();
+        }
+
+        return newCandles;
+      });
+    }
+
+    lastCandleBoundary.current = currentBoundary;
+  }, [game.serverTickCount]);
 
   // ============================================================================
   // TRADE HANDLERS - Now use deposited balance (no wallet approval per trade!)

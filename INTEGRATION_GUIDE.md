@@ -97,13 +97,8 @@ interface TradeDeckProps {
 
 ### Key Constants to Customize:
 ```tsx
-TICK_INTERVAL = 250       // Main game tick (ms) - how often major price updates happen
-TICKS_PER_CANDLE = 5      // Ticks before new candle (250ms × 5 = 1.25s candles)
-IDLE_VOLATILITY = 0.001   // Random price movement per tick (0.1%)
-PUMP_IMPACT = 0.08        // Price increase per 0.1 SOL bought (8%)
-DUMP_IMPACT = 0.06        // Price decrease per 0.1 SOL sold (6%)
+TICKS_PER_CANDLE = 10     // Server ticks per candle (50ms × 10 = 0.5s candles)
 INITIAL_PRICE = 1.0       // Starting price
-INITIAL_BALANCE = 10.0    // Starting balance
 ```
 
 ### Game Loop Explained:

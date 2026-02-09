@@ -33,6 +33,7 @@ export interface GameState {
 
   // Price state (from server only — no local calculation)
   priceMultiplier: number;  // Current multiplier from server tick engine
+  serverTickCount: number;  // Server's authoritative tick count
 
   // Player state (multiplier-based position)
   playerPosition: PlayerPosition | null;
@@ -80,6 +81,9 @@ export function useGame(
 
   // Price multiplier — solely from server
   const [priceMultiplier, setPriceMultiplier] = useState<number>(1.0);
+
+  // Server tick count — authoritative candle boundary source
+  const [serverTickCount, setServerTickCount] = useState<number>(0);
 
   // Track previous round ID for chart reset
   const [previousRoundId, setPreviousRoundId] = useState<string | null>(null);
@@ -370,11 +374,14 @@ export function useGame(
             }
           }
 
-          // PRICE_TICK: Server tick engine sends price every 250ms
+          // PRICE_TICK: Server tick engine sends price every 50ms
           // This is the ONLY source that drives the chart multiplier
           if (data.type === 'PRICE_TICK') {
             const newPrice = Number(data.price);
             setPriceMultiplier(newPrice);
+            if (data.tick_count !== undefined) {
+              setServerTickCount(Number(data.tick_count));
+            }
           }
 
           // ROUND_CRASH: Server signals round end (rug pull!)
@@ -468,6 +475,7 @@ export function useGame(
         console.log('[useGame] New round started, resetting chart');
         setShouldResetChart(true);
         setPriceMultiplier(1.0);
+        setServerTickCount(0);
         setPriceHistory([]);
       }
 
@@ -679,6 +687,7 @@ export function useGame(
 
     // Price state (from server only)
     priceMultiplier,
+    serverTickCount,
 
     // Player state (multiplier-based position)
     playerPosition,
