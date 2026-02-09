@@ -370,8 +370,8 @@ const PumpItSim: React.FC = () => {
       
       let newPrice = priceRef.current + lerpAmount + velocityAmount;
       
-      // Clamp to reasonable bounds
-      newPrice = Math.max(0.1, Math.min(10.0, newPrice));
+      // Clamp to reasonable bounds (floor only — no ceiling)
+      newPrice = Math.max(0.01, newPrice);
       priceRef.current = newPrice;
       
       // Update UI with current ref price
