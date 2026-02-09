@@ -5,6 +5,7 @@ interface GameLayoutProps {
   sidebar?: ReactNode;
   sidebarCollapsed?: boolean;
   chart: ReactNode;
+  chartBorderColor?: string;
   tradeControls: ReactNode;
   mobileTradeControls?: ReactNode;
   leaderboard?: ReactNode;
@@ -18,6 +19,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   sidebar,
   sidebarCollapsed = true,
   chart,
+  chartBorderColor = '#22C55E',
   tradeControls,
   mobileTradeControls,
   leaderboard,
@@ -51,7 +53,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
           </div>
           
           {/* Main Trading Stage - Chart */}
-          <div id="chart-stage">
+          <div id="chart-stage" style={{ borderColor: chartBorderColor, transition: 'border-color 0.3s ease' }}>
             <div id="chart-canvas-wrap">
               {chart}
             </div>

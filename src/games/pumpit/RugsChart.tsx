@@ -39,13 +39,13 @@ const REF_WIDTH = 800;
 const REF_HEIGHT = 450;
 const REF_PADDING_TOP = 30;
 const REF_PADDING_BOTTOM = 38;
-const REF_PADDING_RIGHT = 68;
+const REF_PADDING_RIGHT = 12;
 const REF_PADDING_LEFT = 15;
 const REF_CANDLE_COUNT = 60;          // Desktop candle count
 const MIN_CANDLE_WIDTH = 8;           // Minimum candle body width in px
 // Reference aspect = drawingHeight / drawingWidth at 800×450
 const REF_DRAWING_H = REF_HEIGHT - REF_PADDING_TOP - REF_PADDING_BOTTOM; // 382
-const REF_DRAWING_W = REF_WIDTH - REF_PADDING_LEFT - REF_PADDING_RIGHT;  // 717
+const REF_DRAWING_W = REF_WIDTH - REF_PADDING_LEFT - REF_PADDING_RIGHT;  // 773
 const REF_ASPECT = REF_DRAWING_H / REF_DRAWING_W; // ~0.533
 
 // Colors - matching site background (grey panels)
@@ -55,6 +55,9 @@ const COLOR_GREEN_GLOW = 'rgba(34, 197, 94, 0.6)';
 const COLOR_RED = '#EF4444';
 const COLOR_RED_GLOW = 'rgba(239, 68, 68, 0.6)';
 const COLOR_GRID = 'rgba(255, 255, 255, 0.04)';
+
+// Grid visibility toggle
+const SHOW_GRID_LINES = false; // Set to true to re-enable grid lines & Y-axis labels
 
 // Animation smoothing
 const Y_AXIS_LERP_FACTOR = 0.06; // Smoother axis scaling (lower = smoother)
@@ -264,58 +267,57 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
       ctx.fillRect(0, -Math.abs(cameraOffset) - 10, width, height + Math.abs(cameraOffset) * 2 + 20);
 
       // ================================================================
-      // DRAW DYNAMIC GRID LINES
+      // DRAW DYNAMIC GRID LINES (toggleable)
       // ================================================================
-      ctx.strokeStyle = COLOR_GRID;
-      ctx.lineWidth = 1;
-      
-      // Calculate sensible grid steps based on multiplier
-      // If range is large (e.g. 10x), step 1.0x. If small (0.5x), step 0.1x
-      const rangeMult = drawRange / startPrice;
-      let step = 0.1;
-      if (rangeMult > 0.5) step = 0.25;
-      if (rangeMult > 1.5) step = 0.5;
-      if (rangeMult > 3.0) step = 1.0;
-      if (rangeMult > 10.0) step = 5.0;
+      if (SHOW_GRID_LINES) {
+        ctx.strokeStyle = COLOR_GRID;
+        ctx.lineWidth = 1;
+        
+        const rangeMult = drawRange / startPrice;
+        let step = 0.1;
+        if (rangeMult > 0.5) step = 0.25;
+        if (rangeMult > 1.5) step = 0.5;
+        if (rangeMult > 3.0) step = 1.0;
+        if (rangeMult > 10.0) step = 5.0;
 
-      // Generate lines around startPrice ± N * step
-      // Determine Start/End multipliers visible
-      const minMult = minVal / startPrice;
-      const maxMult = maxVal / startPrice;
-      
-      const startStepIndex = Math.floor(minMult / step);
-      const endStepIndex = Math.ceil(maxMult / step);
+        const minMult = minVal / startPrice;
+        const maxMult = maxVal / startPrice;
+        
+        const startStepIndex = Math.floor(minMult / step);
+        const endStepIndex = Math.ceil(maxMult / step);
 
-      for (let i = startStepIndex; i <= endStepIndex; i++) {
-         const mult = i * step;
-         const price = startPrice * mult;
-         const y = getNormY(price);
-         
-         if (y >= 0 && y <= height) { // Draw if mostly visible
-             ctx.beginPath();
-             ctx.moveTo(0, y);
-             ctx.lineTo(width - PADDING_RIGHT, y);
-             ctx.stroke();
+        for (let i = startStepIndex; i <= endStepIndex; i++) {
+           const mult = i * step;
+           const price = startPrice * mult;
+           const y = getNormY(price);
+           
+           if (y >= 0 && y <= height) {
+               ctx.beginPath();
+               ctx.moveTo(0, y);
+               ctx.lineTo(width - PADDING_RIGHT, y);
+               ctx.stroke();
 
-             // Label (font scales with container width)
-             const labelFontSize = Math.max(8, Math.round(width * 0.011));
-             ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-             ctx.font = `${labelFontSize}px 'DynaPuff', sans-serif`;
-             ctx.textAlign = 'left';
-             ctx.textBaseline = 'middle';
-             ctx.fillText(mult.toFixed(2) + 'x', width - PADDING_RIGHT + 4, y);
-         }
+               const labelFontSize = Math.max(8, Math.round(width * 0.011));
+               ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+               ctx.font = `${labelFontSize}px 'DynaPuff', sans-serif`;
+               ctx.textAlign = 'left';
+               ctx.textBaseline = 'middle';
+               ctx.fillText(mult.toFixed(2) + 'x', width - PADDING_RIGHT + 4, y);
+           }
+        }
       }
 
       // ================================================================
       // DRAW CANDLES
       // ================================================================
       const candleWidth = Math.floor(chartAreaWidth / FIXED_CANDLE_COUNT);
-      const totalCandlesWidth = candleWidth * FIXED_CANDLE_COUNT;
-      const startOffset = PADDING_LEFT + Math.floor((chartAreaWidth - totalCandlesWidth) / 2);
       
       // Only show last FIXED_CANDLE_COUNT candles
       const renderCandles = data.slice(-FIXED_CANDLE_COUNT);
+
+      // Center the candle group horizontally when fewer than max
+      const totalRenderedWidth = candleWidth * renderCandles.length;
+      const startOffset = PADDING_LEFT + Math.floor((chartAreaWidth - totalRenderedWidth) / 2);
 
       renderCandles.forEach((candle, i) => {
         // Position - use integer math to prevent drift

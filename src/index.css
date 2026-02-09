@@ -1114,7 +1114,7 @@ body {
   overflow: visible;
   border-radius: 8px;
   background: rgb(21, 22, 29);
-  border: 2px solid rgb(56, 57, 67);
+  border: none;
   box-sizing: border-box;
 }
 
@@ -1440,7 +1440,7 @@ body {
   height: 450px;
   min-height: 450px;
   box-sizing: border-box;
-  border: 1px solid rgb(56, 57, 67);
+  border: 2px solid #22C55E;
   border-radius: 12px;
   background: rgb(21, 22, 29);
   overflow: hidden;
