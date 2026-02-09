@@ -411,15 +411,22 @@ const PumpItSim: React.FC = () => {
 
     const currentBoundary = Math.floor(game.serverTickCount / TICKS_PER_CANDLE);
 
-    // If we've crossed into a new candle boundary, push a new candle
-    if (currentBoundary > lastCandleBoundary.current && lastCandleBoundary.current > 0) {
-      setCandles(prevCandles => {
-        const newCandles = [...prevCandles];
+    setCandles(prevCandles => {
+      // Seed the very first candle when the first tick arrives.
+      // This gives the 60fps animation loop a candle to update immediately.
+      if (prevCandles.length === 0) {
+        return [{
+          open: priceRef.current,
+          high: priceRef.current,
+          low: priceRef.current,
+          close: priceRef.current,
+        }];
+      }
 
-        // New candle opens at previous candle's close for continuity
-        const prevClose = newCandles.length > 0
-          ? newCandles[newCandles.length - 1].close
-          : priceRef.current;
+      // If we've crossed into a new candle boundary, push a new candle
+      if (currentBoundary > lastCandleBoundary.current) {
+        const newCandles = [...prevCandles];
+        const prevClose = newCandles[newCandles.length - 1].close;
 
         newCandles.push({
           open: prevClose,
@@ -434,8 +441,10 @@ const PumpItSim: React.FC = () => {
         }
 
         return newCandles;
-      });
-    }
+      }
+
+      return prevCandles;
+    });
 
     lastCandleBoundary.current = currentBoundary;
   }, [game.serverTickCount]);
