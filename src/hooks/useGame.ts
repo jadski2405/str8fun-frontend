@@ -435,11 +435,13 @@ export function useGame(
             setShowGetCooked(true);
             setFinalMultiplier(Number(data.final_multiplier) || 0);
             setRoundStatus('ended');
+            setPlayerPosition(null);  // Position is lost on crash — clear immediately to prevent stale PnL
 
             getRinsedTimeoutRef.current = setTimeout(() => {
               console.log('[useGame] Get Rinsed timeout done, starting countdown');
               setShowGetCooked(false);
               setIsCrashed(false);
+              setPlayerPosition(null);  // Safety net: ensure no stale position leaks into new round
               setRoundStatus('countdown');
               setCountdownRemaining(COUNTDOWN_SECONDS);
               isTransitioningRef.current = false;
@@ -451,9 +453,9 @@ export function useGame(
             setRecentTrades((prev) => [data.trade, ...prev.slice(0, 49)]);
           }
 
-          // POSITION_UPDATE from server
+          // POSITION_UPDATE from server (ignore during crash/ended/countdown to prevent stale data)
           if (data.type === 'POSITION_UPDATE' && data.position) {
-            if (data.position.profile_id === profileId) {
+            if (data.position.profile_id === profileId && !isTransitioningRef.current && roundStatusRef.current !== 'ended') {
               setPlayerPosition(data.position);
             }
           }
