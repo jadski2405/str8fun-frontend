@@ -133,3 +133,139 @@ export const GAME_CONSTANTS = {
   BUY_FEE_PERCENT: 0.5,       // 0.5% fee on buy only
   TICK_INTERVAL_MS: 50,        // Server sends price every 50ms (20 ticks/sec)
 } as const;
+
+// ============================================================================
+// REWARDS / XP / LEVELS / KEYS / CHESTS
+// ============================================================================
+
+export const TIER_SLUGS = [
+  '', 'pleb', 'jeet', 'intern', 'degen', 'ape',
+  'chad', 'whale', 'liquidator', 'market_maker', 'sovereign',
+] as const;
+
+export const TIER_NAMES = [
+  '', 'Pleb', 'Jeet', 'Intern', 'Degen', 'Ape',
+  'Chad', 'Whale', 'Liquidator', 'Market Maker', 'Sovereign',
+] as const;
+
+export const TIER_COLORS: Record<number, string> = {
+  1: '#9CA3AF', // Pleb - gray
+  2: '#22C55E', // Jeet - green
+  3: '#3B82F6', // Intern - blue
+  4: '#A855F7', // Degen - purple
+  5: '#F97316', // Ape - orange
+  6: '#EAB308', // Chad - gold
+  7: '#06B6D4', // Whale - cyan
+  8: '#EF4444', // Liquidator - red
+  9: '#C0C0C0', // Market Maker - silver
+  10: '#FFD700', // Sovereign - gold/rainbow
+};
+
+export const tierSlug = (tier: number): string => TIER_SLUGS[tier] || 'pleb';
+export const tierIconUrl = (tier: number): string =>
+  `https://api.str8.fun/icons/tiers/${tierSlug(tier)}.png`;
+export const chestIconUrl = (tier: number): string =>
+  `https://api.str8.fun/icons/chests/${tierSlug(tier)}.png`;
+export const keyIconUrl = (tier: number): string =>
+  `https://api.str8.fun/icons/keys/${tierSlug(tier)}.png`;
+
+export interface TierInfo {
+  tier: number;
+  name: string;
+  slug: string;
+  level_min: number;
+  level_max: number;
+  cooldown_hours: number;
+  min_reward: number;
+  max_reward: number;
+  jackpot_reward: number;
+  jackpot_odds: number;
+  icon_url?: string;
+  chest_url?: string;
+  key_url?: string;
+}
+
+export interface KeyBalance {
+  tier: number;
+  balance: number;
+}
+
+export interface PlayerXpState {
+  xp: number;
+  level: number;
+  tier: number;
+  tier_name: string;
+  progress_xp: number;
+  needed_xp: number;
+  progress_percent: number;
+  xp_to_next_level: number;
+  next_level_xp: number;
+  keys: KeyBalance[];
+}
+
+export interface ChestInfo {
+  tier: number;
+  name: string;
+  level_min: number;
+  level_max: number;
+  is_level_locked: boolean;
+  keys_balance: number;
+  cooldown_remaining_ms: number;
+  next_available_at: number | null;
+  is_available: boolean;
+  min_reward: number;
+  max_reward?: number;
+  jackpot_reward: number;
+  jackpot_odds: number;
+  cooldown_hours: number;
+}
+
+export interface ChestOpenResult {
+  success: boolean;
+  reward_sol?: number;
+  is_jackpot?: boolean;
+  keys_remaining?: number;
+  next_available_at?: number;
+  new_balance?: number;
+  error?: string;
+}
+
+export interface ChestHistoryEntry {
+  tier: number;
+  reward_sol: number;
+  is_jackpot: boolean;
+  opened_at: string;
+}
+
+// WebSocket event payloads
+export interface XpGainEvent {
+  type: 'XP_GAIN';
+  xp_awarded: number;
+  source: 'wager' | 'rekt' | 'daily';
+  total_xp: number;
+  level: number;
+  xp_to_next: number;
+}
+
+export interface LevelUpEvent {
+  type: 'LEVEL_UP';
+  old_level: number;
+  new_level: number;
+  levels_gained: number;
+  tier: number;
+  tier_name: string;
+  keys_granted: { tier: number; count: number }[];
+  total_xp: number;
+  xp_to_next: number;
+}
+
+export interface ChestRewardEvent {
+  type: 'CHEST_REWARD';
+  tier: number;
+  tier_name: string;
+  reward_sol: number;
+  is_jackpot: boolean;
+  keys_remaining: number;
+  next_available_at: number;
+  new_balance: number;
+}

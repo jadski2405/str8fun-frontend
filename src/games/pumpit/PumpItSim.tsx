@@ -7,10 +7,14 @@ import LivePnLFeed, { PlayerPnL } from './LivePnLFeed';
 import { useSolanaWallet } from '../../hooks/useSolanaWallet';
 import { useGame } from '../../hooks/useGame';
 import { useLeaderboard } from '../../hooks/useLeaderboard';
+import { useRewards } from '../../hooks/useRewards';
 import { GAME_CONSTANTS } from '../../types/game';
 import GameLayout from '../../components/layout/GameLayout';
 import GlobalHeader from '../../components/GlobalHeader';
 import GlobalChatSidebar from '../../components/GlobalChatSidebar';
+import LevelUpPopup from '../../components/LevelUpPopup';
+import XpToast from '../../components/XpToast';
+import RewardsModal from '../../components/RewardsModal';
 import solanaLogo from '../../assets/logo_solana.png';
 
 // ============================================================================
@@ -122,6 +126,10 @@ const PumpItSim: React.FC = () => {
   
   // Leaderboard data - refreshes every hour
   const leaderboard = useLeaderboard(10);
+  
+  // Rewards system - XP, levels, keys, chests
+  const rewards = useRewards(publicKey || null, getAuthToken, updateDepositedBalance);
+  const [chestsOpen, setChestsOpen] = useState(false);
   
   // Local simulation state (visual chart)
   const [price, setPrice] = useState(INITIAL_PRICE);
@@ -954,6 +962,8 @@ const PumpItSim: React.FC = () => {
             onOpenDeposit={() => setShowDepositModal(true)}
             onOpenWithdraw={() => setShowDepositModal(true)}
             onToggleChat={() => setChatCollapsed(!chatCollapsed)}
+            xpState={rewards.xpState}
+            onOpenChests={() => { rewards.fetchChests(); setChestsOpen(true); }}
           />
         }
         sidebar={
@@ -1111,6 +1121,25 @@ const PumpItSim: React.FC = () => {
       >
         <MessageCircle size={chatCollapsed ? 22 : 16} className="text-black" />
       </button>
+
+      {/* Rewards Overlays */}
+      <LevelUpPopup
+        levelUp={rewards.activeLevelUp}
+        onDismiss={rewards.dismissLevelUp}
+      />
+      <XpToast
+        gains={rewards.xpGainQueue}
+        onClear={rewards.clearXpGain}
+      />
+      <RewardsModal
+        isOpen={chestsOpen}
+        onClose={() => setChestsOpen(false)}
+        chests={rewards.chests}
+        xpState={rewards.xpState}
+        tiers={rewards.tiers}
+        onOpenChest={rewards.openChest}
+        isLoadingChests={rewards.isLoadingChests}
+      />
     </>
   );
 };

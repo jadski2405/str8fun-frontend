@@ -463,6 +463,17 @@ export function useGame(
           if (data.type === 'ONLINE_COUNT') {
             setOnlineCount(data.count || 0);
           }
+
+          // Rewards events — bridge to useRewards via CustomEvents
+          if (data.type === 'XP_GAIN') {
+            window.dispatchEvent(new CustomEvent('pumpit:xp_gain', { detail: data }));
+          }
+          if (data.type === 'LEVEL_UP') {
+            window.dispatchEvent(new CustomEvent('pumpit:level_up', { detail: data }));
+          }
+          if (data.type === 'CHEST_REWARD') {
+            window.dispatchEvent(new CustomEvent('pumpit:chest_reward', { detail: data }));
+          }
         } catch (e) {
           console.error('WebSocket message error:', e);
         }

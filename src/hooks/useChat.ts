@@ -13,6 +13,7 @@ export interface ChatMessage {
   message: string;
   room: string;
   created_at: string;
+  tier?: number;
 }
 
 interface UseChatOptions {

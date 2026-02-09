@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LogOut, ArrowDownToLine, ArrowUpFromLine, ChevronDown, X, Menu, User, Wallet } from 'lucide-react';
+import { LogOut, ArrowDownToLine, ArrowUpFromLine, ChevronDown, X, Menu, User } from 'lucide-react';
 import { useLogin, usePrivy } from '@privy-io/react-auth';
 import { useSolanaWallet } from '../hooks/useSolanaWallet';
+import XpBar from './XpBar';
+import type { PlayerXpState } from '../types/game';
 import solanaLogo from '../assets/logo_solana.png';
 
 interface GlobalHeaderProps {
@@ -11,6 +13,8 @@ interface GlobalHeaderProps {
   onOpenDeposit?: () => void;
   onOpenWithdraw?: () => void;
   onToggleChat?: () => void;
+  xpState?: PlayerXpState | null;
+  onOpenChests?: () => void;
 }
 
 // Color themes for dropdowns
@@ -31,241 +35,6 @@ const DROPDOWN_THEMES = {
     placeholder: 'Amount to deposit',
     buttonText: 'Deposit',
   },
-};
-
-// Wallet Connection Modal Theme (yellow like deposit menu was)
-const WALLET_THEME = {
-  primary: '#ffc107',
-  primaryActive: '#e6ad06',
-};
-
-// Custom Wallet Connection Modal
-interface WalletConnectionModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
-
-const WalletConnectionModal: React.FC<WalletConnectionModalProps> = ({ isOpen, onClose }) => {
-  const { authenticated } = usePrivy();
-  const { login } = useLogin({
-    onComplete: () => {
-      onClose();
-    },
-    onError: (error) => {
-      console.error('[Privy] Login error:', error);
-    },
-  });
-  
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
-  
-  // Handle Privy login - opens Privy's modal with our wallet options
-  const handleConnectWithPrivy = async () => {
-    // If already authenticated, just close the modal
-    if (authenticated) {
-      onClose();
-      return;
-    }
-    
-    // Try to login even if not ready - Privy may still work
-    setIsLoggingIn(true);
-    try {
-      login();
-      // onClose will be called by onComplete callback
-    } catch (e) {
-      console.error('[Privy] Error initiating login:', e);
-      setIsLoggingIn(false);
-    }
-  };
-
-  return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          {/* Backdrop */}
-          <motion.div
-            className="mobile-modal-backdrop"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            onClick={onClose}
-            style={{
-              position: 'fixed',
-              inset: 0,
-              backgroundColor: 'rgba(0, 0, 0, 0.7)',
-              zIndex: 1000,
-            }}
-          />
-          {/* Modal Container - Flexbox Centering */}
-          <div
-            style={{
-              position: 'fixed',
-              inset: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 1001,
-              pointerEvents: 'none',
-            }}
-          >
-            {/* Modal */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              transition={{ duration: 0.2 }}
-              style={{
-                width: 320,
-                maxWidth: 'calc(100vw - 32px)',
-                backgroundColor: 'rgb(30, 32, 42)',
-                borderRadius: 12,
-                border: '1px solid rgb(58, 61, 74)',
-                boxShadow: 'rgba(0, 0, 0, 0.3) 0px 8px 32px',
-                overflow: 'hidden',
-                pointerEvents: 'auto',
-              }}
-            >
-            {/* Header */}
-            <div 
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '16px 20px',
-                borderBottom: '1px solid rgb(58, 61, 74)',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <Wallet size={18} style={{ color: WALLET_THEME.primary }} />
-                <span 
-                  style={{ 
-                    fontFamily: "'DynaPuff', sans-serif",
-                    fontSize: 16,
-                    fontWeight: 600,
-                    color: 'rgb(248, 248, 252)',
-                  }}
-                >
-                  Connect Wallet
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={onClose}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: 28,
-                  height: 28,
-                  borderRadius: 6,
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  border: 'none',
-                  cursor: 'pointer',
-                  transition: 'background 0.2s ease',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-                }}
-              >
-                <X size={16} color="rgb(248, 248, 252)" />
-              </button>
-            </div>
-
-            {/* Content */}
-            <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {/* Info text */}
-              <p 
-                style={{ 
-                  fontFamily: "'DynaPuff', sans-serif", 
-                  fontSize: 12, 
-                  color: 'rgba(248, 248, 252, 0.6)',
-                  textAlign: 'center',
-                  margin: '0 0 8px 0',
-                  lineHeight: 1.5,
-                }}
-              >
-                Connect your Solana wallet to start playing
-              </p>
-              
-              {/* Main Connect Button - Uses Privy */}
-              <button
-                onClick={handleConnectWithPrivy}
-                disabled={isLoggingIn}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 12,
-                  width: '100%',
-                  padding: '16px 20px',
-                  background: WALLET_THEME.primary,
-                  border: 'none',
-                  borderRadius: 8,
-                  cursor: isLoggingIn ? 'wait' : 'pointer',
-                  transition: 'all 0.2s ease',
-                  boxShadow: `${WALLET_THEME.primary}66 0px 4px 16px`,
-                }}
-                onMouseEnter={(e) => {
-                  if (!isLoggingIn) {
-                    e.currentTarget.style.background = WALLET_THEME.primaryActive;
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = WALLET_THEME.primary;
-                  e.currentTarget.style.transform = 'translateY(0)';
-                }}
-              >
-                <Wallet size={20} color="#000" />
-                <span style={{ 
-                  fontFamily: "'DynaPuff', sans-serif", 
-                  fontSize: 15, 
-                  fontWeight: 700, 
-                  color: '#000' 
-                }}>
-                  {isLoggingIn ? 'Connecting...' : 'Connect Wallet'}
-                </span>
-              </button>
-              
-              {/* Supported wallets info */}
-              <div 
-                style={{ 
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 16,
-                  marginTop: 12,
-                  padding: '12px 16px',
-                  background: 'rgba(0, 0, 0, 0.2)',
-                  borderRadius: 8,
-                }}
-              >
-                <span style={{ fontFamily: "'DynaPuff', sans-serif", fontSize: 11, color: 'rgba(248, 248, 252, 0.4)' }}>
-                  Supports:
-                </span>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <img 
-                    src="https://raw.githubusercontent.com/solana-labs/wallet-adapter/master/packages/wallets/icons/phantom.svg" 
-                    alt="Phantom" 
-                    style={{ width: 20, height: 20, borderRadius: 4 }} 
-                  />
-                  <img 
-                    src="https://raw.githubusercontent.com/solana-labs/wallet-adapter/master/packages/wallets/icons/solflare.svg" 
-                    alt="Solflare" 
-                    style={{ width: 20, height: 20, borderRadius: 4 }} 
-                  />
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-        </>
-      )}
-    </AnimatePresence>
-  );
 };
 
 // Shared Dropdown Shell Component
@@ -1140,13 +909,18 @@ const GameNavButtons: React.FC = () => {
   );
 };
 
-const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat }) => {
+const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat, xpState, onOpenChests }) => {
   // Router hooks for navigation
   const location = useLocation();
   const navigate = useNavigate();
   
-  // Privy auth state - for logout
+  // Privy auth state - for logout and direct login
   const { logout } = usePrivy();
+  const { login } = useLogin({
+    onError: (error) => {
+      console.error('[Privy] Login error:', error);
+    },
+  });
   
   // Global wallet state - SINGLE SOURCE OF TRUTH for wallet connection
   const { 
@@ -1167,7 +941,6 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
   const [showMobileNav, setShowMobileNav] = useState(false);
   const [showMobileDeposit, setShowMobileDeposit] = useState(false);
   const [showMobileWithdraw, setShowMobileWithdraw] = useState(false);
-  const [showWalletConnectionModal, setShowWalletConnectionModal] = useState(false);
   
   // Refs for click outside handling
   const menuRef = useRef<HTMLDivElement>(null);
@@ -1228,9 +1001,9 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
     return `${address.slice(0, 4)}...${address.slice(-4)}`;
   };
 
-  // Handle connect button click - use custom modal
+  // Handle connect button click - directly open Privy login
   const handleConnectClick = () => {
-    setShowWalletConnectionModal(true);
+    login();
   };
 
   // Handle disconnect - logout from Privy (which also disconnects wallet)
@@ -1280,6 +1053,50 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
             boxSizing: 'border-box',
           }}
         >
+          {/* XP Bar - compact */}
+          {xpState && <XpBar xpState={xpState} compact />}
+
+          {/* CHESTS Button - Golden, left of Withdraw */}
+          {onOpenChests && (
+            <button
+              type="button"
+              onClick={onOpenChests}
+              className="header-chests-btn"
+              style={{
+                height: 36,
+                borderRadius: 8,
+                padding: '0 12px',
+                background: '#FFD700',
+                border: 'none',
+                boxShadow: '#b8960f 0px 4px 0px 0px',
+                boxSizing: 'border-box',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+                fontFamily: "'DynaPuff', sans-serif",
+                fontSize: 14,
+                fontWeight: 600,
+                textTransform: 'uppercase',
+                color: 'rgb(13, 14, 18)',
+                cursor: 'pointer',
+                userSelect: 'none',
+                WebkitFontSmoothing: 'antialiased',
+                transition: 'all 0.15s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(2px)';
+                e.currentTarget.style.boxShadow = '#b8960f 0px 2px 0px 0px';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '#b8960f 0px 4px 0px 0px';
+              }}
+            >
+              🎁 Chests
+            </button>
+          )}
+
           {/* Balance Display Box - Left of Withdraw */}
           <div
             className="header-balance-box"
@@ -1724,11 +1541,6 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
         onClose={() => setShowMobileWithdraw(false)}
         balance={depositedBalance}
         onTransaction={withdraw}
-      />
-      {/* Custom Wallet Connection Modal */}
-      <WalletConnectionModal
-        isOpen={showWalletConnectionModal}
-        onClose={() => setShowWalletConnectionModal(false)}
       />
     </div>
   );

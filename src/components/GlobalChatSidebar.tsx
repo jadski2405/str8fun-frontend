@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Send, MessageCircle, Loader2 } from 'lucide-react';
 import { useChat } from '../hooks/useChat';
+import { TIER_COLORS, TIER_NAMES, tierIconUrl } from '../types/game';
 
 interface GlobalChatSidebarProps {
   isCollapsed: boolean;
@@ -213,6 +214,8 @@ const GlobalChatSidebar: React.FC<GlobalChatSidebarProps> = ({
           <>
             {messages.map((msg) => {
               const rankStyle = getRankStyle(msg.username);
+              const hasTier = typeof msg.tier === 'number' && msg.tier >= 1 && msg.tier <= 10;
+              const tierColor = hasTier ? TIER_COLORS[msg.tier!] : undefined;
               
               return (
                 /* Chat Message Row - Badge + Content aligned */
@@ -222,14 +225,36 @@ const GlobalChatSidebar: React.FC<GlobalChatSidebarProps> = ({
                 >
                   {/* Badge Container - Fixed 40px width, centered */}
                   <div className="chat-badge-container">
-                    <span className={`chat-badge ${rankStyle.bg} ${rankStyle.text} border ${rankStyle.border}`}>
-                      {rankStyle.label}
-                    </span>
+                    {hasTier ? (
+                      <img 
+                        src={tierIconUrl(msg.tier!)} 
+                        alt={TIER_NAMES[msg.tier!]} 
+                        className="chat-tier-badge"
+                        title={TIER_NAMES[msg.tier!]}
+                        style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'contain' }}
+                        onError={(e) => {
+                          // Fallback to emoji badge on icon load failure
+                          const parent = (e.target as HTMLImageElement).parentElement;
+                          if (parent) {
+                            parent.innerHTML = `<span class="chat-badge ${rankStyle.bg} ${rankStyle.text} border ${rankStyle.border}">${rankStyle.label}</span>`;
+                          }
+                        }}
+                      />
+                    ) : (
+                      <span className={`chat-badge ${rankStyle.bg} ${rankStyle.text} border ${rankStyle.border}`}>
+                        {rankStyle.label}
+                      </span>
+                    )}
                   </div>
                   
                   {/* Content Container - Username + Message */}
                   <div className="chat-content">
-                    <span className="chat-username">{msg.username}</span>
+                    <span 
+                      className="chat-username" 
+                      style={tierColor ? { color: tierColor } : undefined}
+                    >
+                      {msg.username}
+                    </span>
                     <span className="chat-message-text">{msg.message}</span>
                   </div>
                 </div>
