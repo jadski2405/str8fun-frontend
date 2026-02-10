@@ -114,6 +114,10 @@ export function useGame(
   const roundStatusRef = useRef<'loading' | 'active' | 'ended' | 'countdown' | 'error'>(roundStatus);
   roundStatusRef.current = roundStatus;
 
+  // Ref to track roundId for polling (avoids stale closure in setInterval)
+  const roundIdRef = useRef<string | null>(roundId);
+  roundIdRef.current = roundId;
+
   // ============================================================================
   // DERIVED VALUES
   // ============================================================================
@@ -300,23 +304,16 @@ export function useGame(
   useEffect(() => {
     fetchActiveRound();
 
-    // If still in 'loading' after 2s, retry — handles slow/failed initial fetch
-    const retryId = setTimeout(() => {
-      if (roundStatusRef.current === 'loading') {
-        console.log('[useGame] Still loading after 2s, retrying fetchActiveRound...');
+    // Poll every 3s until we have a valid roundId — handles "between rounds"
+    // states where the server hasn't created a new round yet
+    const pollId = setInterval(() => {
+      if (!roundIdRef.current) {
+        console.log('[useGame] No roundId yet, polling fetchActiveRound...');
         fetchActiveRound();
       }
-    }, 2000);
+    }, 3000);
 
-    // Second retry at 5s if still stuck
-    const retryId2 = setTimeout(() => {
-      if (roundStatusRef.current === 'loading') {
-        console.log('[useGame] Still loading after 5s, retrying fetchActiveRound...');
-        fetchActiveRound();
-      }
-    }, 5000);
-
-    return () => { clearTimeout(retryId); clearTimeout(retryId2); };
+    return () => clearInterval(pollId);
   }, [fetchActiveRound]);
 
   useEffect(() => {
@@ -358,8 +355,6 @@ export function useGame(
   const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
-    if (!roundId) return;
-
     let ws: WebSocket | null = null;
     let reconnectTimeout: ReturnType<typeof setTimeout>;
     let isMounted = true;
@@ -544,7 +539,7 @@ export function useGame(
         wsRef.current.close();
       }
     };
-  }, [roundId, profileId, walletAddress]);
+  }, [profileId, walletAddress]);
 
   // ============================================================================
   // CHART RESET & POSITION SYNC - Clear data when round changes

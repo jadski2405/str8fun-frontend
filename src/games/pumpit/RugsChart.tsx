@@ -206,23 +206,24 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
          maxP = Math.max(maxP, c.high);
       });
       
-      // Center 1.00x: ASYMMETRIC range — 35% below startPrice, 65% above
-      // This lowers the 1.00x baseline so there's more room for pumps above
-      const distAbove = maxP - startPrice;
-      const distBelow = startPrice - minP;
-      const maxDist = Math.max(distAbove, distBelow, startPrice * 0.015);
+      // Dynamic Y-axis: independently scale above/below startPrice
+      // Ensures candles are ALWAYS visible regardless of how far price drops/pumps
+      const distAbove = Math.max(maxP - startPrice, startPrice * 0.02);
+      const distBelow = Math.max(startPrice - minP, startPrice * 0.02);
 
       // Aspect-ratio normalization
       const drawingH = height - PADDING_TOP - PADDING_BOTTOM;
       const drawingW = chartAreaWidth;
       const currentAspect = drawingW > 0 ? drawingH / drawingW : REF_ASPECT;
       const aspectScale = currentAspect / REF_ASPECT;
-      const scaledDist = maxDist * aspectScale;
 
-      const rangePad = scaledDist * 0.12;
-      // Asymmetric: allocate 65% above startPrice, 35% below
-      targetMaxRef.current = startPrice + (scaledDist + rangePad) * 1.30;
-      targetMinRef.current = startPrice - (scaledDist + rangePad) * 0.70;
+      // Scale each direction independently with 20% breathing room
+      const scaledAbove = distAbove * aspectScale * 1.20;
+      const scaledBelow = distBelow * aspectScale * 1.20;
+      // Bias: keep at least 40% of below-range shown above (lowers 1.00x baseline)
+      const minAbove = scaledBelow * 0.40;
+      targetMaxRef.current = startPrice + Math.max(scaledAbove, minAbove);
+      targetMinRef.current = startPrice - scaledBelow;
 
       // Asymmetric zoom: fast zoom-out (nothing clips), slow zoom-in (no jitter)
       const minLerp = targetMinRef.current < animatedMinRef.current ? Y_AXIS_LERP_ZOOM_OUT : Y_AXIS_LERP_ZOOM_IN;
@@ -266,8 +267,8 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
         const startStepIndex = Math.floor(minMult / step);
         const endStepIndex = Math.ceil(maxMult / step);
 
-        const labelFontSize = Math.max(9, Math.round(width * 0.013));
-        ctx.font = `600 ${labelFontSize}px 'DynaPuff', sans-serif`;
+        const labelFontSize = Math.max(11, Math.round(width * 0.018));
+        ctx.font = `700 ${labelFontSize}px 'DynaPuff', sans-serif`;
         ctx.textAlign = 'right';
         ctx.textBaseline = 'middle';
 
