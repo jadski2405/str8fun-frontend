@@ -1070,6 +1070,19 @@ const PumpItSim: React.FC = () => {
                 </div>
               </div>
             )}
+            {/* Loading Overlay - shown while connecting */}
+            {game.roundStatus === 'loading' && (
+              <div className="absolute inset-0 bg-black/70 flex items-center justify-center z-10 rounded-lg">
+                <div className="text-center">
+                  <div className="text-3xl font-dynapuff font-bold text-white/80 mb-3 animate-pulse">
+                    Connecting...
+                  </div>
+                  <div className="text-sm text-white/40 font-dynapuff">
+                    Loading game state
+                  </div>
+                </div>
+              </div>
+            )}
             {/* Round Countdown Overlay - inside chart only */}
             {game.roundStatus === 'countdown' && !game.showGetCooked && game.countdownRemaining > 0 && (
               <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-10 rounded-lg">

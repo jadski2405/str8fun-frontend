@@ -299,6 +299,24 @@ export function useGame(
 
   useEffect(() => {
     fetchActiveRound();
+
+    // If still in 'loading' after 2s, retry — handles slow/failed initial fetch
+    const retryId = setTimeout(() => {
+      if (roundStatusRef.current === 'loading') {
+        console.log('[useGame] Still loading after 2s, retrying fetchActiveRound...');
+        fetchActiveRound();
+      }
+    }, 2000);
+
+    // Second retry at 5s if still stuck
+    const retryId2 = setTimeout(() => {
+      if (roundStatusRef.current === 'loading') {
+        console.log('[useGame] Still loading after 5s, retrying fetchActiveRound...');
+        fetchActiveRound();
+      }
+    }, 5000);
+
+    return () => { clearTimeout(retryId); clearTimeout(retryId2); };
   }, [fetchActiveRound]);
 
   useEffect(() => {
@@ -359,6 +377,8 @@ export function useGame(
           type: 'subscribe',
           channels: ['round', 'trades', 'chat'],
         }));
+        // Request current round state to catch up after (re)connect
+        ws?.send(JSON.stringify({ type: 'get_round_state' }));
         if (walletAddress) {
           ws?.send(JSON.stringify({
             type: 'identify',

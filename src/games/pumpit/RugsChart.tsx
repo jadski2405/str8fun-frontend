@@ -43,8 +43,8 @@ const REF_PADDING_TOP = 30;
 const REF_PADDING_BOTTOM = 38;
 const REF_PADDING_RIGHT = 12;
 const REF_PADDING_LEFT = 52;
-const REF_CANDLE_COUNT = 35;          // Desktop candle count
-const MIN_CANDLE_WIDTH = 14;          // Minimum candle body width in px
+const REF_CANDLE_COUNT = 50;          // Desktop candle count
+const MIN_CANDLE_WIDTH = 8;           // Minimum candle body width in px
 // Reference aspect = drawingHeight / drawingWidth at 800×450
 const REF_DRAWING_H = REF_HEIGHT - REF_PADDING_TOP - REF_PADDING_BOTTOM; // 382
 const REF_DRAWING_W = REF_WIDTH - REF_PADDING_LEFT - REF_PADDING_RIGHT;  // 736
@@ -62,7 +62,7 @@ const COLOR_GRID = 'rgba(255, 255, 255, 0.04)';
 const SHOW_GRID_LINES = true; // Left-side multiplier labels + subtle grid lines
 
 // Animation smoothing
-const Y_AXIS_LERP_ZOOM_OUT = 0.15; // Fast snap when range needs to grow
+const Y_AXIS_LERP_ZOOM_OUT = 0.25; // Fast snap when range needs to grow
 const Y_AXIS_LERP_ZOOM_IN = 0.03;  // Slow settle when range shrinks back
 
 // ============================================================================
@@ -322,14 +322,14 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
         // Clamp to drawing area so candles never leave the canvas
         bodyTop = Math.max(PADDING_TOP, bodyTop);
         bodyBottom = Math.min(height - PADDING_BOTTOM, bodyBottom);
-        if (bodyTop >= bodyBottom) return; // fully out of view
+        if (bodyTop >= bodyBottom) { bodyBottom = bodyTop + 2; } // thin sliver at edge
 
         const rawHeight = bodyBottom - bodyTop;
         const bodyHeight = Math.max(rawHeight, 6);
         const adjustedBodyTop = rawHeight < 6 ? bodyTop - (6 - rawHeight) / 2 : bodyTop;
         
         // DynaPuff style: extra chunky, thicc candles
-        const bodyWidth = Math.max(candleWidth * 0.95, MIN_CANDLE_WIDTH);
+        const bodyWidth = Math.max(candleWidth * 0.85, MIN_CANDLE_WIDTH);
         const bodyX = x + (candleWidth - bodyWidth) / 2;
         
         // Solid colors - full opacity
