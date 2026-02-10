@@ -941,6 +941,8 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
   const [showMobileNav, setShowMobileNav] = useState(false);
   const [showMobileDeposit, setShowMobileDeposit] = useState(false);
   const [showMobileWithdraw, setShowMobileWithdraw] = useState(false);
+  const [showDepositPromo, setShowDepositPromo] = useState(false);
+  const depositPromoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // Refs for click outside handling
   const menuRef = useRef<HTMLDivElement>(null);
@@ -981,6 +983,15 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
     setShowWithdrawMenu(false);
     setShowWalletMenu(false);
     setShowDepositMenu(!showDepositMenu);
+    // Show promo popup for 5 seconds
+    if (!showDepositMenu) {
+      setShowDepositPromo(true);
+      if (depositPromoTimer.current) clearTimeout(depositPromoTimer.current);
+      depositPromoTimer.current = setTimeout(() => setShowDepositPromo(false), 5000);
+    } else {
+      setShowDepositPromo(false);
+      if (depositPromoTimer.current) clearTimeout(depositPromoTimer.current);
+    }
   };
 
   const handleOpenWithdraw = () => {
@@ -1235,6 +1246,50 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
               balance={balance}
               onTransaction={deposit}
             />
+
+            {/* First Deposit Promo Popup */}
+            <AnimatePresence>
+              {showDepositPromo && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.2 }}
+                  style={{
+                    position: 'absolute',
+                    top: 'calc(100% + 8px)',
+                    right: 0,
+                    width: 260,
+                    padding: '12px 14px',
+                    background: 'linear-gradient(135deg, #1a2a1a 0%, #0d1117 100%)',
+                    border: '1px solid #22C55E',
+                    borderRadius: 10,
+                    boxShadow: '0 4px 20px rgba(34, 197, 94, 0.25)',
+                    zIndex: 9999,
+                    pointerEvents: 'none',
+                  }}
+                >
+                  <div style={{
+                    fontFamily: "'DynaPuff', sans-serif",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: '#22C55E',
+                    marginBottom: 4,
+                    letterSpacing: 0.5,
+                  }}>
+                    FIRST DEPOSIT BONUS
+                  </div>
+                  <div style={{
+                    fontFamily: "'DynaPuff', sans-serif",
+                    fontSize: 11,
+                    color: '#e2e8f0',
+                    lineHeight: 1.4,
+                  }}>
+                    Get a 0.5 SOL reward when you deposit 1 SOL or more on your first deposit
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
           
           {/* Username Profile Button - Last element (furthest right) */}
