@@ -39,6 +39,7 @@ export interface TradeMarker {
   type: 'buy' | 'sell';
   price: number;
   candleIndex: number; // Index into candles array when trade happened
+  timestamp: number;   // Date.now() when created, for pop-in animation
 }
 
 // ============================================================================
@@ -362,8 +363,8 @@ const PumpItSim: React.FC = () => {
     let animationId: number;
     let lastTime = performance.now();
     
-    const animatePrice = (currentTime: number) => {
-      const deltaTime = Math.min((currentTime - lastTime) / 16.67, 2); // Normalize to ~60fps, cap at 2x
+    const tick = (currentTime: number) => {
+      const deltaTime = Math.min((currentTime - lastTime) / 16.67, 4); // Normalize to ~60fps, allow 4x catch-up
       lastTime = currentTime;
       
       // Smoothly interpolate towards target price (from server ticks or AMM)
@@ -400,12 +401,42 @@ const PumpItSim: React.FC = () => {
         }
         return newCandles;
       });
-      
-      animationId = requestAnimationFrame(animatePrice);
     };
-    
-    animationId = requestAnimationFrame(animatePrice);
-    return () => cancelAnimationFrame(animationId);
+
+    // RAF for foreground; setInterval fallback for background tabs
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+
+    const startRAF = () => {
+      const frame = (t: number) => {
+        tick(t);
+        animationId = requestAnimationFrame(frame);
+      };
+      animationId = requestAnimationFrame(frame);
+    };
+
+    const startInterval = () => {
+      intervalId = setInterval(() => tick(performance.now()), 100);
+    };
+
+    const onVisibility = () => {
+      if (document.hidden) {
+        cancelAnimationFrame(animationId);
+        startInterval();
+      } else {
+        if (intervalId) { clearInterval(intervalId); intervalId = null; }
+        lastTime = performance.now();
+        startRAF();
+      }
+    };
+
+    document.addEventListener('visibilitychange', onVisibility);
+    startRAF();
+
+    return () => {
+      cancelAnimationFrame(animationId);
+      if (intervalId) clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, []);
 
   // ============================================================================
@@ -504,6 +535,7 @@ const PumpItSim: React.FC = () => {
           type: 'buy',
           price: priceRef.current,
           candleIndex: candles.length - 1,
+          timestamp: Date.now(),
         }]);
         
         // Update balance immediately if returned, otherwise refresh
@@ -553,6 +585,7 @@ const PumpItSim: React.FC = () => {
           type: 'sell',
           price: priceRef.current,
           candleIndex: candles.length - 1,
+          timestamp: Date.now(),
         }]);
         
         // Update balance immediately if returned, otherwise refresh
@@ -596,6 +629,7 @@ const PumpItSim: React.FC = () => {
           type: 'sell',
           price: priceRef.current,
           candleIndex: candles.length - 1,
+          timestamp: Date.now(),
         }]);
         
         if (result.newBalance !== undefined) {

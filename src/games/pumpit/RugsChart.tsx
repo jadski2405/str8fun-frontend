@@ -41,13 +41,13 @@ const REF_HEIGHT = 450;
 const REF_PADDING_TOP = 30;
 const REF_PADDING_BOTTOM = 38;
 const REF_PADDING_RIGHT = 12;
-const REF_PADDING_LEFT = 15;
-const REF_CANDLE_COUNT = 60;          // Desktop candle count
-const MIN_CANDLE_WIDTH = 8;           // Minimum candle body width in px
+const REF_PADDING_LEFT = 52;
+const REF_CANDLE_COUNT = 35;          // Desktop candle count
+const MIN_CANDLE_WIDTH = 14;          // Minimum candle body width in px
 // Reference aspect = drawingHeight / drawingWidth at 800×450
 const REF_DRAWING_H = REF_HEIGHT - REF_PADDING_TOP - REF_PADDING_BOTTOM; // 382
-const REF_DRAWING_W = REF_WIDTH - REF_PADDING_LEFT - REF_PADDING_RIGHT;  // 773
-const REF_ASPECT = REF_DRAWING_H / REF_DRAWING_W; // ~0.533
+const REF_DRAWING_W = REF_WIDTH - REF_PADDING_LEFT - REF_PADDING_RIGHT;  // 736
+const REF_ASPECT = REF_DRAWING_H / REF_DRAWING_W; // ~0.519
 
 // Colors - matching site background (grey panels)
 const COLOR_BG = '#15161D';
@@ -58,7 +58,7 @@ const COLOR_RED_GLOW = 'rgba(239, 68, 68, 0.6)';
 const COLOR_GRID = 'rgba(255, 255, 255, 0.04)';
 
 // Grid visibility toggle
-const SHOW_GRID_LINES = false; // Set to true to re-enable grid lines & Y-axis labels
+const SHOW_GRID_LINES = true; // Left-side multiplier labels + subtle grid lines
 
 // Animation smoothing
 const Y_AXIS_LERP_ZOOM_OUT = 0.15; // Fast snap when range needs to grow
@@ -219,7 +219,7 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
       // Center 1.00x: make range symmetric around startPrice
       const distAbove = maxP - startPrice;
       const distBelow = startPrice - minP;
-      let halfSpan = Math.max(distAbove, distBelow, startPrice * 0.025); // at least 2.5% each side
+      let halfSpan = Math.max(distAbove, distBelow, startPrice * 0.015); // at least 1.5% each side
 
       // Aspect-ratio normalization: scale Y range so price movement looks
       // the same fraction of the chart on any container shape.
@@ -231,7 +231,7 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
       const aspectScale = currentAspect / REF_ASPECT;
       halfSpan *= aspectScale;
 
-      const rangePad = halfSpan * 0.25; // 25% padding
+      const rangePad = halfSpan * 0.12; // 12% padding — keep chart filled
       
       targetMinRef.current = startPrice - halfSpan - rangePad;
       targetMaxRef.current = startPrice + halfSpan + rangePad;
@@ -273,9 +273,6 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
       // DRAW DYNAMIC GRID LINES (toggleable)
       // ================================================================
       if (SHOW_GRID_LINES) {
-        ctx.strokeStyle = COLOR_GRID;
-        ctx.lineWidth = 1;
-        
         const rangeMult = drawRange / startPrice;
         let step = 0.1;
         if (rangeMult > 0.5) step = 0.25;
@@ -289,23 +286,32 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
         const startStepIndex = Math.floor(minMult / step);
         const endStepIndex = Math.ceil(maxMult / step);
 
+        const labelFontSize = Math.max(9, Math.round(width * 0.013));
+        ctx.font = `600 ${labelFontSize}px 'DynaPuff', sans-serif`;
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+
         for (let i = startStepIndex; i <= endStepIndex; i++) {
            const mult = i * step;
            const price = startPrice * mult;
            const y = getNormY(price);
            
-           if (y >= 0 && y <= height) {
+           if (y >= PADDING_TOP && y <= height - PADDING_BOTTOM) {
+               // Subtle grid line
+               ctx.strokeStyle = COLOR_GRID;
+               ctx.lineWidth = 1;
                ctx.beginPath();
-               ctx.moveTo(0, y);
+               ctx.moveTo(PADDING_LEFT, y);
                ctx.lineTo(width - PADDING_RIGHT, y);
                ctx.stroke();
 
-               const labelFontSize = Math.max(8, Math.round(width * 0.011));
-               ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-               ctx.font = `${labelFontSize}px 'DynaPuff', sans-serif`;
-               ctx.textAlign = 'left';
-               ctx.textBaseline = 'middle';
-               ctx.fillText(mult.toFixed(2) + 'x', width - PADDING_RIGHT + 4, y);
+               // Left-side multiplier label, colored by direction
+               const isAbove = mult > 1.005;
+               const isBelow = mult < 0.995;
+               ctx.fillStyle = isAbove ? 'rgba(34, 197, 94, 0.7)'
+                             : isBelow ? 'rgba(239, 68, 68, 0.7)'
+                             : 'rgba(255, 255, 255, 0.7)';
+               ctx.fillText(mult.toFixed(2) + 'x', PADDING_LEFT - 6, y);
            }
         }
       }
@@ -381,7 +387,14 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
           const candleIndex = parseInt(candleIndexStr);
           const x = startOffset + candleIndex * candleWidth + candleWidth / 2;
           
+          const now = Date.now();
           candleMarkers.forEach((marker, stackIndex) => {
+            // Pop-in animation: scale 0→1 over ~130ms
+            const age = now - (marker.timestamp || 0);
+            const popScale = Math.min(1, age / 130);
+            // Ease-out for snappy feel: 1 - (1-t)^3
+            const eased = 1 - Math.pow(1 - popScale, 3);
+
             const markerY = getNormY(marker.price);
             // Offset vertically for stacking (proportional to container)
             const markerScale = width / REF_WIDTH;
@@ -390,11 +403,15 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
             
             const isBuy = marker.type === 'buy';
             const markerColor = isBuy ? COLOR_GREEN : COLOR_RED;
-            const markerRadius = Math.max(8, Math.round(14 * markerScale));
+            const baseRadius = Math.max(8, Math.round(14 * markerScale));
+            const markerRadius = baseRadius * eased;
+
+            if (markerRadius < 1) return; // Skip if still invisible
             
             // Draw circle with glow
             ctx.shadowColor = markerColor;
-            ctx.shadowBlur = 8;
+            ctx.shadowBlur = 8 * eased;
+            ctx.globalAlpha = eased;
             ctx.fillStyle = markerColor;
             ctx.beginPath();
             ctx.arc(x, finalY, markerRadius, 0, Math.PI * 2);
@@ -407,12 +424,13 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
             ctx.stroke();
             
             // Draw letter (B or S)
-            const markerFontSize = Math.max(9, Math.round(14 * markerScale));
+            const markerFontSize = Math.max(9, Math.round(14 * markerScale * eased));
             ctx.fillStyle = '#fff';
             ctx.font = `bold ${markerFontSize}px DynaPuff, sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(isBuy ? 'B' : 'S', x, finalY + 1);
+            ctx.globalAlpha = 1;
           });
         });
       }
@@ -478,12 +496,36 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
       animationRef.current = requestAnimationFrame(render);
     };
 
-    animationRef.current = requestAnimationFrame(render);
+    // Foreground: RAF for smooth 60fps. Background: setInterval to keep Y-axis
+    // animation refs current so chart doesn't flatline when tab is hidden.
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+
+    const startRAF = () => {
+      animationRef.current = requestAnimationFrame(render);
+    };
+
+    const startInterval = () => {
+      intervalId = setInterval(() => render(performance.now()), 200);
+    };
+
+    const onVisibility = () => {
+      if (document.hidden) {
+        cancelAnimationFrame(animationRef.current);
+        startInterval();
+      } else {
+        if (intervalId) { clearInterval(intervalId); intervalId = null; }
+        lastTime = performance.now();
+        startRAF();
+      }
+    };
+
+    document.addEventListener('visibilitychange', onVisibility);
+    startRAF();
 
     return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
+      cancelAnimationFrame(animationRef.current);
+      if (intervalId) clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', onVisibility);
     };
   }, []); // Run once, depend on Refs
 
