@@ -974,7 +974,7 @@ const PumpItSim: React.FC = () => {
             walletAddress={publicKey?.toString() || null}
             getAuthToken={getAuthToken}
             onlineCount={game.onlineCount}
-            playerTier={rewards.xpState?.tier ?? 0}
+            playerTier={rewards.xpState?.tier_index ?? rewards.xpState?.tier ?? 0}
           />
         }
         sidebarCollapsed={chatCollapsed}

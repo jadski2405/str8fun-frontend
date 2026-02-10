@@ -94,6 +94,11 @@ export function useRewards(
       });
       if (response.ok) {
         const data = await response.json();
+        // API returns tier as string name ("Pleb"), tier_index as number (0-9)
+        // Normalize: ensure .tier is always the numeric index
+        if (typeof data.tier_index === 'number') {
+          data.tier = data.tier_index;
+        }
         setXpState(data);
       }
     } catch (error) {
