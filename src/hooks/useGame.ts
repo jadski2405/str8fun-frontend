@@ -414,6 +414,10 @@ export function useGame(
               if (data.tick_count !== undefined) {
                 setServerTickCount(Number(data.tick_count));
               }
+              // Synchronous event bypasses React effect batching in background tabs
+              window.dispatchEvent(new CustomEvent('pumpit:price_tick', {
+                detail: { price: newPrice, tick_count: data.tick_count },
+              }));
             }
           }
 

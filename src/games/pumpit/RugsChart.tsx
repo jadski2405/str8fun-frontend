@@ -84,10 +84,6 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
   const targetMinRef = useRef(startPrice * 0.95);
   const targetMaxRef = useRef(startPrice * 1.05);
   
-  // Camera offset for impact effects
-  const cameraOffsetRef = useRef(0);
-  const prevPriceRef = useRef(currentPrice);
-
   // Keep refs for loop
   const dataRef = useRef(data);
   const currentPriceRef = useRef(currentPrice);
@@ -120,23 +116,8 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
       animatedMaxRef.current = sp * 1.05;
       targetMinRef.current = sp * 0.95;
       targetMaxRef.current = sp * 1.05;
-      cameraOffsetRef.current = 0;
-      prevPriceRef.current = sp;
     }
   }, [resetView, startPrice]);
-
-  // ============================================================================
-  // CAMERA IMPACT EFFECT - Detect big price changes (smooth)
-  // ============================================================================
-  useEffect(() => {
-    const priceChange = (currentPrice - prevPriceRef.current) / prevPriceRef.current;
-    prevPriceRef.current = currentPrice;
-    
-    // If significant price change, add camera offset (very subtle)
-    if (Math.abs(priceChange) > 0.02) { 
-      cameraOffsetRef.current += priceChange * 40; 
-    }
-  }, [currentPrice]);
 
   // ============================================================================
   // CANVAS SETUP - Dynamic sizing via ResizeObserver with retina scaling
@@ -259,22 +240,14 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
           return PADDING_TOP + drawingH * (1 - ratio);
       };
 
-      // Camera Offset Decay
-      cameraOffsetRef.current *= 0.95;
-      if (Math.abs(cameraOffsetRef.current) < 0.1) cameraOffsetRef.current = 0;
-      const cameraOffset = cameraOffsetRef.current;
-      
       const isUp = currentPrice >= startPrice;
       const lineColor = isUp ? COLOR_GREEN : COLOR_RED;
 
       // ================================================================
       // DRAW BACKGROUND
       // ================================================================
-      ctx.save();
-      ctx.translate(0, cameraOffset);
-
       ctx.fillStyle = COLOR_BG;
-      ctx.fillRect(0, -Math.abs(cameraOffset) - 10, width, height + Math.abs(cameraOffset) * 2 + 20);
+      ctx.fillRect(0, 0, width, height);
 
       // ================================================================
       // DRAW DYNAMIC GRID LINES (toggleable)
@@ -548,8 +521,6 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
         ctx.stroke();
         ctx.setLineDash([]);
       }
-
-      ctx.restore();
 
       animationRef.current = requestAnimationFrame(render);
     };

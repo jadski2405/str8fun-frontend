@@ -270,13 +270,27 @@ const PumpItSim: React.FC = () => {
 
   // ============================================================================
   // SYNC PRICE FROM GAME STATE (Server-driven via PRICE_TICK)
-  // Sets targetPriceRef so the 60fps lerp animation smoothly interpolates
+  // Uses BOTH a React effect AND a direct event listener.
+  // The event listener fires synchronously from the WS handler, bypassing
+  // React's effect scheduler which defers execution in background tabs.
   // ============================================================================
   useEffect(() => {
     if (game.roundStatus === 'active' && game.priceMultiplier > 0) {
       targetPriceRef.current = game.priceMultiplier;
     }
   }, [game.priceMultiplier, game.roundStatus]);
+
+  // Direct event listener for background-tab price sync (no React batching)
+  useEffect(() => {
+    const onPriceTick = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.price > 0) {
+        targetPriceRef.current = detail.price;
+      }
+    };
+    window.addEventListener('pumpit:price_tick', onPriceTick);
+    return () => window.removeEventListener('pumpit:price_tick', onPriceTick);
+  }, []);
 
   // ============================================================================
   // CRASH ANIMATION - Rapid drop to 0 when round crashes
