@@ -46,12 +46,12 @@ export function useChat({ walletAddress = null, getAuthToken = undefined, limit 
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(`${API_URL}/api/chat/messages?limit=${limit}`);
+        const response = await fetch(`${API_URL}/api/chat/pumpit`);
         if (!response.ok) throw new Error('Failed to fetch messages');
         const data = await response.json();
-        // API returns newest first — reverse so oldest is at top
-        const msgs: ChatMessage[] = data.messages || data || [];
-        setMessages(msgs.reverse());
+        // API returns oldest to newest already
+        const msgs: ChatMessage[] = Array.isArray(data) ? data : (data.messages || []);
+        setMessages(msgs);
       } catch (err) {
         console.error('[useChat] Error fetching messages:', err);
         setError(err instanceof Error ? err.message : 'Failed to load messages');
@@ -94,8 +94,8 @@ export function useChat({ walletAddress = null, getAuthToken = undefined, limit 
     const trimmedText = text.trim();
     if (!trimmedText) return false;
 
-    if (trimmedText.length > 280) {
-      setError('Message too long (max 280 characters)');
+    if (trimmedText.length > 500) {
+      setError('Message too long (max 500 characters)');
       return false;
     }
 
@@ -118,14 +118,14 @@ export function useChat({ walletAddress = null, getAuthToken = undefined, limit 
 
     try {
       const token = getAuthToken ? await getAuthToken() : null;
-      const response = await fetch(`${API_URL}/api/chat/send`, {
+      const response = await fetch(`${API_URL}/api/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'x-wallet-address': walletAddress,
           ...(token ? { 'Authorization': `Bearer ${token}`, 'x-auth-token': token } : {}),
         },
-        body: JSON.stringify({ message: trimmedText }),
+        body: JSON.stringify({ message: trimmedText, room: 'pumpit' }),
       });
 
       if (!response.ok) {
@@ -142,12 +142,12 @@ export function useChat({ walletAddress = null, getAuthToken = undefined, limit 
         return false;
       }
 
-      // Parse success response safely
+      // Parse success response — flat object { id, username, wallet_address, message, room, created_at }
       try {
         const result = await response.json();
-        if (result.message?.id) {
+        if (result.id) {
           setMessages(prev =>
-            prev.map(m => m.id === tempId ? { ...result.message } : m)
+            prev.map(m => m.id === tempId ? { ...result } : m)
           );
         }
       } catch { /* non-JSON 200 — keep optimistic msg as-is */ }
