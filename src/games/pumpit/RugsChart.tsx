@@ -21,6 +21,7 @@ interface RugsChartProps {
   showPnL?: boolean;        // Whether to show PnL overlay
   tradeMarkers?: TradeMarker[]; // User's buy/sell markers
   resetView?: boolean;      // When true, instantly snap Y-axis back to 1.00x centered
+  entryMultiplier?: number; // Player's average entry multiplier for PnL line
 }
 
 // ============================================================================
@@ -67,7 +68,7 @@ const Y_AXIS_LERP_ZOOM_IN = 0.03;  // Slow settle when range shrinks back
 // ============================================================================
 // RUGS CHART COMPONENT - Canvas Based for 60fps
 // ============================================================================
-const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, positionValue: _positionValue = 0, unrealizedPnL = 0, hasPosition: _hasPosition = false, showPnL = true, tradeMarkers = [], resetView = false }) => {
+const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, positionValue: _positionValue = 0, unrealizedPnL = 0, hasPosition = false, showPnL = true, tradeMarkers = [], resetView = false, entryMultiplier = 0 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>(0);
@@ -92,6 +93,10 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
   const currentPriceRef = useRef(currentPrice);
   const startPriceRef = useRef(startPrice);
   const tradeMarkersRef = useRef(tradeMarkers);
+  const hasPositionRef = useRef(hasPosition);
+  const entryMultiplierRef = useRef(entryMultiplier);
+  const unrealizedPnLRef = useRef(unrealizedPnL);
+  const showPnLRef = useRef(showPnL);
 
   // Update refs
   useEffect(() => {
@@ -99,7 +104,11 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
     currentPriceRef.current = currentPrice;
     startPriceRef.current = startPrice;
     tradeMarkersRef.current = tradeMarkers;
-  }, [data, currentPrice, startPrice, tradeMarkers]);
+    hasPositionRef.current = hasPosition;
+    entryMultiplierRef.current = entryMultiplier;
+    unrealizedPnLRef.current = unrealizedPnL;
+    showPnLRef.current = showPnL;
+  }, [data, currentPrice, startPrice, tradeMarkers, hasPosition, entryMultiplier, unrealizedPnL, showPnL]);
 
   // ============================================================================
   // RESET VIEW - Snap Y-axis back to 1.00x centered (on round end/new round)
@@ -216,25 +225,23 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
          maxP = Math.max(maxP, c.high);
       });
       
-      // Center 1.00x: make range symmetric around startPrice
+      // Center 1.00x: ASYMMETRIC range — 35% below startPrice, 65% above
+      // This lowers the 1.00x baseline so there's more room for pumps above
       const distAbove = maxP - startPrice;
       const distBelow = startPrice - minP;
-      let halfSpan = Math.max(distAbove, distBelow, startPrice * 0.015); // at least 1.5% each side
+      const maxDist = Math.max(distAbove, distBelow, startPrice * 0.015);
 
-      // Aspect-ratio normalization: scale Y range so price movement looks
-      // the same fraction of the chart on any container shape.
-      // A taller container (higher currentAspect) gets a proportionally
-      // wider price range, preventing amplified visual movement.
+      // Aspect-ratio normalization
       const drawingH = height - PADDING_TOP - PADDING_BOTTOM;
       const drawingW = chartAreaWidth;
       const currentAspect = drawingW > 0 ? drawingH / drawingW : REF_ASPECT;
       const aspectScale = currentAspect / REF_ASPECT;
-      halfSpan *= aspectScale;
+      const scaledDist = maxDist * aspectScale;
 
-      const rangePad = halfSpan * 0.12; // 12% padding — keep chart filled
-      
-      targetMinRef.current = startPrice - halfSpan - rangePad;
-      targetMaxRef.current = startPrice + halfSpan + rangePad;
+      const rangePad = scaledDist * 0.12;
+      // Asymmetric: allocate 65% above startPrice, 35% below
+      targetMaxRef.current = startPrice + (scaledDist + rangePad) * 1.30;
+      targetMinRef.current = startPrice - (scaledDist + rangePad) * 0.70;
 
       // Asymmetric zoom: fast zoom-out (nothing clips), slow zoom-in (no jitter)
       const minLerp = targetMinRef.current < animatedMinRef.current ? Y_AXIS_LERP_ZOOM_OUT : Y_AXIS_LERP_ZOOM_IN;
@@ -336,10 +343,16 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
         const color = isPump ? COLOR_GREEN : COLOR_RED;
 
         // Body
-        const bodyTop = getNormY(Math.max(candle.open, candle.close));
-        const bodyBottom = getNormY(Math.min(candle.open, candle.close));
+        let bodyTop = getNormY(Math.max(candle.open, candle.close));
+        let bodyBottom = getNormY(Math.min(candle.open, candle.close));
+
+        // Clamp to drawing area so candles never leave the canvas
+        bodyTop = Math.max(PADDING_TOP, bodyTop);
+        bodyBottom = Math.min(height - PADDING_BOTTOM, bodyBottom);
+        if (bodyTop >= bodyBottom) return; // fully out of view
+
         const rawHeight = bodyBottom - bodyTop;
-        const bodyHeight = Math.max(rawHeight, 6); // Slightly taller minimum for DynaPuff style
+        const bodyHeight = Math.max(rawHeight, 6);
         const adjustedBodyTop = rawHeight < 6 ? bodyTop - (6 - rawHeight) / 2 : bodyTop;
         
         // DynaPuff style: extra chunky, thicc candles
@@ -433,6 +446,51 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
             ctx.globalAlpha = 1;
           });
         });
+      }
+
+      // ================================================================
+      // DRAW PnL ENTRY LINE (average entry dashed line)
+      // ================================================================
+      const _hasPos = hasPositionRef.current;
+      const _entryMult = entryMultiplierRef.current;
+      const _pnl = unrealizedPnLRef.current;
+      const _showPnL = showPnLRef.current;
+      let entryLineY = -1;
+
+      if (_hasPos && _entryMult > 0 && _showPnL) {
+        const entryPrice = startPrice * _entryMult;
+        entryLineY = getNormY(entryPrice);
+        // Clamp to drawing area
+        const clampedY = Math.max(PADDING_TOP, Math.min(height - PADDING_BOTTOM, entryLineY));
+        const inProfit = currentPrice >= entryPrice;
+        const pnlColor = inProfit ? COLOR_GREEN : COLOR_RED;
+
+        // Dashed entry line
+        ctx.strokeStyle = pnlColor;
+        ctx.globalAlpha = 0.5;
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([6, 4]);
+        ctx.beginPath();
+        ctx.moveTo(PADDING_LEFT, clampedY);
+        ctx.lineTo(width - PADDING_RIGHT, clampedY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.globalAlpha = 1;
+
+        // PnL label just above the line (right-aligned)
+        if (_pnl !== 0) {
+          const pnlText = _pnl >= 0
+            ? `+${_pnl.toFixed(2)} SOL`
+            : `${_pnl.toFixed(2)} SOL`;
+          const labelFontSize = Math.max(10, Math.round(width * 0.014));
+          ctx.font = `bold ${labelFontSize}px DynaPuff, sans-serif`;
+          ctx.textAlign = 'right';
+          ctx.textBaseline = 'bottom';
+          ctx.fillStyle = pnlColor;
+          ctx.globalAlpha = 0.9;
+          ctx.fillText(pnlText, width - PADDING_RIGHT - 4, clampedY - 4);
+          ctx.globalAlpha = 1;
+        }
       }
 
       // ================================================================
@@ -611,34 +669,6 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
           {multiplierText}
         </div>
       </div>
-      
-      {/* PnL Overlay - Top Right (only when active and has non-zero PnL) */}
-      {showPnL && unrealizedPnL !== 0 && (
-        <div
-          style={{
-            position: 'absolute',
-            top: 'clamp(6px, 2.7%, 12px)',
-            right: 'clamp(6px, 1.5%, 12px)',
-            pointerEvents: 'none',
-            textAlign: 'right',
-          }}
-        >
-          <div
-            style={{
-              fontSize: 'clamp(13px, 2.5vw, 20px)',
-              fontWeight: 700,
-              fontFamily: "'DynaPuff', system-ui, sans-serif",
-              color: unrealizedPnL >= 0 ? COLOR_GREEN : COLOR_RED,
-              lineHeight: 1
-            }}
-          >
-            {unrealizedPnL >= 0
-              ? `+ ${unrealizedPnL.toFixed(3)} SOL`
-              : `- ${Math.abs(unrealizedPnL).toFixed(3)} SOL`
-            }
-          </div>
-        </div>
-      )}
     </div>
   );
 };

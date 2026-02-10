@@ -340,7 +340,7 @@ export function useSolanaWallet(): WalletState {
             'Content-Type': 'application/json',
             ...(token ? { 'Authorization': `Bearer ${token}`, 'x-auth-token': token } : {}),
           },
-          body: JSON.stringify({ wallet_address: walletAddress }),
+          body: JSON.stringify({ wallet_address: walletAddress, referral_code: localStorage.getItem('referral_code') || undefined }),
         });
         
         // Retry on 401 - Privy will refresh token on next getAuthToken() call
@@ -360,6 +360,8 @@ export function useSolanaWallet(): WalletState {
         setUsernameState(profile.username);
         setNeedsUsername(profile.needsUsername || profile.username === null);
         setDepositedBalance(Number(profile.deposited_balance) || 0);
+        // Clear referral code after successful profile creation/fetch
+        localStorage.removeItem('referral_code');
       } else {
         console.error('[useSolanaWallet] Profile fetch failed:', response.status, await response.text());
         setNeedsUsername(true);

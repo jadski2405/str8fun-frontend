@@ -479,6 +479,14 @@ export function useGame(
           if (data.type === 'CHAT_MESSAGE') {
             window.dispatchEvent(new CustomEvent('pumpit:chat_message', { detail: data }));
           }
+
+          // Referral events — bridge to useReferral via CustomEvents
+          if (data.type === 'REFERRAL_COMMISSION') {
+            window.dispatchEvent(new CustomEvent('pumpit:referral_commission', { detail: data }));
+          }
+          if (data.type === 'REFERRAL_MILESTONE') {
+            window.dispatchEvent(new CustomEvent('pumpit:referral_milestone', { detail: data }));
+          }
         } catch (e) {
           console.error('WebSocket message error:', e);
         }

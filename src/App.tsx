@@ -102,6 +102,23 @@ function LaunchCountdown() {
 function App() {
   const [isLaunched, setIsLaunched] = useState(Date.now() >= LAUNCH_TIME);
   
+  // Capture ?ref= query param and save to localStorage
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const ref = params.get('ref');
+      if (ref && ref.trim()) {
+        localStorage.setItem('referral_code', ref.trim());
+        // Clean URL without reloading
+        const url = new URL(window.location.href);
+        url.searchParams.delete('ref');
+        window.history.replaceState({}, '', url.pathname + url.search);
+      }
+    } catch (e) {
+      console.error('[App] referral param error:', e);
+    }
+  }, []);
+
   useEffect(() => {
     if (!isLaunched) {
       const timer = setInterval(() => {

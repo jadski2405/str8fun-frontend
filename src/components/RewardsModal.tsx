@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { X, Clock, Lock } from 'lucide-react';
+import { X, Clock, Lock, Copy, Check, Users, Gift } from 'lucide-react';
 import type { ChestInfo, ChestOpenResult, PlayerXpState, TierInfo, LootTableEntry } from '../types/game';
 import {
   TIER_COLORS, tierIconUrl, chestIconUrl, keyIconUrl,
   TIER_NAMES, TIER_LEVEL_REQ, RARITY_COLORS,
 } from '../types/game';
+import type { UseReferralReturn } from '../hooks/useReferral';
 
 interface RewardsModalProps {
   isOpen: boolean;
@@ -16,9 +17,11 @@ interface RewardsModalProps {
   isLoadingChests: boolean;
   chestHistory?: unknown[];
   fetchHistory?: () => Promise<void>;
+  referral?: UseReferralReturn | null;
 }
 
 type AnimPhase = 'idle' | 'shaking' | 'bursting' | 'revealing';
+type RewardsTab = 'chests' | 'referrals';
 
 // Format cooldown ms to human string
 function formatCooldown(ms: number): string {
@@ -51,6 +54,7 @@ const RewardsModal: React.FC<RewardsModalProps> = ({
   isLoadingChests,
   chestHistory: _chestHistory = [],
   fetchHistory: _fetchHistory,
+  referral,
 }) => {
   const [selectedTier, setSelectedTier] = useState<number>(0);
   const [animPhase, setAnimPhase] = useState<AnimPhase>('idle');
@@ -58,6 +62,8 @@ const RewardsModal: React.FC<RewardsModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const animTimeoutRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const stripRef = useRef<HTMLDivElement>(null);
+  const [activeTab, setActiveTab] = useState<RewardsTab>('chests');
+  const [copiedLink, setCopiedLink] = useState(false);
 
   const playerLevel = xpState?.level || 0;
   const playerTier = xpState?.tier ?? 0;
@@ -69,8 +75,17 @@ const RewardsModal: React.FC<RewardsModalProps> = ({
       setAnimPhase('idle');
       setRevealedReward(null);
       setError(null);
+      setCopiedLink(false);
     }
   }, [isOpen, playerTier]);
+
+  // Fetch referral data when switching to referrals tab
+  useEffect(() => {
+    if (isOpen && activeTab === 'referrals' && referral) {
+      referral.fetchStats();
+      referral.fetchNetwork();
+    }
+  }, [isOpen, activeTab]);
 
   // Cleanup anim timeouts
   useEffect(() => {
@@ -135,10 +150,22 @@ const RewardsModal: React.FC<RewardsModalProps> = ({
     setAnimPhase('idle');
   }, []);
 
+  // Copy referral link to clipboard
+  const handleCopyLink = useCallback(() => {
+    if (!referral?.referralLink) return;
+    navigator.clipboard.writeText(referral.referralLink).then(() => {
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+    });
+  }, [referral?.referralLink]);
+
   if (!isOpen) return null;
 
   const tierColor = TIER_COLORS[selectedTier] || '#9CA3AF';
   const tierName = TIER_NAMES[selectedTier] || 'Unknown';
+
+  const refStats = referral?.stats;
+  const refNetwork = referral?.network || [];
 
   return (
     <div className="rewards-overlay" onClick={onClose}>
@@ -151,8 +178,29 @@ const RewardsModal: React.FC<RewardsModalProps> = ({
           </button>
         </div>
 
+        {/* Tabs */}
+        <div className="rewards-tab-bar">
+          <button
+            className={`rewards-tab-btn${activeTab === 'chests' ? ' active' : ''}`}
+            onClick={() => setActiveTab('chests')}
+          >
+            <Gift size={14} />
+            Chests
+          </button>
+          <button
+            className={`rewards-tab-btn${activeTab === 'referrals' ? ' active' : ''}`}
+            onClick={() => setActiveTab('referrals')}
+          >
+            <Users size={14} />
+            Referrals
+          </button>
+        </div>
+
         {/* Body */}
         <div className="rewards-modal-body">
+          {/* ── CHESTS TAB ─────────────────────────────────────────── */}
+          {activeTab === 'chests' && (
+            <>
               {/* Error banner */}
               {error && (
                 <div className="chest-error-banner">
@@ -308,6 +356,116 @@ const RewardsModal: React.FC<RewardsModalProps> = ({
                   </button>
                 </div>
               </div>
+            </>
+          )}
+
+          {/* ── REFERRALS TAB ──────────────────────────────────────── */}
+          {activeTab === 'referrals' && (
+            <div className="referral-tab">
+              {/* Referral Link Section */}
+              <div className="referral-link-section">
+                <div className="referral-link-label">Your Referral Link</div>
+                <div className="referral-link-row">
+                  <input
+                    className="referral-link-input"
+                    value={referral?.referralLink || 'Connect wallet to get link'}
+                    readOnly
+                  />
+                  <button
+                    className="referral-copy-btn"
+                    onClick={handleCopyLink}
+                    disabled={!referral?.referralLink}
+                  >
+                    {copiedLink ? <Check size={14} /> : <Copy size={14} />}
+                    {copiedLink ? 'Copied!' : 'Copy'}
+                  </button>
+                </div>
+                <div className="referral-commission-info">
+                  Earn <span className="referral-highlight">25%</span> Layer 1 · <span className="referral-highlight">5%</span> Layer 2 · <span className="referral-highlight">3%</span> Layer 3 of house fees
+                </div>
+              </div>
+
+              {/* Stats Cards */}
+              <div className="referral-stats-grid">
+                <div className="referral-stat-card">
+                  <div className="referral-stat-value">{refStats?.total_referrals ?? 0}</div>
+                  <div className="referral-stat-label">Total Referrals</div>
+                </div>
+                <div className="referral-stat-card">
+                  <div className="referral-stat-value">{refStats?.active_referrals ?? 0}</div>
+                  <div className="referral-stat-label">Active</div>
+                </div>
+                <div className="referral-stat-card">
+                  <div className="referral-stat-value" style={{ color: '#00FFA3' }}>
+                    {(refStats?.total_earnings ?? 0).toFixed(2)}
+                  </div>
+                  <div className="referral-stat-label">Total Earned (SOL)</div>
+                </div>
+              </div>
+
+              {/* Claimable Weeks */}
+              {refStats?.claimable_weeks && refStats.claimable_weeks.length > 0 && (
+                <div className="referral-claimable-section">
+                  <div className="referral-section-title">Claimable Earnings</div>
+                  {refStats.claimable_weeks.filter(w => !w.claimed).map(week => (
+                    <div key={week.week_start} className="referral-claim-row">
+                      <div className="referral-claim-info">
+                        <span className="referral-claim-week">
+                          Week of {new Date(week.week_start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </span>
+                        <span className="referral-claim-amount" style={{ color: '#00FFA3' }}>
+                          {week.amount.toFixed(4)} SOL
+                        </span>
+                      </div>
+                      <button
+                        className="referral-claim-btn"
+                        onClick={() => referral?.claimWeek(week.week_start)}
+                        disabled={referral?.isClaiming}
+                      >
+                        {referral?.isClaiming ? 'Claiming...' : 'Claim'}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Network */}
+              {refNetwork.length > 0 && (
+                <div className="referral-network-section">
+                  <div className="referral-section-title">Your Network</div>
+                  <div className="referral-network-list">
+                    {refNetwork.map((user, i) => (
+                      <div key={i} className="referral-network-row">
+                        <div className="referral-network-user">
+                          <span className={`referral-layer-badge layer-${user.layer}`}>L{user.layer}</span>
+                          <span className="referral-network-name">{user.username}</span>
+                        </div>
+                        <div className="referral-network-meta">
+                          <span className="referral-network-level">Lv.{user.level}</span>
+                          <span className="referral-network-wagered">{user.wagered.toFixed(2)} SOL</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Empty state */}
+              {!referral?.isLoading && refNetwork.length === 0 && (
+                <div className="referral-empty">
+                  <Users size={32} style={{ opacity: 0.3, marginBottom: 8 }} />
+                  <div>Share your link to start earning</div>
+                  <div style={{ fontSize: 11, opacity: 0.5, marginTop: 4 }}>
+                    Earn commissions when your referrals trade
+                  </div>
+                </div>
+              )}
+
+              <button className="chest-go-back-btn" onClick={onClose}>
+                GO BACK
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

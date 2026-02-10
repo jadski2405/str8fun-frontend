@@ -8,6 +8,7 @@ import { useSolanaWallet } from '../../hooks/useSolanaWallet';
 import { useGame } from '../../hooks/useGame';
 import { useLeaderboard } from '../../hooks/useLeaderboard';
 import { useRewards } from '../../hooks/useRewards';
+import { useReferral } from '../../hooks/useReferral';
 import { GAME_CONSTANTS } from '../../types/game';
 import GameLayout from '../../components/layout/GameLayout';
 import GlobalHeader from '../../components/GlobalHeader';
@@ -130,6 +131,7 @@ const PumpItSim: React.FC = () => {
   
   // Rewards system - XP, levels, keys, chests
   const rewards = useRewards(publicKey || null, getAuthToken, updateDepositedBalance);
+  const referral = useReferral(publicKey || null, getAuthToken);
   const [chestsOpen, setChestsOpen] = useState(false);
   
   // Local simulation state (visual chart)
@@ -1041,6 +1043,7 @@ const PumpItSim: React.FC = () => {
                 showPnL={!game.showGetCooked && !game.isCrashed && game.roundStatus === 'active'}
                 tradeMarkers={tradeMarkers}
                 resetView={game.shouldResetChart || chartResetView}
+                entryMultiplier={game.entryMultiplier}
               />
             </div>
             {/* "Get Rinsed" Overlay - shows for 4 seconds after crash */}
@@ -1175,6 +1178,7 @@ const PumpItSim: React.FC = () => {
         isLoadingChests={rewards.isLoadingChests}
         chestHistory={rewards.chestHistory}
         fetchHistory={rewards.fetchHistory}
+        referral={referral}
       />
     </>
   );
