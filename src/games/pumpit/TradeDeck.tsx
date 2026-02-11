@@ -331,7 +331,7 @@ export const MobileTradeDeck: React.FC<MobileTradeDeckProps> = ({
             autoComplete="off"
           />
           <div className="mobile-balance-box">
-            <span className="mobile-balance-value">{balance.toFixed(3)}</span>
+            <span className="mobile-balance-value">{formatSOL(balance)}</span>
           </div>
         </div>
       </div>
