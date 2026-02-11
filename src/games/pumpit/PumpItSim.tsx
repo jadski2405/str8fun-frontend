@@ -346,23 +346,31 @@ const PumpItSim: React.FC = () => {
   // ============================================================================
   
   useEffect(() => {
-    // Only initialize once when we first receive price history for a round
-    // and only if we haven't already initialized (to prevent overwriting ongoing chart)
-    if (game.priceHistory.length > 0 && !priceHistoryInitialized.current && game.roundStatus === 'active') {
+    // Rebuild chart whenever price_history is received (initial load, mid-round join, or tab-return sync).
+    if (game.priceHistory.length > 0 && game.roundStatus === 'active') {
+      const expectedCandles = Math.ceil(game.priceHistory.length / TICKS_PER_CANDLE);
       
-      const candlesFromHistory = generateCandlesFromHistory(game.priceHistory, TICKS_PER_CANDLE);
-      setCandles(candlesFromHistory);
-      
-      // Set current price to last price in history
-      const lastPrice = game.priceHistory[game.priceHistory.length - 1];
-      priceRef.current = lastPrice;
-      targetPriceRef.current = lastPrice;
-      setPrice(lastPrice);
-      
-      // Sync candle boundary to server state so subsequent ticks create candles at the right time
-      lastCandleBoundary.current = Math.floor(game.priceHistory.length / TICKS_PER_CANDLE);
-      
-      priceHistoryInitialized.current = true;
+      setCandles(prev => {
+        // Only rebuild if the history would produce at least as many candles as we currently have,
+        // or if we haven't initialized yet. This prevents overwriting an ongoing chart with stale data
+        // but allows sync responses to fully repaint after tab-return flatlines.
+        if (!priceHistoryInitialized.current || expectedCandles >= Math.floor(prev.length * 0.8)) {
+          const candlesFromHistory = generateCandlesFromHistory(game.priceHistory, TICKS_PER_CANDLE);
+          
+          // Set current price to last price in history
+          const lastPrice = game.priceHistory[game.priceHistory.length - 1];
+          priceRef.current = lastPrice;
+          targetPriceRef.current = lastPrice;
+          setPrice(lastPrice);
+          
+          // Sync candle boundary to server state so subsequent ticks create candles at the right time
+          lastCandleBoundary.current = Math.floor(game.priceHistory.length / TICKS_PER_CANDLE);
+          
+          priceHistoryInitialized.current = true;
+          return candlesFromHistory;
+        }
+        return prev;
+      });
     }
     
     // Reset the initialized flag when round changes

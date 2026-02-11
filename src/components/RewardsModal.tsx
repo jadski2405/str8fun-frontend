@@ -6,6 +6,8 @@ import {
   TIER_NAMES, TIER_LEVEL_REQ, RARITY_COLORS,
 } from '../types/game';
 import type { UseReferralReturn } from '../hooks/useReferral';
+import ChestCarousel from './ChestCarousel';
+import solanaLogo from '../assets/logo_solana.png';
 
 interface RewardsModalProps {
   isOpen: boolean;
@@ -20,7 +22,7 @@ interface RewardsModalProps {
   referral?: UseReferralReturn | null;
 }
 
-type AnimPhase = 'idle' | 'shaking' | 'bursting' | 'revealing';
+type AnimPhase = 'idle' | 'shaking' | 'carousel' | 'revealing';
 type RewardsTab = 'chests' | 'referrals';
 
 // Format cooldown ms to human string
@@ -59,6 +61,7 @@ const RewardsModal: React.FC<RewardsModalProps> = ({
   const [selectedTier, setSelectedTier] = useState<number>(0);
   const [animPhase, setAnimPhase] = useState<AnimPhase>('idle');
   const [revealedReward, setRevealedReward] = useState<ChestOpenResult | null>(null);
+  const [carouselResult, setCarouselResult] = useState<ChestOpenResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const animTimeoutRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const stripRef = useRef<HTMLDivElement>(null);
@@ -113,6 +116,7 @@ const RewardsModal: React.FC<RewardsModalProps> = ({
     if (isLocked || !hasKeys || !isReady || animPhase !== 'idle') return;
     setError(null);
     setRevealedReward(null);
+    setCarouselResult(null);
     setAnimPhase('shaking');
 
     // Clear old timeouts
@@ -122,28 +126,31 @@ const RewardsModal: React.FC<RewardsModalProps> = ({
     try {
       const resultPromise = onOpenChest(selectedTier);
 
-      // Phase 2: burst after 800ms
-      const t1 = setTimeout(() => setAnimPhase('bursting'), 800);
+      // After 800ms shake, transition to carousel
+      const t1 = setTimeout(async () => {
+        const result = await resultPromise;
+
+        if (result.success && result.reward_sol !== undefined) {
+          setCarouselResult(result);
+          setAnimPhase('carousel');
+        } else {
+          setError(result.error || 'Failed to open chest');
+          setAnimPhase('idle');
+        }
+      }, 800);
       animTimeoutRef.current.push(t1);
-
-      const result = await resultPromise;
-
-      if (result.success && result.reward_sol !== undefined) {
-        // Phase 3: reveal after burst (400ms more)
-        const t2 = setTimeout(() => {
-          setRevealedReward(result);
-          setAnimPhase('revealing');
-        }, 1200);
-        animTimeoutRef.current.push(t2);
-      } else {
-        setError(result.error || 'Failed to open chest');
-        setAnimPhase('idle');
-      }
     } catch {
       setError('Failed to open chest');
       setAnimPhase('idle');
     }
   }, [isLocked, hasKeys, isReady, animPhase, onOpenChest, selectedTier]);
+
+  const handleCarouselComplete = useCallback(() => {
+    if (carouselResult) {
+      setRevealedReward(carouselResult);
+      setAnimPhase('revealing');
+    }
+  }, [carouselResult]);
 
   const dismissReveal = useCallback(() => {
     setRevealedReward(null);
@@ -254,11 +261,16 @@ const RewardsModal: React.FC<RewardsModalProps> = ({
                 {/* Chest icon + title */}
                 <div className="chest-detail-header">
                   <div
-                    className={`chest-detail-icon ${animPhase === 'shaking' ? 'chest-anim-shaking' : ''} ${animPhase === 'bursting' ? 'chest-anim-bursting' : ''}`}
-                    style={{ backgroundImage: animPhase !== 'revealing' ? `url(${chestIconUrl(selectedTier)})` : 'none' }}
+                    className={`chest-detail-icon ${animPhase === 'shaking' ? 'chest-anim-shaking' : ''}`}
+                    style={{ backgroundImage: animPhase !== 'revealing' && animPhase !== 'carousel' ? `url(${chestIconUrl(selectedTier)})` : 'none' }}
                   />
-                  {animPhase === 'bursting' && (
-                    <div className="chest-burst-flash" style={{ background: `radial-gradient(circle, ${tierColor}88 0%, transparent 70%)` }} />
+                  {animPhase === 'carousel' && carouselResult && (
+                    <ChestCarousel
+                      lootTable={selectedLoot}
+                      result={carouselResult}
+                      tierColor={tierColor}
+                      onComplete={handleCarouselComplete}
+                    />
                   )}
                   <h3 className="chest-detail-title" style={{ color: tierColor }}>
                     {tierName} Chest Rewards
@@ -284,7 +296,10 @@ const RewardsModal: React.FC<RewardsModalProps> = ({
                     >
                       {revealedReward.rarity}
                     </div>
-                    <div className="chest-reveal-sol">+{revealedReward.reward_sol} SOL</div>
+                    <div className="chest-reveal-sol">
+                      <img src={solanaLogo} alt="SOL" style={{ width: 22, height: 22 }} />
+                      +{revealedReward.reward_sol} SOL
+                    </div>
                     <div className="chest-reveal-sub">Added to your balance</div>
                     <div className="chest-reveal-tap">Tap to dismiss</div>
                     {revealedReward.is_jackpot && <div className="chest-confetti" />}
@@ -307,7 +322,10 @@ const RewardsModal: React.FC<RewardsModalProps> = ({
                           } as React.CSSProperties}
                         >
                           <div className="chest-loot-sol-bg" />
-                          <div className="chest-loot-amount">{entry.reward_sol}</div>
+                          <div className="chest-loot-amount">
+                            <img src={solanaLogo} alt="SOL" className="chest-loot-sol-logo" />
+                            {entry.reward_sol}
+                          </div>
                           <div className="chest-loot-rarity" style={{ color: rarityColor }}>{entry.rarity}</div>
                           <div className="chest-loot-odds">{entry.odds_percent}%</div>
                         </div>

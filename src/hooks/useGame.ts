@@ -506,6 +506,81 @@ export function useGame(
           if (data.type === 'REFERRAL_MILESTONE') {
             window.dispatchEvent(new CustomEvent('pumpit:referral_milestone', { detail: data }));
           }
+
+          // ── NEW SERVER EVENT TYPES (sync + subscribe auto-reply) ──
+
+          // ROUND_STARTED: Full round state with optional price_history for instant chart rebuild
+          if (data.type === 'ROUND_STARTED' && data.round) {
+            const round = data.round;
+            if (round.id) setRoundId(round.id);
+            setRoundStatus('active');
+            roundStatusRef.current = 'active';
+            setCountdownRemaining(0);
+            setIsCrashed(false);
+            setShowGetCooked(false);
+            setFinalMultiplier(null);
+
+            if (data.price_history && Array.isArray(data.price_history) && data.price_history.length > 0) {
+              // Full chart rebuild from price_history — eliminates flatline gaps after tab return
+              setPriceHistory(data.price_history.map((p: number) => Number(p)));
+              const lastPrice = Number(data.price_history[data.price_history.length - 1]);
+              setPriceMultiplier(lastPrice);
+              if (data.tick_count !== undefined) setServerTickCount(Number(data.tick_count));
+            } else {
+              setPriceHistory([]);
+              setPriceMultiplier(round.current_price ? Number(round.current_price) : 1.0);
+              setServerTickCount(0);
+            }
+          }
+
+          // COUNTDOWN: Server signals pre-round countdown phase
+          if (data.type === 'COUNTDOWN') {
+            if (data.round?.id) setRoundId(data.round.id);
+            if (roundStatusRef.current !== 'countdown') {
+              setRoundStatus('countdown');
+              roundStatusRef.current = 'countdown';
+              setCountdownRemaining(data.countdown_seconds || data.round?.countdown_seconds || COUNTDOWN_SECONDS);
+              setPlayerPosition(null);
+              setPriceMultiplier(1.0);
+              setServerTickCount(0);
+            }
+            setIsCrashed(false);
+            setShowGetCooked(false);
+          }
+
+          // PRESALE_OPEN: Server signals presale window is open (treat like countdown with presale flag)
+          if (data.type === 'PRESALE_OPEN') {
+            if (data.round?.id) setRoundId(data.round.id);
+            if (roundStatusRef.current !== 'countdown') {
+              setRoundStatus('countdown');
+              roundStatusRef.current = 'countdown';
+              setCountdownRemaining(data.countdown_seconds || COUNTDOWN_SECONDS);
+              setPriceMultiplier(1.0);
+              setServerTickCount(0);
+            }
+          }
+
+          // GET_COOKED: Server signals crash state (from sync response after tab return during crash)
+          if (data.type === 'GET_COOKED') {
+            if (!isTransitioningRef.current) {
+              isTransitioningRef.current = true;
+              if (getRinsedTimeoutRef.current) clearTimeout(getRinsedTimeoutRef.current);
+              setIsCrashed(true);
+              setShowGetCooked(true);
+              setFinalMultiplier(Number(data.final_multiplier) || 0);
+              setRoundStatus('ended');
+              setPlayerPosition(null);
+
+              getRinsedTimeoutRef.current = setTimeout(() => {
+                setShowGetCooked(false);
+                setIsCrashed(false);
+                setPlayerPosition(null);
+                setRoundStatus('countdown');
+                setCountdownRemaining(COUNTDOWN_SECONDS);
+                isTransitioningRef.current = false;
+              }, GET_RINSED_DURATION);
+            }
+          }
         } catch (e) {
           console.error('WebSocket message error:', e);
         }
@@ -523,6 +598,16 @@ export function useGame(
 
     const initTimeout = setTimeout(connect, 100);
 
+    // Tab visibility sync: send { type: 'sync' } when user returns to the tab.
+    // Backend replies with ROUND_STARTED (with price_history), COUNTDOWN,
+    // PRESALE_OPEN, or GET_COOKED — instantly rebuilding the chart.
+    const onVisibilityChange = () => {
+      if (!document.hidden && ws?.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'sync' }));
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
     // Periodically request online count every 30 seconds
     const onlineCountInterval = setInterval(() => {
       if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -535,6 +620,7 @@ export function useGame(
       clearTimeout(initTimeout);
       clearTimeout(reconnectTimeout);
       clearInterval(onlineCountInterval);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
       if (wsRef.current) {
         wsRef.current.close();
       }

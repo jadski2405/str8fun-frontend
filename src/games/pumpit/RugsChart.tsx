@@ -65,6 +65,10 @@ const SHOW_GRID_LINES = true; // Left-side multiplier labels + subtle grid lines
 const Y_AXIS_LERP_ZOOM_OUT = 0.25; // Fast snap when range needs to grow
 const Y_AXIS_LERP_ZOOM_IN = 0.03;  // Slow settle when range shrinks back
 
+// Edge-proximity auto-zoom: proactively expand range when candles approach the border
+const EDGE_BUFFER_RATIO = 0.20; // 20% of visible range = danger zone on each side
+const EDGE_BOOST = 1.40;        // Multiply the scaled distance by this when in the danger zone
+
 // ============================================================================
 // RUGS CHART COMPONENT - Canvas Based for 60fps
 // ============================================================================
@@ -218,8 +222,20 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
       const aspectScale = currentAspect / REF_ASPECT;
 
       // Scale each direction independently with 20% breathing room
-      const scaledAbove = distAbove * aspectScale * 1.20;
-      const scaledBelow = distBelow * aspectScale * 1.20;
+      let scaledAbove = distAbove * aspectScale * 1.20;
+      let scaledBelow = distBelow * aspectScale * 1.20;
+
+      // Edge-proximity boost: if candles are within 20% of the animated range edges,
+      // proactively expand the target range so the lerp starts zooming out BEFORE
+      // candles clip the container border.
+      const animRange = animatedMaxRef.current - animatedMinRef.current;
+      if (animRange > 0) {
+        const lowerEdge = animatedMinRef.current + animRange * EDGE_BUFFER_RATIO;
+        const upperEdge = animatedMaxRef.current - animRange * EDGE_BUFFER_RATIO;
+        if (minP < lowerEdge) scaledBelow *= EDGE_BOOST;
+        if (maxP > upperEdge) scaledAbove *= EDGE_BOOST;
+      }
+
       // Bias: keep at least 40% of below-range shown above (lowers 1.00x baseline)
       const minAbove = scaledBelow * 0.40;
       targetMaxRef.current = startPrice + Math.max(scaledAbove, minAbove);
