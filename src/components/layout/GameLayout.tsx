@@ -65,29 +65,33 @@ const GameLayout: React.FC<GameLayoutProps> = ({
 
           {/* Main Trading Stage - Chart + Desktop Round History side by side */}
           <div id="chart-and-history">
-            <div id="chart-stage" style={{ borderColor: chartBorderColor, transition: 'border-color 0.3s ease' }}>
-              <div id="chart-canvas-wrap">
-                {chart}
+            {/* Chart column: chart + trade controls stacked vertically */}
+            <div id="chart-column">
+              <div id="chart-stage" style={{ borderColor: chartBorderColor, transition: 'border-color 0.3s ease' }}>
+                <div id="chart-canvas-wrap">
+                  {chart}
+                </div>
+              </div>
+
+              {/* Mobile Trade Controls - Directly below chart on mobile */}
+              {mobileTradeControls && (
+                <div id="trade-ctrls-mobile">
+                  {mobileTradeControls}
+                </div>
+              )}
+
+              {/* Trade Controls: Below chart - Desktop */}
+              <div id="trade-ctrls">
+                {tradeControls}
               </div>
             </div>
+
             {/* Desktop Round History - Vertical column right of chart, OUTSIDE chart border */}
             {roundHistory && (
               <div id="round-history-column" className="desktop-only">
                 {roundHistory}
               </div>
             )}
-          </div>
-
-          {/* Mobile Trade Controls - Directly below chart on mobile */}
-          {mobileTradeControls && (
-            <div id="trade-ctrls-mobile">
-              {mobileTradeControls}
-            </div>
-          )}
-
-          {/* Trade Controls: Below chart - Desktop */}
-          <div id="trade-ctrls">
-            {tradeControls}
           </div>
           
           {/* Processing indicator */}

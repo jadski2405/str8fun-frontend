@@ -1073,7 +1073,7 @@ const PumpItSim: React.FC = () => {
             {game.showGetCooked && (
               <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-20 rounded-lg pointer-events-none">
                 <div className="text-center">
-                  <div className="text-7xl font-dynapuff font-bold text-red-500 animate-pulse" style={{ textShadow: '0 0 30px rgba(239, 68, 68, 0.8)' }}>
+                  <div className="get-rinsed-text font-dynapuff font-bold text-red-500 animate-pulse" style={{ textShadow: '0 0 30px rgba(239, 68, 68, 0.8)' }}>
                     Get Rinsed
                   </div>
                 </div>
@@ -1129,6 +1129,7 @@ const PumpItSim: React.FC = () => {
             currentPrice={price}
             onBuy={handleBuy}
             onSell={handleSell}
+            onSellAll={handleSellAll}
             solWagered={game.solWagered}
             currentValue={game.currentValue}
             connected={connected}
@@ -1137,10 +1138,10 @@ const PumpItSim: React.FC = () => {
           />
         }
         roundHistory={
-          <RoundHistoryStrip rounds={game.roundHistory} mode="vertical" maxVisible={10} />
+          <RoundHistoryStrip rounds={game.roundHistory} mode="vertical" maxVisible={4} />
         }
         mobileRoundHistory={
-          <RoundHistoryStrip rounds={game.roundHistory} mode="horizontal" maxVisible={5} />
+          <RoundHistoryStrip rounds={game.roundHistory} mode="horizontal" maxVisible={4} />
         }
         leaderboard={
           <>

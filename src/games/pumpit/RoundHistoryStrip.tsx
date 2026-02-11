@@ -63,7 +63,7 @@ interface RoundHistoryStripProps {
 const RoundHistoryStrip: React.FC<RoundHistoryStripProps> = ({
   rounds,
   mode,
-  maxVisible = mode === 'vertical' ? 10 : 5,
+  maxVisible = 4,
 }) => {
   // Only show rounds that have thumbnails (newest-first, capped)
   const visible = rounds.filter(r => r.thumbnailUrl).slice(0, maxVisible);

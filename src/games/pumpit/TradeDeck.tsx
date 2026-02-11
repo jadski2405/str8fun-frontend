@@ -201,6 +201,7 @@ interface MobileTradeDeckProps {
   currentPrice: number;
   onBuy: (amount: number) => void;
   onSell: (amount: number) => void;
+  onSellAll?: () => void; // Sell entire position via dedicated endpoint
   solWagered?: number;
   currentValue?: number;
   connected?: boolean;
@@ -213,6 +214,7 @@ export const MobileTradeDeck: React.FC<MobileTradeDeckProps> = ({
   currentPrice: _currentPrice,
   onBuy,
   onSell,
+  onSellAll,
   solWagered = 0,
   currentValue = 0,
   connected: _connected = true,
@@ -228,17 +230,33 @@ export const MobileTradeDeck: React.FC<MobileTradeDeckProps> = ({
     }
   };
 
-  const adjustAmount = useCallback((_type: 'percent', value: number) => {
-    // For selling - calculate from position value (like desktop)
-    if (solWagered > 0) {
-      const newValue = (currentValue * value) / 100;
-      setTradeAmount(newValue > 0 ? formatSOL(newValue) : '');
-    } else {
-      // No position - calculate from balance for buying
-      const newValue = (balance * value) / 100;
-      setTradeAmount(newValue > 0 ? formatSOL(newValue) : '');
+  // Buy preset: autofill input with percentage of balance
+  const handleBuyPercent = useCallback((pct: number) => {
+    const amount = (balance * pct) / 100;
+    setTradeAmount(amount > 0 ? formatSOL(amount) : '');
+  }, [balance]);
+
+  // Instant sell: sell a fraction of position immediately
+  const handleInstantSell = useCallback((fraction: number) => {
+    if (isCountdown) return;
+    if (solWagered <= 0) {
+      onError?.('No position to sell');
+      return;
     }
-  }, [balance, solWagered, currentValue]);
+    const amount = currentValue * fraction;
+    if (amount <= 0) return;
+    onSell(amount);
+  }, [isCountdown, solWagered, currentValue, onSell, onError]);
+
+  // Sell all: sell entire position via dedicated endpoint
+  const handleSellAllClick = useCallback(() => {
+    if (isCountdown) return;
+    if (solWagered <= 0) {
+      onError?.('No position to sell');
+      return;
+    }
+    onSellAll?.();
+  }, [isCountdown, solWagered, onSellAll, onError]);
 
   const handleBuy = () => {
     const amount = parseFloat(tradeAmount) || 0;
@@ -268,7 +286,38 @@ export const MobileTradeDeck: React.FC<MobileTradeDeckProps> = ({
 
   return (
     <div className="mobile-trade-deck">
-      {/* Amount Input with Presets */}
+      {/* Row 1: Green Buy Presets + Red Sell Presets (matching desktop) */}
+      <div className="mobile-controls-row">
+        <div className="mobile-btn-group">
+          {BUY_PERCENTAGES.map(pct => (
+            <button
+              key={pct}
+              onClick={() => handleBuyPercent(pct)}
+              className="mobile-buy-preset-btn"
+            >
+              {pct}%
+            </button>
+          ))}
+        </div>
+        <div className="mobile-btn-group">
+          <button
+            onClick={() => handleInstantSell(0.5)}
+            className="mobile-sell-preset-btn"
+            disabled={isCountdown}
+          >
+            1/2
+          </button>
+          <button
+            onClick={handleSellAllClick}
+            className="mobile-sell-preset-btn"
+            disabled={isCountdown}
+          >
+            MAX
+          </button>
+        </div>
+      </div>
+
+      {/* Row 2: Amount Input */}
       <div className="mobile-trade-input-row">
         <div className="mobile-input-wrap">
           <img src={solanaLogo} alt="SOL" className="mobile-sol-icon" />
@@ -287,20 +336,7 @@ export const MobileTradeDeck: React.FC<MobileTradeDeckProps> = ({
         </div>
       </div>
 
-      {/* Percentage Presets */}
-      <div className="mobile-preset-row">
-        {BUY_PERCENTAGES.map(pct => (
-          <button
-            key={pct}
-            onClick={() => adjustAmount('percent', pct)}
-            className="mobile-preset-btn"
-          >
-            {pct}%
-          </button>
-        ))}
-      </div>
-
-      {/* Direct Buy/Sell Buttons */}
+      {/* Row 3: Direct Buy/Sell Buttons */}
       <div className="mobile-action-row">
         <button
           onClick={handleBuy}

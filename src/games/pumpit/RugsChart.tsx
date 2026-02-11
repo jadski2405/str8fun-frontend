@@ -196,8 +196,10 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
       const PADDING_LEFT = Math.round(width * (REF_PADDING_LEFT / REF_WIDTH));
 
       // Dynamic candle count — ensure candles stay readable (≥ MIN_CANDLE_WIDTH px)
+      // On mobile (< 500px), cap at 35 candles for chunkier, more visible candles
       const chartAreaWidth = width - PADDING_LEFT - PADDING_RIGHT;
-      const FIXED_CANDLE_COUNT = Math.max(20, Math.min(REF_CANDLE_COUNT, Math.floor(chartAreaWidth / MIN_CANDLE_WIDTH)));
+      const mobileMaxCandles = width < 500 ? 35 : REF_CANDLE_COUNT;
+      const FIXED_CANDLE_COUNT = Math.max(20, Math.min(mobileMaxCandles, Math.floor(chartAreaWidth / MIN_CANDLE_WIDTH)));
 
       // ================================================================
       // 1. CALCULATE AUTO-SCALING (Centered View)
@@ -283,10 +285,14 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
         const startStepIndex = Math.floor(minMult / step);
         const endStepIndex = Math.ceil(maxMult / step);
 
-        const labelFontSize = Math.max(11, Math.round(width * 0.018));
+        const isMobile = width < 500;
+        const labelFontSize = Math.max(isMobile ? 13 : 11, Math.round(width * 0.018));
         ctx.font = `700 ${labelFontSize}px 'DynaPuff', sans-serif`;
         ctx.textAlign = 'right';
         ctx.textBaseline = 'middle';
+
+        // On mobile, shift multiplier labels rightward by 5%
+        const labelX = PADDING_LEFT - 6 + (isMobile ? Math.round(width * 0.05) : 0);
 
         for (let i = startStepIndex; i <= endStepIndex; i++) {
            const mult = i * step;
@@ -310,7 +316,7 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
                              : 'rgba(255, 255, 255, 0.7)';
                // Dynamic precision: 0.05x → "0.05x", 1.50x → "1.50x", 12.5x → "12.5x", 100x → "100x"
                const decimals = mult >= 100 ? 0 : mult >= 10 ? 1 : 2;
-               ctx.fillText(mult.toFixed(decimals) + 'x', PADDING_LEFT - 6, y);
+               ctx.fillText(mult.toFixed(decimals) + 'x', labelX, y);
            }
         }
       }
@@ -350,6 +356,18 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
         // DynaPuff style: extra chunky, thicc candles
         const bodyWidth = Math.max(candleWidth * 0.85, MIN_CANDLE_WIDTH);
         const bodyX = x + (candleWidth - bodyWidth) / 2;
+        
+        // Mobile: add glow behind candles for visual impact
+        const isMobileCandle = width < 500;
+        if (isMobileCandle) {
+          ctx.save();
+          ctx.shadowColor = isPump ? COLOR_GREEN_GLOW : COLOR_RED_GLOW;
+          ctx.shadowBlur = 8;
+          ctx.globalAlpha = 0.6;
+          ctx.fillStyle = color;
+          ctx.fillRect(bodyX, adjustedBodyTop, bodyWidth, bodyHeight);
+          ctx.restore();
+        }
         
         // Solid colors - full opacity
         ctx.globalAlpha = 1;

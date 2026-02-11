@@ -1141,7 +1141,7 @@ body {
    Positioned directly under the main chart stage (1617px)
    ============================================ */
 #trade-ctrls {
-  width: 800px;
+  width: 100%;
   max-width: 100%;
   flex-shrink: 0;
   padding: 12px 0;
@@ -1150,14 +1150,6 @@ body {
   flex-direction: column;
   gap: 12px;
   background: rgb(21, 22, 29);
-  margin-bottom: 10vh;
-}
-
-@media (max-width: 1680px) {
-  #trade-ctrls {
-    width: 100%;
-    max-width: 800px;
-  }
 }
 
 /* Trade Buttons Container */
@@ -1437,9 +1429,17 @@ body {
 #chart-and-history {
   display: flex;
   flex-direction: row;
-  align-items: stretch;
+  align-items: flex-start;
   width: 100%;
   max-width: 960px;
+}
+
+/* Chart column: chart + trade controls stacked under chart */
+#chart-column {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
 }
 
 /* Chart Stage Container - 16:9 Aspect Ratio */
@@ -1468,6 +1468,7 @@ body {
   align-items: center;
   gap: 6px;
   padding: 8px 6px;
+  margin-left: 22px;
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: none;
@@ -1511,6 +1512,10 @@ body {
     max-width: 100%;
   }
 
+  #chart-column {
+    width: 100%;
+  }
+
   /* Chart Stage - Mobile: 15% smaller, shifted up 10% */
   #chart-stage {
     width: 100%;
@@ -1529,7 +1534,7 @@ body {
     display: none !important;
   }
   
-  /* Show mobile round history strip — lowered 20%, 10% bigger */
+  /* Show mobile round history strip — lowered 30%, 10% bigger */
   #round-history-mobile {
     display: flex !important;
     flex-direction: row;
@@ -1538,7 +1543,7 @@ body {
     gap: 10px;
     height: 62px;
     padding: 6px 12px;
-    margin-top: 8px;
+    margin-top: calc(8px + 1vh);
     background: rgb(21, 22, 29);
     flex-shrink: 0;
   }
@@ -1786,6 +1791,72 @@ body {
   box-shadow: none;
   cursor: not-allowed;
   transform: none !important;
+}
+
+/* Mobile controls row: green buy presets + red sell presets */
+.mobile-controls-row {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.mobile-btn-group {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+}
+
+.mobile-buy-preset-btn {
+  flex: 1;
+  height: 30px;
+  font-family: 'DynaPuff', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: white;
+  background: rgba(34, 197, 94, 0.2);
+  border: 1px solid rgba(34, 197, 94, 0.5);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: rgba(0, 0, 0, 0.3) 0px 2px 0px 0px;
+}
+
+.mobile-buy-preset-btn:active {
+  transform: translateY(2px);
+  box-shadow: none;
+  background: rgba(34, 197, 94, 0.4);
+}
+
+.mobile-sell-preset-btn {
+  flex: 1;
+  height: 30px;
+  font-family: 'DynaPuff', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: white;
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: rgba(0, 0, 0, 0.3) 0px 2px 0px 0px;
+}
+
+.mobile-sell-preset-btn:active {
+  transform: translateY(2px);
+  box-shadow: none;
+  background: rgba(239, 68, 68, 0.4);
+}
+
+/* Get Rinsed text — 10% smaller on mobile */
+.get-rinsed-text {
+  font-size: 4.5rem; /* text-7xl equivalent */
+}
+
+@media (max-width: 767px) {
+  .get-rinsed-text {
+    font-size: 4.05rem; /* 10% smaller than 4.5rem */
+  }
 }
 
 /* Price Display */
@@ -2891,6 +2962,13 @@ body {
   align-items: center;
   gap: 3px;
   flex-shrink: 0;
+  transition: opacity 0.5s ease;
+}
+
+/* Fade effect on oldest visible card */
+.rh-column .rh-card:last-child,
+.rh-row .rh-card:last-child {
+  opacity: 0.4;
 }
 
 /* Desktop: doubled size (120×80) */
