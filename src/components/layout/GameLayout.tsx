@@ -12,6 +12,8 @@ interface GameLayoutProps {
   balanceBar?: ReactNode;
   statusBar?: ReactNode;
   processingIndicator?: ReactNode;
+  roundHistory?: ReactNode;       // Desktop: vertical column right of chart
+  mobileRoundHistory?: ReactNode; // Mobile: horizontal strip above chart
 }
 
 const GameLayout: React.FC<GameLayoutProps> = ({
@@ -26,6 +28,8 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   balanceBar,
   statusBar,
   processingIndicator,
+  roundHistory,
+  mobileRoundHistory,
 }) => {
   return (
     <div className={`layout-vertical ${!sidebarCollapsed ? 'sidebar-open' : ''}`}>
@@ -52,11 +56,24 @@ const GameLayout: React.FC<GameLayoutProps> = ({
             {balanceBar}
           </div>
           
+          {/* Mobile Round History - Above chart on mobile */}
+          {mobileRoundHistory && (
+            <div id="round-history-mobile" className="mobile-only">
+              {mobileRoundHistory}
+            </div>
+          )}
+
           {/* Main Trading Stage - Chart */}
           <div id="chart-stage" style={{ borderColor: chartBorderColor, transition: 'border-color 0.3s ease' }}>
             <div id="chart-canvas-wrap">
               {chart}
             </div>
+            {/* Desktop Round History - Vertical column right of chart */}
+            {roundHistory && (
+              <div id="round-history-column" className="desktop-only">
+                {roundHistory}
+              </div>
+            )}
           </div>
 
           {/* Mobile Trade Controls - Directly below chart on mobile */}

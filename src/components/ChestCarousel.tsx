@@ -16,9 +16,9 @@ interface ChestCarouselProps {
 // ============================================================================
 
 const ITEM_COUNT = 35;
-const ITEM_WIDTH = 92;     // px per item card
-const ITEM_GAP = 8;        // px gap between items
-const ITEM_TOTAL = ITEM_WIDTH + ITEM_GAP; // 100px per slot
+const ITEM_WIDTH = 80;     // px per circle item
+const ITEM_GAP = 10;       // px gap between items
+const ITEM_TOTAL = ITEM_WIDTH + ITEM_GAP; // 90px per slot
 const WIN_INDEX = 30;      // The winning item's position in the strip
 const SCROLL_DURATION = 4500; // ms — total animation duration
 const HOLD_DURATION = 800;   // ms — how long to hold on the winner before completing
@@ -202,29 +202,29 @@ const ChestCarousel: React.FC<ChestCarouselProps> = ({
               const rarityColor = RARITY_COLORS[item.rarity] || '#9d9d9d';
               const isWinner = i === WIN_INDEX && finished;
               const isJackpot = item.rarity === 'Jackpot';
+              const isHighRarity = ['Epic', 'Legendary', 'Mythic', 'Ancient', 'Immortal', 'Divine', 'Jackpot'].includes(item.rarity);
 
               return (
                 <div
                   key={i}
-                  className={`chest-carousel-item${isWinner ? ' winner' : ''}${isJackpot ? ' jackpot' : ''}`}
+                  className={`chest-carousel-item${isWinner ? ' winner' : ''}${isJackpot ? ' jackpot' : ''}${isHighRarity ? ' high-rarity' : ''}`}
                   style={{
                     borderColor: rarityColor,
                     boxShadow: isWinner
-                      ? `0 0 24px ${rarityColor}66, inset 0 0 12px ${rarityColor}22`
-                      : `0 0 6px ${rarityColor}22`,
+                      ? `0 0 28px ${rarityColor}88, inset 0 0 16px ${rarityColor}33`
+                      : `0 0 8px ${rarityColor}33`,
+                    background: `radial-gradient(circle at 50% 40%, ${rarityColor}18 0%, rgba(12, 12, 16, 0.95) 70%)`,
                     width: ITEM_WIDTH,
                     minWidth: ITEM_WIDTH,
+                    height: ITEM_WIDTH,
                   }}
                 >
                   <div className="chest-carousel-item-amount">
                     <img src={solanaLogo} alt="SOL" className="chest-carousel-sol-icon" />
                     <span>{item.reward_sol}</span>
                   </div>
-                  <div
-                    className="chest-carousel-item-rarity"
-                    style={{ color: rarityColor }}
-                  >
-                    {item.rarity}
+                  <div className="chest-carousel-item-percent">
+                    {item.odds_percent.toFixed(1)}%
                   </div>
                 </div>
               );

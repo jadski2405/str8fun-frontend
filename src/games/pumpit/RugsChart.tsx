@@ -63,11 +63,7 @@ const SHOW_GRID_LINES = true; // Left-side multiplier labels + subtle grid lines
 
 // Animation smoothing
 const Y_AXIS_LERP_ZOOM_OUT = 0.25; // Fast snap when range needs to grow
-const Y_AXIS_LERP_ZOOM_IN = 0.03;  // Slow settle when range shrinks back
-
-// Edge-proximity auto-zoom: proactively expand range when candles approach the border
-const EDGE_BUFFER_RATIO = 0.20; // 20% of visible range = danger zone on each side
-const EDGE_BOOST = 1.40;        // Multiply the scaled distance by this when in the danger zone
+const Y_AXIS_LERP_ZOOM_IN = 0;     // Ratchet prevents zoom-in within a round
 
 // ============================================================================
 // RUGS CHART COMPONENT - Canvas Based for 60fps
@@ -87,6 +83,10 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
   const animatedMaxRef = useRef(startPrice * 1.05);
   const targetMinRef = useRef(startPrice * 0.95);
   const targetMaxRef = useRef(startPrice * 1.05);
+  
+  // Ratchet refs — Y-axis range can only GROW within a round (never shrink)
+  const ratchetMinRef = useRef(startPrice * 0.95);
+  const ratchetMaxRef = useRef(startPrice * 1.05);
   
   // Keep refs for loop
   const dataRef = useRef(data);
@@ -120,6 +120,8 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
       animatedMaxRef.current = sp * 1.05;
       targetMinRef.current = sp * 0.95;
       targetMaxRef.current = sp * 1.05;
+      ratchetMinRef.current = sp * 0.95;
+      ratchetMaxRef.current = sp * 1.05;
     }
   }, [resetView, startPrice]);
 
@@ -225,21 +227,17 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
       let scaledAbove = distAbove * aspectScale * 1.20;
       let scaledBelow = distBelow * aspectScale * 1.20;
 
-      // Edge-proximity boost: if candles are within 20% of the animated range edges,
-      // proactively expand the target range so the lerp starts zooming out BEFORE
-      // candles clip the container border.
-      const animRange = animatedMaxRef.current - animatedMinRef.current;
-      if (animRange > 0) {
-        const lowerEdge = animatedMinRef.current + animRange * EDGE_BUFFER_RATIO;
-        const upperEdge = animatedMaxRef.current - animRange * EDGE_BUFFER_RATIO;
-        if (minP < lowerEdge) scaledBelow *= EDGE_BOOST;
-        if (maxP > upperEdge) scaledAbove *= EDGE_BOOST;
-      }
-
       // Bias: keep at least 40% of below-range shown above (lowers 1.00x baseline)
       const minAbove = scaledBelow * 0.40;
-      targetMaxRef.current = startPrice + Math.max(scaledAbove, minAbove);
-      targetMinRef.current = startPrice - scaledBelow;
+      const computedMax = startPrice + Math.max(scaledAbove, minAbove);
+      const computedMin = startPrice - scaledBelow;
+
+      // Ratchet: range can only GROW within a round — never shrink back
+      // This eliminates all wiggle/jitter from zoom-in/zoom-out oscillation
+      ratchetMaxRef.current = Math.max(ratchetMaxRef.current, computedMax);
+      ratchetMinRef.current = Math.min(ratchetMinRef.current, computedMin);
+      targetMaxRef.current = ratchetMaxRef.current;
+      targetMinRef.current = ratchetMinRef.current;
 
       // Asymmetric zoom: fast zoom-out (nothing clips), slow zoom-in (no jitter)
       const minLerp = targetMinRef.current < animatedMinRef.current ? Y_AXIS_LERP_ZOOM_OUT : Y_AXIS_LERP_ZOOM_IN;
@@ -271,11 +269,13 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
       // ================================================================
       if (SHOW_GRID_LINES) {
         const rangeMult = drawRange / startPrice;
-        let step = 0.1;
+        let step = 0.05;
+        if (rangeMult > 0.2) step = 0.1;
         if (rangeMult > 0.5) step = 0.25;
         if (rangeMult > 1.5) step = 0.5;
         if (rangeMult > 3.0) step = 1.0;
         if (rangeMult > 10.0) step = 5.0;
+        if (rangeMult > 50.0) step = 10.0;
 
         const minMult = minVal / startPrice;
         const maxMult = maxVal / startPrice;
@@ -308,7 +308,9 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
                ctx.fillStyle = isAbove ? 'rgba(34, 197, 94, 0.7)'
                              : isBelow ? 'rgba(239, 68, 68, 0.7)'
                              : 'rgba(255, 255, 255, 0.7)';
-               ctx.fillText(mult.toFixed(2) + 'x', PADDING_LEFT - 6, y);
+               // Dynamic precision: 0.05x → "0.05x", 1.50x → "1.50x", 12.5x → "12.5x", 100x → "100x"
+               const decimals = mult >= 100 ? 0 : mult >= 10 ? 1 : 2;
+               ctx.fillText(mult.toFixed(decimals) + 'x', PADDING_LEFT - 6, y);
            }
         }
       }

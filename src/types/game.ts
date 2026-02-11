@@ -173,6 +173,14 @@ export const chestIconUrl = (tier: number): string =>
 export const keyIconUrl = (): string =>
   `https://api.str8.fun/icons/keys/key.png`;
 
+// Round history entry (for round history strip)
+export interface RoundResult {
+  roundId: string;
+  peakMultiplier: number;
+  isBust: boolean;           // true if peakMultiplier < 1.0
+  thumbnailUrl?: string;     // Backend-rendered chart thumbnail (120×80 PNG)
+}
+
 // Loot table entry (returned per tier from /api/rewards/tiers and /api/rewards/chests)
 export interface LootTableEntry {
   rarity: string;

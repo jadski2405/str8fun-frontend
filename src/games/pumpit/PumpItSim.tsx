@@ -16,6 +16,7 @@ import GlobalChatSidebar from '../../components/GlobalChatSidebar';
 import LevelUpPopup from '../../components/LevelUpPopup';
 import XpToast from '../../components/XpToast';
 import RewardsModal from '../../components/RewardsModal';
+import RoundHistoryStrip from './RoundHistoryStrip';
 import solanaLogo from '../../assets/logo_solana.png';
 
 // ============================================================================
@@ -1134,6 +1135,12 @@ const PumpItSim: React.FC = () => {
             onError={setTradeError}
             isCountdown={game.roundStatus === 'countdown'}
           />
+        }
+        roundHistory={
+          <RoundHistoryStrip rounds={game.roundHistory} mode="vertical" maxVisible={10} />
+        }
+        mobileRoundHistory={
+          <RoundHistoryStrip rounds={game.roundHistory} mode="horizontal" maxVisible={5} />
         }
         leaderboard={
           <>

@@ -1,148 +1,70 @@
 import React from 'react';
+import type { RoundResult } from '../../types/game';
 
 // ============================================================================
-// TYPES
+// HELPERS
 // ============================================================================
-interface RoundResult {
-  roundId: string;
-  multiplier: number;
-  isBust: boolean;
-  priceHistory?: number[]; // For mini-chart SVG
-}
 
-interface RoundHistoryStripProps {
-  rounds: RoundResult[];
-  totalBurned?: number;
-  counts?: {
-    x2: number;
-    x10: number;
-    x50: number;
-  };
+/** Dynamic precision: 0.87x, 1.24x, 12.5x, 124x */
+function formatMultiplier(m: number): string {
+  if (m >= 100) return m.toFixed(0) + 'x';
+  if (m >= 10) return m.toFixed(1) + 'x';
+  return m.toFixed(2) + 'x';
 }
 
 // ============================================================================
-// MINI CHART SVG - Simplified candle representation
-// ============================================================================
-const MiniChart: React.FC<{ priceHistory?: number[]; isWin: boolean }> = ({ priceHistory, isWin }) => {
-  // Generate a simple line path from price history or create a random one
-  const points = priceHistory?.length 
-    ? priceHistory 
-    : Array.from({ length: 8 }, () => Math.random());
-  
-  const min = Math.min(...points);
-  const max = Math.max(...points);
-  const range = max - min || 1;
-  
-  // Normalize to SVG viewBox (0-40 width, 0-30 height)
-  const pathData = points
-    .map((p, i) => {
-      const x = (i / (points.length - 1)) * 40;
-      const y = 28 - ((p - min) / range) * 24;
-      return `${i === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`;
-    })
-    .join(' ');
-
-  const color = isWin ? '#00FFA3' : '#ff4757';
-  
-  return (
-    <svg 
-      viewBox="0 0 40 30" 
-      className="round-card-chart"
-      style={{ width: '100%', height: '28px' }}
-    >
-      <defs>
-        <linearGradient id={`grad-${isWin ? 'win' : 'lose'}`} x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor={color} stopOpacity="0.3" />
-          <stop offset="100%" stopColor={color} stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      {/* Area fill */}
-      <path
-        d={`${pathData} L 40 30 L 0 30 Z`}
-        fill={`url(#grad-${isWin ? 'win' : 'lose'})`}
-      />
-      {/* Line stroke */}
-      <path
-        d={pathData}
-        fill="none"
-        stroke={color}
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-};
-
-// ============================================================================
-// ROUND CARD COMPONENT
+// ROUND CARD — Thumbnail + peak multiplier label
 // ============================================================================
 const RoundCard: React.FC<{ round: RoundResult; isLatest?: boolean }> = ({ round, isLatest = false }) => {
-  const isWin = round.multiplier >= 1;
-  
+  const isWin = round.peakMultiplier >= 1;
+  const borderColor = isWin ? '#22C55E' : '#EF4444';
+
   return (
-    <div 
-      className={`round-card ${isLatest ? 'latest' : ''}`}
+    <div
+      className={`rh-card ${isLatest ? 'rh-card-latest' : ''}`}
       style={{
-        boxShadow: isLatest ? '0 0 8px rgba(0, 255, 163, 0.3)' : undefined
+        borderColor,
+        boxShadow: isLatest ? `0 0 8px ${borderColor}55` : undefined,
       }}
     >
-      <MiniChart priceHistory={round.priceHistory} isWin={isWin} />
-      <div 
-        className="round-card-multiplier"
-        style={{ color: isWin ? '#00FFA3' : '#ff4757' }}
-      >
-        {round.multiplier.toFixed(2)}x
+      {round.thumbnailUrl ? (
+        <img src={round.thumbnailUrl} alt={`Round ${round.roundId}`} className="rh-card-img" />
+      ) : (
+        <div className="rh-card-placeholder" style={{ background: `${borderColor}15` }} />
+      )}
+      <div className="rh-card-label" style={{ color: borderColor }}>
+        {formatMultiplier(round.peakMultiplier)}
       </div>
     </div>
   );
 };
 
 // ============================================================================
-// ROUND HISTORY STRIP COMPONENT
+// ROUND HISTORY STRIP — Vertical (desktop) or Horizontal (mobile)
 // ============================================================================
+interface RoundHistoryStripProps {
+  rounds: RoundResult[];
+  mode: 'vertical' | 'horizontal';
+  maxVisible?: number;
+}
+
 const RoundHistoryStrip: React.FC<RoundHistoryStripProps> = ({
   rounds,
-  totalBurned = 0,
-  counts = { x2: 0, x10: 0, x50: 0 }
+  mode,
+  maxVisible = mode === 'vertical' ? 10 : 5,
 }) => {
-  return (
-    <div id="round-history-strip" className="round-history-strip">
-      {/* Last 100 Summary - Pinned Left */}
-      <div className="round-history-summary">
-        {/* Fire + Total Burned */}
-        <div className="summary-stat fire-stat">
-          <span className="fire-icon">🔥</span>
-          <span className="fire-value">{totalBurned.toFixed(2)}x</span>
-        </div>
-        
-        {/* Multiplier Counters */}
-        <div className="summary-counters">
-          <div className="counter-item">
-            <span className="counter-badge x2">2x</span>
-            <span className="counter-count">{counts.x2}</span>
-          </div>
-          <div className="counter-item">
-            <span className="counter-badge x10">10x</span>
-            <span className="counter-count">{counts.x10}</span>
-          </div>
-          <div className="counter-item">
-            <span className="counter-badge x50">50x</span>
-            <span className="counter-count">{counts.x50}</span>
-          </div>
-        </div>
-      </div>
+  // Newest-first, capped
+  const visible = rounds.slice(0, maxVisible);
 
-      {/* Scrollable Round Cards */}
-      <div className="round-history-cards">
-        {rounds.map((round, index) => (
-          <RoundCard 
-            key={round.roundId} 
-            round={round} 
-            isLatest={index === rounds.length - 1}
-          />
-        ))}
-      </div>
+  if (!visible.length) return null;
+
+  const isVertical = mode === 'vertical';
+
+  return (
+    <div className={isVertical ? 'rh-column' : 'rh-row'}>
+      {visible.map((round, i) => (
+        <RoundCard key={round.roundId || i} round={round} isLatest={i === 0} />
+      ))}
     </div>
   );
 };

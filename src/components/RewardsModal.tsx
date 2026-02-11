@@ -297,7 +297,7 @@ const RewardsModal: React.FC<RewardsModalProps> = ({
                       {revealedReward.rarity}
                     </div>
                     <div className="chest-reveal-sol">
-                      <img src={solanaLogo} alt="SOL" style={{ width: 22, height: 22 }} />
+                      <img src={solanaLogo} alt="SOL" style={{ width: 44, height: 44 }} />
                       +{revealedReward.reward_sol} SOL
                     </div>
                     <div className="chest-reveal-sub">Added to your balance</div>

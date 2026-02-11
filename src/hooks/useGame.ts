@@ -5,7 +5,7 @@
 // ============================================================================
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { PlayerPosition, Trade, GAME_CONSTANTS } from '../types/game';
+import { PlayerPosition, Trade, GAME_CONSTANTS, RoundResult } from '../types/game';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://api.str8.fun';
 const WS_URL = import.meta.env.VITE_WS_URL || 'wss://api.str8.fun';
@@ -48,6 +48,9 @@ export interface GameState {
 
   // Online players count
   onlineCount: number;
+
+  // Round history
+  roundHistory: RoundResult[];
 
   // Actions
   buy: (solAmount: number) => Promise<{ success: boolean; error?: string; newBalance?: number }>;
@@ -100,6 +103,9 @@ export function useGame(
 
   // Online players count
   const [onlineCount, setOnlineCount] = useState<number>(0);
+
+  // Round history — accumulated from ROUND_CRASH events + REST seed
+  const [roundHistory, setRoundHistory] = useState<RoundResult[]>([]);
 
   // Error state
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -381,6 +387,21 @@ export function useGame(
           }));
         }
         ws?.send(JSON.stringify({ type: 'get_online_count' }));
+
+        // Seed round history from REST endpoint (same data for all users)
+        fetch(`${API_URL}/api/game/round-history?limit=20`)
+          .then(r => r.ok ? r.json() : null)
+          .then(data => {
+            if (data?.rounds && Array.isArray(data.rounds)) {
+              setRoundHistory(data.rounds.map((r: any) => ({
+                roundId: r.round_id || '',
+                peakMultiplier: Number(r.peak_multiplier) || 0,
+                isBust: Number(r.peak_multiplier) < 1.0,
+                thumbnailUrl: r.thumbnail_url || undefined,
+              })));
+            }
+          })
+          .catch(() => { /* Round history is non-critical */ });
       };
 
       ws.onmessage = (event) => {
@@ -465,6 +486,20 @@ export function useGame(
               setCountdownRemaining(COUNTDOWN_SECONDS);
               isTransitioningRef.current = false;
             }, GET_RINSED_DURATION);
+
+            // Accumulate round history from crash event
+            const crashedRoundId = data.round_id || roundIdRef.current || '';
+            const peakMult = Number(data.peak_multiplier || data.final_multiplier) || 0;
+            const thumbnailUrl = data.thumbnail_url || undefined;
+            setRoundHistory(prev => {
+              const entry: RoundResult = {
+                roundId: crashedRoundId,
+                peakMultiplier: peakMult,
+                isBust: peakMult < 1.0,
+                thumbnailUrl,
+              };
+              return [entry, ...prev].slice(0, 20);
+            });
           }
 
           // TRADE events — do NOT move chart, just update feed
@@ -505,6 +540,22 @@ export function useGame(
           }
           if (data.type === 'REFERRAL_MILESTONE') {
             window.dispatchEvent(new CustomEvent('pumpit:referral_milestone', { detail: data }));
+          }
+
+          // Round history update — new round completed, append to history
+          if (data.type === 'ROUND_HISTORY_UPDATE' && data.round) {
+            const r = data.round;
+            setRoundHistory(prev => {
+              const entry: RoundResult = {
+                roundId: r.round_id || '',
+                peakMultiplier: Number(r.peak_multiplier) || 0,
+                isBust: Number(r.peak_multiplier) < 1.0,
+                thumbnailUrl: r.thumbnail_url || undefined,
+              };
+              // Deduplicate by roundId
+              if (prev.some(p => p.roundId === entry.roundId)) return prev;
+              return [entry, ...prev].slice(0, 20);
+            });
           }
 
           // ── NEW SERVER EVENT TYPES (sync + subscribe auto-reply) ──
@@ -866,6 +917,9 @@ export function useGame(
 
     // Online count
     onlineCount,
+
+    // Round history
+    roundHistory,
 
     // Error state
     errorMessage,
