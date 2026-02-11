@@ -63,12 +63,14 @@ const GameLayout: React.FC<GameLayoutProps> = ({
             </div>
           )}
 
-          {/* Main Trading Stage - Chart */}
-          <div id="chart-stage" style={{ borderColor: chartBorderColor, transition: 'border-color 0.3s ease' }}>
-            <div id="chart-canvas-wrap">
-              {chart}
+          {/* Main Trading Stage - Chart + Desktop Round History side by side */}
+          <div id="chart-and-history">
+            <div id="chart-stage" style={{ borderColor: chartBorderColor, transition: 'border-color 0.3s ease' }}>
+              <div id="chart-canvas-wrap">
+                {chart}
+              </div>
             </div>
-            {/* Desktop Round History - Vertical column right of chart */}
+            {/* Desktop Round History - Vertical column right of chart, OUTSIDE chart border */}
             {roundHistory && (
               <div id="round-history-column" className="desktop-only">
                 {roundHistory}

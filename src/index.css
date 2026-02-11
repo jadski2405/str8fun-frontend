@@ -1433,6 +1433,16 @@ body {
 }
 
 /* Chart Stage Container - 16:9 Aspect Ratio */
+/* Chart + History wrapper — side by side on desktop */
+#chart-and-history {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  width: 100%;
+  max-width: 960px;
+}
+
+/* Chart Stage Container - 16:9 Aspect Ratio */
 #chart-stage {
   position: relative;
   width: 800px;
@@ -1445,30 +1455,27 @@ body {
   background: rgb(21, 22, 29);
   overflow: hidden;
   aspect-ratio: 16 / 9;
-  display: flex;
-  flex-direction: row;
-}
-
-/* Desktop: chart canvas takes remaining space when round history column present */
-#chart-stage > #chart-canvas-wrap {
   flex: 1;
   min-width: 0;
 }
 
-/* Desktop: vertical round history column on right side of chart */
+/* Desktop: vertical round history column OUTSIDE chart, on the right */
 #round-history-column {
-  width: 72px;
+  width: 144px;
   flex-shrink: 0;
-  height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 6px 4px;
-  overflow: hidden;
-  background: rgba(15, 15, 20, 0.7);
-  border-left: 1px solid rgba(58, 61, 74, 0.5);
+  gap: 6px;
+  padding: 8px 6px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
   box-sizing: border-box;
+}
+
+#round-history-column::-webkit-scrollbar {
+  display: none;
 }
 
 /* Mobile round history strip - above chart, below header */
@@ -1498,18 +1505,23 @@ body {
     display: block !important;
   }
   
-  /* Chart Stage - Mobile: Fill available viewport height (portrait-ish) */
+  /* Chart + History wrapper — stack vertically on mobile */
+  #chart-and-history {
+    flex-direction: column;
+    max-width: 100%;
+  }
+
+  /* Chart Stage - Mobile: 15% smaller, shifted up 10% */
   #chart-stage {
     width: 100%;
     min-width: unset;
     max-width: 100%;
-    height: calc((100dvh - 180px) * 0.85);
-    min-height: 240px;
+    height: calc((100dvh - 180px) * 0.72);
+    min-height: 200px;
     max-height: unset;
-    margin: calc(24px + 5vh) auto 0 auto;
+    margin: calc(16px + 3vh) auto 0 auto;
     border-radius: 8px;
     overflow: visible;
-    flex-direction: row;
   }
 
   /* Hide desktop round history column on mobile */
@@ -1517,15 +1529,16 @@ body {
     display: none !important;
   }
   
-  /* Show mobile round history strip */
+  /* Show mobile round history strip — lowered 20%, 10% bigger */
   #round-history-mobile {
     display: flex !important;
     flex-direction: row;
     justify-content: center;
     align-items: center;
-    gap: 8px;
-    height: 52px;
-    padding: 4px 12px;
+    gap: 10px;
+    height: 62px;
+    padding: 6px 12px;
+    margin-top: 8px;
     background: rgb(21, 22, 29);
     flex-shrink: 0;
   }
@@ -2850,10 +2863,6 @@ body {
   }
 }
 
-/* ============================================
-   ROUND HISTORY STRIP - Top of Chart Header
-   Height: 80px, Horizontal Layout
-   ============================================ */
 /* ============================================================================
    ROUND HISTORY STRIP — Vertical (desktop) + Horizontal (mobile) cards
    ============================================================================ */
@@ -2863,10 +2872,8 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   width: 100%;
-  height: 100%;
-  overflow: hidden;
 }
 
 /* Horizontal row layout (mobile - inside #round-history-mobile) */
@@ -2874,7 +2881,7 @@ body {
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 /* Individual round card — thumbnail + label */
@@ -2882,34 +2889,28 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 3px;
   flex-shrink: 0;
 }
 
+/* Desktop: doubled size (120×80) */
 .rh-card-img {
-  width: 60px;
-  height: 40px;
+  width: 120px;
+  height: 80px;
   border-radius: 4px;
-  border: 2px solid;
-  border-color: inherit;
+  border: 2px solid #FFFFFF;
   object-fit: cover;
   background: rgba(15, 15, 20, 0.8);
 }
 
-.rh-card-placeholder {
-  width: 60px;
-  height: 40px;
-  border-radius: 4px;
-  border: 2px solid;
-  border-color: inherit;
-}
-
+/* Desktop label: doubled text */
 .rh-card-label {
   font-family: 'DynaPuff', sans-serif;
-  font-size: 9px;
+  font-size: 14px;
   font-weight: 700;
   text-align: center;
   line-height: 1;
+  color: #FFFFFF;
 }
 
 .rh-card-latest {
@@ -2919,6 +2920,19 @@ body {
 @keyframes rhCardAppear {
   from { opacity: 0; transform: scale(0.8); }
   to { opacity: 1; transform: scale(1); }
+}
+
+/* Mobile overrides: 10% bigger than original (66×44), doubled text */
+@media (max-width: 767px) {
+  .rh-card-img {
+    width: 66px;
+    height: 44px;
+    border: 2px solid #FFFFFF;
+  }
+  
+  .rh-card-label {
+    font-size: 12px;
+  }
 }
 
 /* ============================================================================

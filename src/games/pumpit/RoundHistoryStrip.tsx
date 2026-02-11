@@ -12,27 +12,39 @@ function formatMultiplier(m: number): string {
   return m.toFixed(2) + 'x';
 }
 
+/**
+ * Multiplier color logic:
+ * - Under 2x: white
+ * - 2x+: gradually more vibrant green (lerp from white → bright green)
+ * - Cap at 50x for full green saturation
+ */
+function getMultiplierColor(m: number): string {
+  if (m < 2) return '#FFFFFF';
+  // Lerp from 2x (slight green) to 50x (full vibrant green)
+  const t = Math.min((m - 2) / 48, 1); // 0 at 2x, 1 at 50x+
+  const r = Math.round(255 - t * (255 - 34));   // 255 → 34
+  const g = Math.round(255 - t * (255 - 197));  // 255 → 197 (stays high)
+  const b = Math.round(255 - t * (255 - 94));   // 255 → 94
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
 // ============================================================================
 // ROUND CARD — Thumbnail + peak multiplier label
+// Only renders when thumbnailUrl is available (backend has finished rendering)
 // ============================================================================
 const RoundCard: React.FC<{ round: RoundResult; isLatest?: boolean }> = ({ round, isLatest = false }) => {
-  const isWin = round.peakMultiplier >= 1;
-  const borderColor = isWin ? '#22C55E' : '#EF4444';
+  // Don't render cards without thumbnails — prevents empty boxes on screen
+  if (!round.thumbnailUrl) return null;
 
   return (
     <div
       className={`rh-card ${isLatest ? 'rh-card-latest' : ''}`}
       style={{
-        borderColor,
-        boxShadow: isLatest ? `0 0 8px ${borderColor}55` : undefined,
+        boxShadow: isLatest ? '0 0 8px rgba(255, 255, 255, 0.25)' : undefined,
       }}
     >
-      {round.thumbnailUrl ? (
-        <img src={round.thumbnailUrl} alt={`Round ${round.roundId}`} className="rh-card-img" />
-      ) : (
-        <div className="rh-card-placeholder" style={{ background: `${borderColor}15` }} />
-      )}
-      <div className="rh-card-label" style={{ color: borderColor }}>
+      <img src={round.thumbnailUrl} alt="Round" className="rh-card-img" />
+      <div className="rh-card-label" style={{ color: getMultiplierColor(round.peakMultiplier) }}>
         {formatMultiplier(round.peakMultiplier)}
       </div>
     </div>
@@ -53,8 +65,8 @@ const RoundHistoryStrip: React.FC<RoundHistoryStripProps> = ({
   mode,
   maxVisible = mode === 'vertical' ? 10 : 5,
 }) => {
-  // Newest-first, capped
-  const visible = rounds.slice(0, maxVisible);
+  // Only show rounds that have thumbnails (newest-first, capped)
+  const visible = rounds.filter(r => r.thumbnailUrl).slice(0, maxVisible);
 
   if (!visible.length) return null;
 
