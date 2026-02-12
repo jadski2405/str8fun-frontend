@@ -16,12 +16,13 @@ interface ChestCarouselProps {
 // ============================================================================
 
 const ITEM_COUNT = 35;
-const ITEM_WIDTH = 80;     // px per circle item
-const ITEM_GAP = 10;       // px gap between items
-const ITEM_TOTAL = ITEM_WIDTH + ITEM_GAP; // 90px per slot
+const ITEM_WIDTH = 72;     // px per rectangle card width
+const ITEM_HEIGHT = 100;   // px per rectangle card height
+const ITEM_GAP = 8;        // px gap between items
+const ITEM_TOTAL = ITEM_WIDTH + ITEM_GAP; // 80px per slot
 const WIN_INDEX = 30;      // The winning item's position in the strip
-const SCROLL_DURATION = 4500; // ms — total animation duration
-const HOLD_DURATION = 800;   // ms — how long to hold on the winner before completing
+const SCROLL_DURATION = 5000; // ms — total animation duration (longer for drama)
+const HOLD_DURATION = 1000;   // ms — how long to hold on the winner before completing
 
 // Rarity hierarchy for near-miss placement
 const RARITY_ORDER = [
@@ -57,15 +58,15 @@ function findNearMiss(winRarity: string, table: LootTableEntry[]): LootTableEntr
   return null;
 }
 
-/** Custom easing: fast ramp-up (first 20%), long cubic deceleration (remaining 80%) */
+/** Custom easing: fast ramp-up (first 12%), long dramatic deceleration (remaining 88%) */
 function carouselEase(t: number): number {
-  if (t < 0.15) {
+  if (t < 0.12) {
     // Quick acceleration
-    return t / 0.15 * 0.15;
+    return (t / 0.12) * 0.12;
   }
-  // Cubic ease-out for the remaining 85% of time
-  const localT = (t - 0.15) / 0.85;
-  return 0.15 + 0.85 * (1 - Math.pow(1 - localT, 3));
+  // Quartic ease-out for more dramatic slow-down
+  const localT = (t - 0.12) / 0.88;
+  return 0.12 + 0.88 * (1 - Math.pow(1 - localT, 4));
 }
 
 // ============================================================================
@@ -153,11 +154,14 @@ const ChestCarousel: React.FC<ChestCarouselProps> = ({
       const centerPos = currentX + containerWidthRef.current / 2;
       const currentItemIdx = Math.floor(centerPos / ITEM_TOTAL);
 
-      // Play tick when a new item crosses the center
+      // Play tick when a new item crosses the center (skip during very fast phase for cleaner sound)
       if (currentItemIdx !== lastItemIdxRef.current && currentItemIdx >= 0 && currentItemIdx < ITEM_COUNT) {
         lastItemIdxRef.current = currentItemIdx;
         const speed = 1 - easedT; // Speed decreases as easing progresses
-        playTick(speed);
+        // Skip ticks during the fastest phase to avoid noise
+        if (speed < 0.85) {
+          playTick(speed);
+        }
       }
 
       if (t < 1) {
@@ -189,7 +193,7 @@ const ChestCarousel: React.FC<ChestCarouselProps> = ({
     <div className="chest-carousel-overlay">
       <div className="chest-carousel-container">
         {/* Center indicator */}
-        <div className="chest-carousel-indicator" style={{ borderColor: tierColor, boxShadow: `0 0 12px ${tierColor}66` }} />
+        <div className="chest-carousel-indicator" style={{ color: tierColor, borderColor: tierColor }} />
 
         {/* Scrolling strip */}
         <div className="chest-carousel-viewport">
@@ -211,14 +215,17 @@ const ChestCarousel: React.FC<ChestCarouselProps> = ({
                   style={{
                     borderColor: rarityColor,
                     boxShadow: isWinner
-                      ? `0 0 28px ${rarityColor}88, inset 0 0 16px ${rarityColor}33`
-                      : `0 0 8px ${rarityColor}33`,
-                    background: `radial-gradient(circle at 50% 40%, ${rarityColor}18 0%, rgba(12, 12, 16, 0.95) 70%)`,
+                      ? `0 0 32px ${rarityColor}99, 0 0 64px ${rarityColor}44, inset 0 0 20px ${rarityColor}33`
+                      : `0 0 8px ${rarityColor}22`,
+                    background: `linear-gradient(180deg, ${rarityColor}15 0%, rgba(12, 12, 16, 0.95) 60%, ${rarityColor}08 100%)`,
                     width: ITEM_WIDTH,
                     minWidth: ITEM_WIDTH,
-                    height: ITEM_WIDTH,
+                    height: ITEM_HEIGHT,
                   }}
                 >
+                  <div className="chest-carousel-item-rarity" style={{ color: rarityColor }}>
+                    {item.rarity}
+                  </div>
                   <div className="chest-carousel-item-amount">
                     <img src={solanaLogo} alt="SOL" className="chest-carousel-sol-icon" />
                     <span>{item.reward_sol}</span>
