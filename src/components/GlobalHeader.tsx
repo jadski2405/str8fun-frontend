@@ -909,7 +909,7 @@ const GameNavButtons: React.FC = () => {
   );
 };
 
-const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat, xpState, onOpenChests }) => {
+const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat, onOpenDeposit, onOpenWithdraw, xpState, onOpenChests }) => {
   // Router hooks for navigation
   const location = useLocation();
   const navigate = useNavigate();
@@ -1461,7 +1461,11 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
               className="mobile-nav-action-btn mobile-nav-withdraw"
               onClick={() => {
                 setShowMobileNav(false);
-                setShowMobileWithdraw(true);
+                if (onOpenWithdraw) {
+                  onOpenWithdraw();
+                } else {
+                  setShowMobileWithdraw(true);
+                }
               }}
             >
               <ArrowUpFromLine size={14} />
@@ -1471,7 +1475,11 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
               className="mobile-nav-action-btn mobile-nav-deposit"
               onClick={() => {
                 setShowMobileNav(false);
-                setShowMobileDeposit(true);
+                if (onOpenDeposit) {
+                  onOpenDeposit();
+                } else {
+                  setShowMobileDeposit(true);
+                }
               }}
             >
               <ArrowDownToLine size={14} />
