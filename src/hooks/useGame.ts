@@ -53,9 +53,9 @@ export interface GameState {
   roundHistory: RoundResult[];
 
   // Actions
-  buy: (solAmount: number) => Promise<{ success: boolean; error?: string; newBalance?: number }>;
-  sell: (solAmount: number) => Promise<{ success: boolean; error?: string; newBalance?: number }>;
-  sellAll: () => Promise<{ success: boolean; error?: string; newBalance?: number }>;
+  buy: (solAmount: number, currency?: 'sol' | 'csol') => Promise<{ success: boolean; error?: string; newBalance?: number }>;
+  sell: (solAmount: number, currency?: 'sol' | 'csol') => Promise<{ success: boolean; error?: string; newBalance?: number }>;
+  sellAll: (currency?: 'sol' | 'csol') => Promise<{ success: boolean; error?: string; newBalance?: number }>;
   refreshState: () => Promise<void>;
   retryConnection: () => Promise<void>;
 
@@ -376,7 +376,7 @@ export function useGame(
         console.log('✅ WebSocket connected');
         ws?.send(JSON.stringify({
           type: 'subscribe',
-          channels: ['round', 'trades', 'chat'],
+          channels: ['round', 'trades', 'chat', 'blitz'],
         }));
         // Request current round state to catch up after (re)connect
         ws?.send(JSON.stringify({ type: 'get_round_state' }));
@@ -540,6 +540,20 @@ export function useGame(
           }
           if (data.type === 'REFERRAL_MILESTONE') {
             window.dispatchEvent(new CustomEvent('pumpit:referral_milestone', { detail: data }));
+          }
+
+          // Blitz events — bridge to useBlitz via CustomEvents
+          if (data.type === 'BLITZ_HOUR_STARTED') {
+            window.dispatchEvent(new CustomEvent('pumpit:blitz_hour_started', { detail: data }));
+          }
+          if (data.type === 'BLITZ_HOUR_ENDED') {
+            window.dispatchEvent(new CustomEvent('pumpit:blitz_hour_ended', { detail: data }));
+          }
+          if (data.type === 'BLITZ_LEADERBOARD') {
+            window.dispatchEvent(new CustomEvent('pumpit:blitz_leaderboard', { detail: data }));
+          }
+          if (data.type === 'BLITZ_TRADE') {
+            window.dispatchEvent(new CustomEvent('pumpit:blitz_trade', { detail: data }));
           }
 
           // Round history update — new round completed, append to history
@@ -714,7 +728,7 @@ export function useGame(
   // BUY ACTION — POST /api/game/trade { trade_type: "buy", sol_amount }
   // ============================================================================
 
-  const buy = useCallback(async (solAmount: number): Promise<{ success: boolean; error?: string; newBalance?: number }> => {
+  const buy = useCallback(async (solAmount: number, currency?: 'sol' | 'csol'): Promise<{ success: boolean; error?: string; newBalance?: number }> => {
     if (!roundId || !walletAddress || (roundStatus !== 'active' && roundStatus !== 'countdown')) {
       return { success: false, error: 'Round not active or not connected' };
     }
@@ -738,6 +752,7 @@ export function useGame(
             wallet_address: walletAddress,
             trade_type: 'buy',
             sol_amount: solAmount,
+            ...(currency === 'csol' ? { currency: 'csol' } : {}),
           }),
         });
 
@@ -776,7 +791,7 @@ export function useGame(
   // sol_amount = the wagered SOL amount to sell (NOT tokens)
   // ============================================================================
 
-  const sell = useCallback(async (solAmount: number): Promise<{ success: boolean; error?: string; newBalance?: number }> => {
+  const sell = useCallback(async (solAmount: number, currency?: 'sol' | 'csol'): Promise<{ success: boolean; error?: string; newBalance?: number }> => {
     if (!roundId || !walletAddress || roundStatus !== 'active') {
       return { success: false, error: 'Round not active or not connected' };
     }
@@ -800,6 +815,7 @@ export function useGame(
             wallet_address: walletAddress,
             trade_type: 'sell',
             sol_amount: solAmount,
+            ...(currency === 'csol' ? { currency: 'csol' } : {}),
           }),
         });
 
@@ -840,7 +856,7 @@ export function useGame(
   // SELL ALL — POST /api/game/sell-all (no body needed)
   // ============================================================================
 
-  const sellAll = useCallback(async (): Promise<{ success: boolean; error?: string; newBalance?: number }> => {
+  const sellAll = useCallback(async (currency?: 'sol' | 'csol'): Promise<{ success: boolean; error?: string; newBalance?: number }> => {
     if (!roundId || !walletAddress || roundStatus !== 'active') {
       return { success: false, error: 'Round not active or not connected' };
     }
@@ -861,6 +877,7 @@ export function useGame(
         },
         body: JSON.stringify({
           wallet_address: walletAddress,
+          ...(currency === 'csol' ? { currency: 'csol' } : {}),
         }),
       });
 

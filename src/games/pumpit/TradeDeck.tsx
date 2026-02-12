@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { Zap } from 'lucide-react';
 import solanaLogo from '../../assets/logo_solana.png';
 
 // ============================================================================
@@ -14,6 +15,7 @@ interface TradeDeckProps {
   currentValue?: number; // Current value of position
   onError?: (message: string) => void; // Callback to show error messages
   isCountdown?: boolean; // Presale phase — buy at 1.00x, sell disabled
+  currencyMode?: 'sol' | 'csol'; // Currency mode for Blitz
 }
 
 // ============================================================================
@@ -40,6 +42,7 @@ const TradeDeck: React.FC<TradeDeckProps> = ({
   currentValue = 0,
   onError,
   isCountdown = false,
+  currencyMode = 'sol',
 }) => {
   // ============================================================================
   // STATE
@@ -118,7 +121,7 @@ const TradeDeck: React.FC<TradeDeckProps> = ({
   // RENDER - Vertical Stacked Layout (rugs.fun style)
   // ============================================================================
   return (
-    <div id="trade-deck" className="trade-deck">
+    <div id="trade-deck" className={`trade-deck ${currencyMode === 'csol' ? 'trd-csol-mode' : ''}`}>
       
       {/* Row 1: Buy Presets (green) + Sell Presets (red) */}
       <div className="trd-row trd-row-controls">
@@ -155,7 +158,11 @@ const TradeDeck: React.FC<TradeDeckProps> = ({
       {/* Row 2: Amount Input with SOL icon */}
       <div className="trd-row trd-row-input">
         <div className="trd-input-wrap">
-          <img src={solanaLogo} alt="SOL" className="trd-sol-icon" />
+          {currencyMode === 'csol' ? (
+            <Zap size={18} className="trd-csol-icon" />
+          ) : (
+            <img src={solanaLogo} alt="SOL" className="trd-sol-icon" />
+          )}
           <input
             id="trade-amount-input"
             type="text"
@@ -207,6 +214,7 @@ interface MobileTradeDeckProps {
   connected?: boolean;
   onError?: (message: string) => void;
   isCountdown?: boolean;
+  currencyMode?: 'sol' | 'csol'; // Currency mode for Blitz
 }
 
 export const MobileTradeDeck: React.FC<MobileTradeDeckProps> = ({
@@ -220,6 +228,7 @@ export const MobileTradeDeck: React.FC<MobileTradeDeckProps> = ({
   connected: _connected = true,
   onError,
   isCountdown = false,
+  currencyMode = 'sol',
 }) => {
   const [tradeAmount, setTradeAmount] = useState<string>('');
 
@@ -265,7 +274,7 @@ export const MobileTradeDeck: React.FC<MobileTradeDeckProps> = ({
       return;
     }
     if (amount > balance) {
-      onError?.('Insufficient balance - deposit SOL first');
+      onError?.(currencyMode === 'csol' ? 'Insufficient Csol balance' : 'Insufficient balance - deposit SOL first');
       return;
     }
     onBuy(amount);
@@ -285,7 +294,7 @@ export const MobileTradeDeck: React.FC<MobileTradeDeckProps> = ({
   };
 
   return (
-    <div className="mobile-trade-deck">
+    <div className={`mobile-trade-deck ${currencyMode === 'csol' ? 'trd-csol-mode' : ''}`}>
       {/* Row 1: Green Buy Presets + Red Sell Presets (matching desktop) */}
       <div className="mobile-controls-row">
         <div className="mobile-btn-group">
@@ -320,7 +329,11 @@ export const MobileTradeDeck: React.FC<MobileTradeDeckProps> = ({
       {/* Row 2: Amount Input */}
       <div className="mobile-trade-input-row">
         <div className="mobile-input-wrap">
-          <img src={solanaLogo} alt="SOL" className="mobile-sol-icon" />
+          {currencyMode === 'csol' ? (
+            <Zap size={18} className="trd-csol-icon" />
+          ) : (
+            <img src={solanaLogo} alt="SOL" className="mobile-sol-icon" />
+          )}
           <input
             type="text"
             inputMode="decimal"

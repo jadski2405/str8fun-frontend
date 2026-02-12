@@ -298,3 +298,83 @@ export interface ChestRewardEvent {
   cooldown_ready_at: string;
   timestamp?: number;
 }
+
+// ============================================================================
+// STR8 BLITZ — Weekly trading competition types
+// ============================================================================
+
+export interface BlitzParticipant {
+  wallet_address: string;
+  username: string | null;
+  csol_balance: number;
+  rank?: number;
+}
+
+export interface BlitzStatus {
+  success: boolean;
+  active: boolean;
+  event_id: string | null;
+  current_hour: number | null;
+  total_hours: number;
+  hour_ends_at: string | null;
+  participants: BlitzParticipant[];
+  next_event_at: string | null;
+}
+
+export interface BlitzMeResponse {
+  success: boolean;
+  participating: boolean;
+  csol_balance?: number;
+}
+
+export interface BlitzHourWinner {
+  hour_number: number;
+  winner_username: string | null;
+  winner_wallet: string;
+  winning_balance: number;
+}
+
+export interface BlitzEvent {
+  id: string;
+  date: string;
+  hours: BlitzHourWinner[];
+}
+
+export interface BlitzHistoryResponse {
+  success: boolean;
+  events: BlitzEvent[];
+}
+
+// Blitz WebSocket event payloads
+export interface BlitzHourStartedEvent {
+  type: 'BLITZ_HOUR_STARTED';
+  hour_number: number;
+  ends_at: string;
+  participants: BlitzParticipant[];
+  timestamp: number;
+}
+
+export interface BlitzHourEndedEvent {
+  type: 'BLITZ_HOUR_ENDED';
+  hour_number: number;
+  winner: BlitzParticipant;
+  prize_sol: number;
+  timestamp: number;
+}
+
+export interface BlitzLeaderboardEvent {
+  type: 'BLITZ_LEADERBOARD';
+  hour_number: number;
+  leaderboard: BlitzParticipant[];
+  timestamp: number;
+}
+
+export interface BlitzTradeEvent {
+  type: 'BLITZ_TRADE';
+  wallet_address: string;
+  username: string | null;
+  trade_type: 'buy' | 'sell';
+  csol_amount: number;
+  csol_balance: number;
+  timestamp: number;
+}

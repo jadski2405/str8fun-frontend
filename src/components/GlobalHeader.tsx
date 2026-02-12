@@ -4,8 +4,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { LogOut, ArrowDownToLine, ArrowUpFromLine, ChevronDown, X, Menu, User } from 'lucide-react';
 import { useLogin, usePrivy } from '@privy-io/react-auth';
 import { useSolanaWallet } from '../hooks/useSolanaWallet';
-import XpBar from './XpBar';
+import BlitzHeaderCarousel from './BlitzHeaderCarousel';
+import CurrencySelector from './CurrencySelector';
 import type { PlayerXpState } from '../types/game';
+import type { BlitzState } from '../hooks/useBlitz';
 import solanaLogo from '../assets/logo_solana.png';
 
 interface GlobalHeaderProps {
@@ -15,6 +17,9 @@ interface GlobalHeaderProps {
   onToggleChat?: () => void;
   xpState?: PlayerXpState | null;
   onOpenChests?: () => void;
+  blitz?: BlitzState;
+  activeCurrency?: 'sol' | 'csol';
+  onCurrencyChange?: (currency: 'sol' | 'csol') => void;
 }
 
 // Color themes for dropdowns
@@ -909,7 +914,7 @@ const GameNavButtons: React.FC = () => {
   );
 };
 
-const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat, onOpenDeposit, onOpenWithdraw, xpState, onOpenChests }) => {
+const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat, onOpenDeposit, onOpenWithdraw, xpState, onOpenChests, blitz, activeCurrency, onCurrencyChange }) => {
   // Router hooks for navigation
   const location = useLocation();
   const navigate = useNavigate();
@@ -1049,17 +1054,26 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
         <GameNavButtons />
       </div>
 
-      {/* Center Section - XP Bar (absolutely centered) */}
-      {isConnected && xpState && (
+      {/* Center Section - XP Bar + Blitz Carousel (absolutely centered) */}
+      {isConnected && xpState && blitz ? (
         <div className="header-center-xp" style={{
           position: 'absolute',
           left: '50%',
           transform: 'translateX(-50%)',
           zIndex: 10,
         }}>
-          <XpBar xpState={xpState} compact />
+          <BlitzHeaderCarousel xpState={xpState} blitz={blitz} compact />
         </div>
-      )}
+      ) : isConnected && xpState ? (
+        <div className="header-center-xp" style={{
+          position: 'absolute',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 10,
+        }}>
+          <BlitzHeaderCarousel xpState={xpState} blitz={null as any} compact />
+        </div>
+      ) : null}
 
       {/* Right Section - Wallet */}
       {isConnected ? (
@@ -1119,34 +1133,44 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
           )}
 
           {/* Balance Display Box - Left of Withdraw */}
-          <div
-            className="header-balance-box"
-            style={{
-              height: 36,
-              borderRadius: 8,
-              padding: '0 12px',
-              background: '#0d1117',
-              border: '1px solid rgba(248, 248, 252, 0.15)',
-              boxSizing: 'border-box',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 6,
-            }}
-          >
-            <img src={solanaLogo} alt="SOL" style={{ width: 20, height: 20 }} />
-            <span
+          {blitz && activeCurrency !== undefined && onCurrencyChange ? (
+            <CurrencySelector
+              activeCurrency={activeCurrency}
+              onCurrencyChange={onCurrencyChange}
+              solBalance={depositedBalance}
+              csolBalance={blitz.csolBalance}
+              isParticipating={blitz.isParticipating}
+            />
+          ) : (
+            <div
+              className="header-balance-box"
               style={{
-                fontFamily: "'DynaPuff', sans-serif",
-                fontSize: 14,
-                fontWeight: 600,
-                color: '#00FFA3',
-                textShadow: '0 0 8px rgba(0, 255, 163, 0.3)',
+                height: 36,
+                borderRadius: 8,
+                padding: '0 12px',
+                background: '#0d1117',
+                border: '1px solid rgba(248, 248, 252, 0.15)',
+                boxSizing: 'border-box',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
               }}
             >
-              {depositedBalance.toFixed(3)}
-            </span>
-          </div>
+              <img src={solanaLogo} alt="SOL" style={{ width: 20, height: 20 }} />
+              <span
+                style={{
+                  fontFamily: "'DynaPuff', sans-serif",
+                  fontSize: 14,
+                  fontWeight: 600,
+                  color: '#00FFA3',
+                  textShadow: '0 0 8px rgba(0, 255, 163, 0.3)',
+                }}
+              >
+                {depositedBalance.toFixed(3)}
+              </span>
+            </div>
+          )}
 
           {/* Withdraw Button with Dropdown */}
           <div className="relative" ref={withdrawRef} style={{ position: 'relative' }}>

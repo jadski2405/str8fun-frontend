@@ -4894,3 +4894,721 @@ body {
   border-top: 8px solid;
   border-top-color: inherit;
 }
+
+/* ============================================================================
+   STR8 BLITZ — Electric purple/blue competition theme
+   ============================================================================ */
+
+/* -- Blitz CSS Variables -- */
+:root {
+  --blitz-purple: #A855F7;
+  --blitz-purple-dark: #7C3AED;
+  --blitz-blue: #3B82F6;
+  --blitz-glow: rgba(168, 85, 247, 0.4);
+  --blitz-glow-strong: rgba(168, 85, 247, 0.6);
+}
+
+/* -- Carousel Container -- */
+.blitz-carousel-container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.blitz-carousel-compact {
+  min-width: 0;
+}
+
+.blitz-carousel-viewport {
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* -- Carousel Dots -- */
+.blitz-carousel-dots {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+}
+
+.blitz-carousel-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  border: none;
+  padding: 0;
+  background: rgba(248, 248, 252, 0.2);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.blitz-carousel-dot-active {
+  background: var(--blitz-purple);
+  box-shadow: 0 0 6px var(--blitz-glow);
+}
+
+/* -- Blitz Timer Trigger (header item) -- */
+.blitz-timer-trigger {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-family: 'DynaPuff', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: #f8f8fc;
+  background: transparent;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.blitz-timer-trigger:hover {
+  background: rgba(168, 85, 247, 0.1);
+}
+
+.blitz-timer-live {
+  background: rgba(168, 85, 247, 0.08);
+  border: 1px solid rgba(168, 85, 247, 0.25);
+}
+
+.blitz-timer-live:hover {
+  background: rgba(168, 85, 247, 0.15);
+}
+
+.blitz-timer-upcoming {
+  color: rgba(248, 248, 252, 0.7);
+}
+
+.blitz-zap-icon {
+  color: var(--blitz-purple);
+  fill: var(--blitz-purple);
+  flex-shrink: 0;
+}
+
+.blitz-timer-label {
+  color: var(--blitz-purple);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 11px;
+}
+
+.blitz-timer-hour {
+  color: rgba(248, 248, 252, 0.6);
+  font-size: 11px;
+}
+
+.blitz-timer-countdown {
+  color: #f8f8fc;
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+}
+
+/* -- Blitz Live Pulsing Dot -- */
+.blitz-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--blitz-purple);
+  box-shadow: 0 0 6px var(--blitz-glow-strong);
+  animation: blitz-pulse 1.5s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes blitz-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 6px var(--blitz-glow-strong); }
+  50% { opacity: 0.4; box-shadow: 0 0 2px var(--blitz-glow); }
+}
+
+/* -- Blitz Dropdown (leaderboard/history) -- */
+.blitz-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 320px;
+  max-width: calc(100vw - 24px);
+  background: #131722;
+  border: 1px solid rgba(168, 85, 247, 0.2);
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(168, 85, 247, 0.1);
+  z-index: 100;
+  overflow: hidden;
+}
+
+.blitz-dropdown-header {
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid rgba(248, 248, 252, 0.06);
+}
+
+.blitz-dropdown-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.blitz-dropdown-title {
+  font-family: 'DynaPuff', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: #f8f8fc;
+  letter-spacing: 1px;
+}
+
+.blitz-status-badge {
+  font-family: 'DynaPuff', sans-serif;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-left: auto;
+}
+
+.blitz-status-live {
+  background: rgba(168, 85, 247, 0.2);
+  color: var(--blitz-purple);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+.blitz-status-upcoming {
+  background: rgba(59, 130, 246, 0.15);
+  color: var(--blitz-blue);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+}
+
+.blitz-status-ended {
+  background: rgba(156, 163, 175, 0.1);
+  color: #9CA3AF;
+  border: 1px solid rgba(156, 163, 175, 0.2);
+}
+
+.blitz-dropdown-timer-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'DynaPuff', sans-serif;
+  font-size: 11px;
+  color: rgba(248, 248, 252, 0.5);
+  margin-bottom: 4px;
+}
+
+.blitz-dropdown-countdown {
+  color: #f8f8fc;
+  font-variant-numeric: tabular-nums;
+  margin-left: auto;
+}
+
+.blitz-dropdown-prize {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'DynaPuff', sans-serif;
+  font-size: 11px;
+  color: #FFD700;
+}
+
+/* -- Blitz Tabs -- */
+.blitz-dropdown-tabs {
+  display: flex;
+  border-bottom: 1px solid rgba(248, 248, 252, 0.06);
+}
+
+.blitz-tab {
+  flex: 1;
+  padding: 8px 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: 'DynaPuff', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(248, 248, 252, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.15s ease;
+}
+
+.blitz-tab:hover {
+  color: rgba(248, 248, 252, 0.7);
+}
+
+.blitz-tab-active {
+  color: var(--blitz-purple);
+  box-shadow: inset 0 -2px 0 var(--blitz-purple);
+}
+
+/* -- Blitz Dropdown Body -- */
+.blitz-dropdown-body {
+  padding: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.blitz-dropdown-body::-webkit-scrollbar {
+  width: 4px;
+}
+
+.blitz-dropdown-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.blitz-dropdown-body::-webkit-scrollbar-thumb {
+  background: rgba(168, 85, 247, 0.3);
+  border-radius: 4px;
+}
+
+.blitz-empty {
+  text-align: center;
+  padding: 24px 12px;
+  font-family: 'DynaPuff', sans-serif;
+  font-size: 12px;
+  color: rgba(248, 248, 252, 0.3);
+}
+
+/* -- Blitz Leaderboard -- */
+.blitz-leaderboard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.blitz-leaderboard-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  transition: background 0.15s ease;
+  font-family: 'DynaPuff', sans-serif;
+  font-size: 12px;
+}
+
+.blitz-leaderboard-row:hover {
+  background: rgba(248, 248, 252, 0.03);
+}
+
+.blitz-leaderboard-row--me {
+  background: rgba(168, 85, 247, 0.1);
+  border: 1px solid rgba(168, 85, 247, 0.25);
+}
+
+.blitz-leaderboard-row--me:hover {
+  background: rgba(168, 85, 247, 0.15);
+}
+
+.blitz-rank {
+  width: 22px;
+  text-align: center;
+  font-weight: 700;
+  color: rgba(248, 248, 252, 0.5);
+  flex-shrink: 0;
+}
+
+.blitz-rank-1 { color: #FFD700; }
+.blitz-rank-2 { color: #C0C0C0; }
+.blitz-rank-3 { color: #CD7F32; }
+
+.blitz-player-name {
+  flex: 1;
+  color: #f8f8fc;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.blitz-csol-balance {
+  color: var(--blitz-purple);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.blitz-gap-indicator {
+  font-size: 10px;
+  color: #22C55E;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+/* -- Blitz History -- */
+.blitz-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.blitz-history-event {
+  padding: 8px 10px;
+  background: rgba(248, 248, 252, 0.02);
+  border-radius: 8px;
+  border: 1px solid rgba(248, 248, 252, 0.04);
+}
+
+.blitz-history-date {
+  font-family: 'DynaPuff', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(248, 248, 252, 0.6);
+  margin-bottom: 6px;
+}
+
+.blitz-history-hour {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+  font-family: 'DynaPuff', sans-serif;
+  font-size: 11px;
+}
+
+.blitz-history-hour-num {
+  color: rgba(248, 248, 252, 0.4);
+  width: 36px;
+  flex-shrink: 0;
+}
+
+.blitz-history-winner {
+  flex: 1;
+  color: #f8f8fc;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blitz-history-balance {
+  color: var(--blitz-purple);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.blitz-history-more {
+  font-size: 10px;
+  color: rgba(248, 248, 252, 0.3);
+  text-align: center;
+  padding-top: 4px;
+}
+
+/* -- Blitz Modal Overlays -- */
+.blitz-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.blitz-modal-card {
+  position: relative;
+  background: #131722;
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  border-radius: 16px;
+  padding: 28px 24px;
+  max-width: 400px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 0 40px rgba(168, 85, 247, 0.15), 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.blitz-modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(248, 248, 252, 0.06);
+  border: none;
+  border-radius: 6px;
+  padding: 4px;
+  cursor: pointer;
+  color: rgba(248, 248, 252, 0.4);
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.blitz-modal-close:hover {
+  background: rgba(248, 248, 252, 0.12);
+  color: #f8f8fc;
+}
+
+.blitz-modal-close-winner {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.blitz-modal-close-winner:hover {
+  color: #fff;
+}
+
+.blitz-modal-icon-row {
+  margin-bottom: 12px;
+}
+
+.blitz-modal-title {
+  font-family: 'DynaPuff', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: #f8f8fc;
+  margin: 0 0 4px;
+}
+
+.blitz-modal-subtitle {
+  font-family: 'DynaPuff', sans-serif;
+  font-size: 13px;
+  color: rgba(248, 248, 252, 0.5);
+  margin: 0 0 16px;
+}
+
+/* -- Hour Started Modal -- */
+.blitz-modal-started {
+  border-color: rgba(168, 85, 247, 0.4);
+}
+
+.blitz-modal-participant-list {
+  max-height: 200px;
+  overflow-y: auto;
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+.blitz-modal-participant-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.blitz-modal-participant-list::-webkit-scrollbar-thumb {
+  background: rgba(168, 85, 247, 0.3);
+  border-radius: 4px;
+}
+
+.blitz-modal-participant {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  font-family: 'DynaPuff', sans-serif;
+  font-size: 11px;
+}
+
+.blitz-modal-participant-num {
+  color: rgba(248, 248, 252, 0.3);
+  width: 24px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.blitz-modal-participant-name {
+  flex: 1;
+  color: #f8f8fc;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blitz-modal-participant-csol {
+  color: var(--blitz-purple);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.blitz-modal-prize-note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: 'DynaPuff', sans-serif;
+  font-size: 12px;
+  color: #FFD700;
+}
+
+/* -- Hour Ended Modal -- */
+.blitz-modal-ended {
+  border-color: rgba(255, 215, 0, 0.3);
+}
+
+.blitz-modal-winner-name {
+  font-family: 'DynaPuff', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--blitz-purple);
+  margin: 8px 0;
+}
+
+.blitz-modal-winner-stats {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-family: 'DynaPuff', sans-serif;
+  font-size: 14px;
+  color: rgba(248, 248, 252, 0.7);
+}
+
+.blitz-modal-winner-arrow {
+  color: rgba(248, 248, 252, 0.3);
+}
+
+.blitz-modal-winner-prize {
+  color: #FFD700;
+  font-weight: 700;
+}
+
+/* -- Winner Celebration (full-screen, for when YOU win) -- */
+.blitz-winner-celebration {
+  background: radial-gradient(ellipse at center, rgba(168, 85, 247, 0.15) 0%, rgba(0, 0, 0, 0.85) 70%);
+}
+
+.blitz-winner-content {
+  position: relative;
+  text-align: center;
+  padding: 40px;
+  max-width: 480px;
+}
+
+.blitz-winner-zap-ring {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: rgba(168, 85, 247, 0.15);
+  border: 2px solid rgba(168, 85, 247, 0.4);
+  box-shadow: 0 0 30px var(--blitz-glow), 0 0 60px rgba(168, 85, 247, 0.15);
+  margin: 0 auto 20px;
+  animation: blitz-ring-glow 2s ease-in-out infinite;
+}
+
+@keyframes blitz-ring-glow {
+  0%, 100% { box-shadow: 0 0 30px var(--blitz-glow), 0 0 60px rgba(168, 85, 247, 0.15); }
+  50% { box-shadow: 0 0 50px var(--blitz-glow-strong), 0 0 80px rgba(168, 85, 247, 0.25); }
+}
+
+.blitz-winner-headline {
+  font-family: 'DynaPuff', sans-serif;
+  font-size: 36px;
+  font-weight: 800;
+  color: #FFD700;
+  text-shadow: 0 0 20px rgba(255, 215, 0, 0.5), 0 0 40px rgba(255, 215, 0, 0.2);
+  margin: 0 0 8px;
+  line-height: 1.1;
+}
+
+.blitz-winner-sub {
+  font-family: 'DynaPuff', sans-serif;
+  font-size: 15px;
+  color: rgba(248, 248, 252, 0.6);
+  margin: 0 0 24px;
+}
+
+.blitz-winner-trophy {
+  color: #FFD700;
+  display: flex;
+  justify-content: center;
+  filter: drop-shadow(0 0 12px rgba(255, 215, 0, 0.5));
+}
+
+/* -- Trade Deck Csol Mode -- */
+.trd-csol-mode {
+  border: 1px solid rgba(168, 85, 247, 0.25) !important;
+  background: linear-gradient(180deg, rgba(168, 85, 247, 0.05) 0%, transparent 100%) !important;
+}
+
+.trd-csol-mode .trd-buy-btn {
+  background: linear-gradient(180deg, #A855F7 0%, #7C3AED 100%) !important;
+  box-shadow: #5B21B6 0px 4px 0px 0px !important;
+}
+
+.trd-csol-mode .trd-buy-btn:hover {
+  background: linear-gradient(180deg, #9333EA 0%, #6D28D9 100%) !important;
+}
+
+.trd-csol-mode .trd-sell-btn {
+  background: linear-gradient(180deg, #6D28D9 0%, #4C1D95 100%) !important;
+  box-shadow: #3B0764 0px 4px 0px 0px !important;
+}
+
+.trd-csol-mode .trd-balance-value,
+.trd-csol-mode .mobile-balance-value {
+  color: var(--blitz-purple) !important;
+}
+
+.trd-csol-mode .trd-buy-preset-btn {
+  border-color: rgba(168, 85, 247, 0.3) !important;
+  color: var(--blitz-purple) !important;
+}
+
+.trd-csol-mode .trd-buy-preset-btn:hover {
+  background: rgba(168, 85, 247, 0.15) !important;
+}
+
+.trd-csol-mode .mobile-buy-preset-btn {
+  border-color: rgba(168, 85, 247, 0.3) !important;
+  color: var(--blitz-purple) !important;
+}
+
+.trd-csol-mode .mobile-buy-preset-btn:hover {
+  background: rgba(168, 85, 247, 0.15) !important;
+}
+
+.trd-csol-icon {
+  color: var(--blitz-purple);
+  fill: var(--blitz-purple);
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+}
+
+.trd-csol-mode .mobile-action-btn.buy {
+  background: linear-gradient(180deg, #A855F7 0%, #7C3AED 100%) !important;
+  box-shadow: #5B21B6 0px 4px 0px 0px !important;
+}
+
+.trd-csol-mode .mobile-action-btn.sell {
+  background: linear-gradient(180deg, #6D28D9 0%, #4C1D95 100%) !important;
+  box-shadow: #3B0764 0px 4px 0px 0px !important;
+}
+
+/* -- Currency Selector -- */
+.currency-selector-row:hover {
+  background: rgba(248, 248, 252, 0.04) !important;
+}
+
+/* -- Mobile Responsive -- */
+@media (max-width: 640px) {
+  .blitz-dropdown {
+    width: calc(100vw - 24px);
+    max-width: 360px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .blitz-winner-headline {
+    font-size: 28px;
+  }
+
+  .blitz-winner-content {
+    padding: 24px;
+  }
+
+  .blitz-modal-card {
+    padding: 20px 16px;
+    max-width: calc(100vw - 32px);
+  }
+
+  .blitz-timer-trigger {
+    font-size: 11px;
+    gap: 4px;
+    padding: 4px 8px;
+  }
+}

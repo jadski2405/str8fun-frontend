@@ -9,6 +9,7 @@ import { useGame } from '../../hooks/useGame';
 import { useLeaderboard } from '../../hooks/useLeaderboard';
 import { useRewards } from '../../hooks/useRewards';
 import { useReferral } from '../../hooks/useReferral';
+import { useBlitz } from '../../hooks/useBlitz';
 import { GAME_CONSTANTS } from '../../types/game';
 import GameLayout from '../../components/layout/GameLayout';
 import GlobalHeader from '../../components/GlobalHeader';
@@ -16,6 +17,7 @@ import GlobalChatSidebar from '../../components/GlobalChatSidebar';
 import LevelUpPopup from '../../components/LevelUpPopup';
 import XpToast from '../../components/XpToast';
 import RewardsModal from '../../components/RewardsModal';
+import { BlitzHourStartedModal, BlitzHourEndedModal } from '../../components/BlitzModals';
 import RoundHistoryStrip from './RoundHistoryStrip';
 import solanaLogo from '../../assets/logo_solana.png';
 
@@ -135,6 +137,10 @@ const PumpItSim: React.FC = () => {
   const referral = useReferral(publicKey || null, getAuthToken);
   const [chestsOpen, setChestsOpen] = useState(false);
   
+  // Blitz competition state
+  const blitz = useBlitz(publicKey || null, getAuthToken);
+  const [activeCurrency, setActiveCurrency] = useState<'sol' | 'csol'>('sol');
+  
   // Local simulation state (visual chart)
   const [price, setPrice] = useState(INITIAL_PRICE);
   const [candles, setCandles] = useState<Candle[]>([]);
@@ -207,6 +213,18 @@ const PumpItSim: React.FC = () => {
       setShowUsernameModal(false);
     }
   }, [connected, needsUsername]);
+
+  // Auto-reset currency to SOL if user is no longer a Blitz participant
+  useEffect(() => {
+    if (!blitz.isParticipating && activeCurrency === 'csol') {
+      setActiveCurrency('sol');
+    }
+  }, [blitz.isParticipating, activeCurrency]);
+
+  // Store wallet address globally for Blitz leaderboard row highlight
+  useEffect(() => {
+    (window as any).__blitz_wallet = publicKey || null;
+  }, [publicKey]);
 
   // ============================================================================
   // USERNAME HANDLERS
@@ -528,21 +546,24 @@ const PumpItSim: React.FC = () => {
       login();
       return;
     }
+
+    const isCsol = activeCurrency === 'csol';
+    const effectiveBalance = isCsol ? blitz.csolBalance : depositedBalance;
     
-    if (depositedBalance <= 0) {
-      // Show deposit modal if no balance
+    if (!isCsol && depositedBalance <= 0) {
+      // Show deposit modal if no SOL balance
       setShowDepositModal(true);
       setDepositError('Deposit SOL to start trading');
       return;
     }
     
-    if (amount <= 0 || amount > depositedBalance) {
-      console.log('❌ Invalid amount or insufficient deposited balance');
+    if (amount <= 0 || amount > effectiveBalance) {
+      console.log('Invalid amount or insufficient balance');
       return;
     }
     
     if (amount < GAME_CONSTANTS.MIN_TRADE_SOL) {
-      console.log(`❌ Minimum trade is ${GAME_CONSTANTS.MIN_TRADE_SOL} SOL`);
+      console.log(`Minimum trade is ${GAME_CONSTANTS.MIN_TRADE_SOL} SOL`);
       return;
     }
     
@@ -550,10 +571,10 @@ const PumpItSim: React.FC = () => {
     
     try {
       // Execute trade using deposited balance (NO WALLET APPROVAL!)
-      const result = await game.buy(amount);
+      const result = await game.buy(amount, activeCurrency);
       
       if (result.success) {
-        console.log(`🟢 BUY: ${amount.toFixed(4)} SOL`);
+        console.log(`BUY: ${amount.toFixed(4)} ${isCsol ? 'Csol' : 'SOL'}`);
         
         // Add trade marker at current price and candle
         setTradeMarkers(prev => [...prev, {
@@ -563,14 +584,16 @@ const PumpItSim: React.FC = () => {
           timestamp: Date.now(),
         }]);
         
-        // Update balance immediately if returned, otherwise refresh
-        if (result.newBalance !== undefined) {
-          updateDepositedBalance(result.newBalance);
-        } else {
-          refreshDepositedBalance();
+        // Update balance immediately if returned (SOL only — Csol updates via WS)
+        if (!isCsol) {
+          if (result.newBalance !== undefined) {
+            updateDepositedBalance(result.newBalance);
+          } else {
+            refreshDepositedBalance();
+          }
         }
       } else {
-        console.log(`❌ Buy failed: ${result.error}`);
+        console.log(`Buy failed: ${result.error}`);
         setTradeError(result.error || 'Buy failed');
       }
     } catch (error) {
@@ -578,21 +601,23 @@ const PumpItSim: React.FC = () => {
     } finally {
       setIsProcessingTrade(false);
     }
-  }, [connected, depositedBalance, game, login, refreshDepositedBalance, updateDepositedBalance]);
+  }, [connected, depositedBalance, game, login, refreshDepositedBalance, updateDepositedBalance, activeCurrency, blitz.csolBalance]);
 
   const handleSell = useCallback(async (amount: number) => {
     if (!connected) {
       login();
       return;
     }
+
+    const isCsol = activeCurrency === 'csol';
     
     if (amount <= 0 || game.solWagered <= 0) {
-      console.log('❌ No position to sell');
+      console.log('No position to sell');
       return;
     }
     
     if (amount < GAME_CONSTANTS.MIN_TRADE_SOL) {
-      console.log(`❌ Minimum trade is ${GAME_CONSTANTS.MIN_TRADE_SOL} SOL`);
+      console.log(`Minimum trade is ${GAME_CONSTANTS.MIN_TRADE_SOL} SOL`);
       return;
     }
     
@@ -600,10 +625,10 @@ const PumpItSim: React.FC = () => {
     
     try {
       // Execute sell (credits deposited balance - NO WALLET APPROVAL!)
-      const result = await game.sell(amount);
+      const result = await game.sell(amount, activeCurrency);
       
       if (result.success) {
-        console.log(`🔴 SELL: ~${amount.toFixed(4)} SOL worth`);
+        console.log(`SELL: ~${amount.toFixed(4)} ${isCsol ? 'Csol' : 'SOL'} worth`);
         
         // Add trade marker at current price and candle
         setTradeMarkers(prev => [...prev, {
@@ -613,14 +638,16 @@ const PumpItSim: React.FC = () => {
           timestamp: Date.now(),
         }]);
         
-        // Update balance immediately if returned, otherwise refresh
-        if (result.newBalance !== undefined) {
-          updateDepositedBalance(result.newBalance);
-        } else {
-          refreshDepositedBalance();
+        // Update balance immediately if returned (SOL only — Csol updates via WS)
+        if (!isCsol) {
+          if (result.newBalance !== undefined) {
+            updateDepositedBalance(result.newBalance);
+          } else {
+            refreshDepositedBalance();
+          }
         }
       } else {
-        console.log(`❌ Sell failed: ${result.error}`);
+        console.log(`Sell failed: ${result.error}`);
         setTradeError(result.error || 'Sell failed');
       }
     } catch (error) {
@@ -628,7 +655,7 @@ const PumpItSim: React.FC = () => {
     } finally {
       setIsProcessingTrade(false);
     }
-  }, [connected, game, login, refreshDepositedBalance, updateDepositedBalance]);
+  }, [connected, game, login, refreshDepositedBalance, updateDepositedBalance, activeCurrency]);
 
   // Sell entire position via dedicated sell-all endpoint
   const handleSellAll = useCallback(async () => {
@@ -636,19 +663,21 @@ const PumpItSim: React.FC = () => {
       login();
       return;
     }
+
+    const isCsol = activeCurrency === 'csol';
     
     if (game.solWagered <= 0) {
-      console.log('❌ No position to sell');
+      console.log('No position to sell');
       return;
     }
     
     setIsProcessingTrade(true);
     
     try {
-      const result = await game.sellAll();
+      const result = await game.sellAll(activeCurrency);
       
       if (result.success) {
-        console.log('🔴 SELL ALL: entire position closed');
+        console.log('SELL ALL: entire position closed');
         
         setTradeMarkers(prev => [...prev, {
           type: 'sell',
@@ -657,13 +686,16 @@ const PumpItSim: React.FC = () => {
           timestamp: Date.now(),
         }]);
         
-        if (result.newBalance !== undefined) {
-          updateDepositedBalance(result.newBalance);
-        } else {
-          refreshDepositedBalance();
+        // Update balance immediately if returned (SOL only — Csol updates via WS)
+        if (!isCsol) {
+          if (result.newBalance !== undefined) {
+            updateDepositedBalance(result.newBalance);
+          } else {
+            refreshDepositedBalance();
+          }
         }
       } else {
-        console.log(`❌ Sell-all failed: ${result.error}`);
+        console.log(`Sell-all failed: ${result.error}`);
         setTradeError(result.error || 'Sell failed');
       }
     } catch (error) {
@@ -671,7 +703,7 @@ const PumpItSim: React.FC = () => {
     } finally {
       setIsProcessingTrade(false);
     }
-  }, [connected, game, login, refreshDepositedBalance, updateDepositedBalance]);
+  }, [connected, game, login, refreshDepositedBalance, updateDepositedBalance, activeCurrency]);
 
   // ============================================================================
   // DEPOSIT/WITHDRAW HANDLERS
@@ -1023,6 +1055,9 @@ const PumpItSim: React.FC = () => {
             onToggleChat={() => setChatCollapsed(!chatCollapsed)}
             xpState={rewards.xpState}
             onOpenChests={() => { rewards.fetchChests(); setChestsOpen(true); }}
+            blitz={blitz}
+            activeCurrency={activeCurrency}
+            onCurrencyChange={setActiveCurrency}
           />
         }
         sidebar={
@@ -1112,7 +1147,7 @@ const PumpItSim: React.FC = () => {
         }
         tradeControls={
           <TradeDeck
-            balance={displayBalance}
+            balance={activeCurrency === 'csol' ? blitz.csolBalance : displayBalance}
             currentPrice={price}
             onBuy={handleBuy}
             onSell={handleSell}
@@ -1121,11 +1156,12 @@ const PumpItSim: React.FC = () => {
             currentValue={game.currentValue}
             onError={setTradeError}
             isCountdown={game.roundStatus === 'countdown'}
+            currencyMode={activeCurrency}
           />
         }
         mobileTradeControls={
           <MobileTradeDeck
-            balance={displayBalance}
+            balance={activeCurrency === 'csol' ? blitz.csolBalance : displayBalance}
             currentPrice={price}
             onBuy={handleBuy}
             onSell={handleSell}
@@ -1135,6 +1171,7 @@ const PumpItSim: React.FC = () => {
             connected={connected}
             onError={setTradeError}
             isCountdown={game.roundStatus === 'countdown'}
+            currencyMode={activeCurrency}
           />
         }
         roundHistory={
@@ -1223,6 +1260,9 @@ const PumpItSim: React.FC = () => {
         fetchHistory={rewards.fetchHistory}
         referral={referral}
       />
+      {/* Blitz Modals */}
+      <BlitzHourStartedModal data={blitz.hourStartedSplash} onDismiss={blitz.dismissHourStarted} />
+      <BlitzHourEndedModal data={blitz.hourEndedSplash} onDismiss={blitz.dismissHourEnded} />
     </>
   );
 };
