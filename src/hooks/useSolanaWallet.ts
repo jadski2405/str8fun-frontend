@@ -87,9 +87,10 @@ export function useSolanaWallet(): WalletState {
     return null;
   }, [privyWallet?.address, walletAdapterPublicKey]);
   
-  // Derive connection state: ONLY connected when we have a usable wallet address
-  // This fixes race condition where authenticated=true but wallet not yet populated
-  const isConnected = (authenticated && !!walletAddress) || walletAdapterConnected;
+  // Derive connection state: ONLY connected when Privy authenticated + wallet address
+  // This prevents mobile wallet-adapter auto-connect from showing "connected" without auth,
+  // which would leave depositedBalance at 0 since all API calls require authenticated=true
+  const isConnected = authenticated && !!walletAddress;
   
   // Loading state: authenticated but wallet not yet available
   const isWalletLoading = authenticated && !walletAddress && !walletAdapterConnected;
