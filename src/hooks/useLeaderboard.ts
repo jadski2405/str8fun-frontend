@@ -43,8 +43,12 @@ export function useLeaderboard(limit: number = 10): LeaderboardState {
       setIsLoading(true);
       setError(null);
       
-      const response = await fetch(`${API_URL}/api/game/leaderboard?limit=${limit}`);
+      const response = await fetch(`${API_URL}/api/game/leaderboard?limit=${limit}&period=all`);
       
+      if (response.status === 429) {
+        console.warn('[useLeaderboard] Rate limited, retrying later');
+        return;
+      }
       if (!response.ok) {
         throw new Error('Failed to fetch leaderboard');
       }

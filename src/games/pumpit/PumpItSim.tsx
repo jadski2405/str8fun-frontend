@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useLogin } from '@privy-io/react-auth';
+import { useLogin, usePrivy } from '@privy-io/react-auth';
 import { MessageCircle } from 'lucide-react';
 import RugsChart from './RugsChart';
 import TradeDeck, { MobileTradeDeck } from './TradeDeck';
@@ -10,6 +10,7 @@ import { useLeaderboard } from '../../hooks/useLeaderboard';
 import { useRewards } from '../../hooks/useRewards';
 import { useReferral } from '../../hooks/useReferral';
 import { useBlitz } from '../../hooks/useBlitz';
+import { useProfile } from '../../hooks/useProfile';
 import { GAME_CONSTANTS } from '../../types/game';
 import GameLayout from '../../components/layout/GameLayout';
 import GlobalHeader from '../../components/GlobalHeader';
@@ -18,6 +19,7 @@ import LevelUpPopup from '../../components/LevelUpPopup';
 import XpToast from '../../components/XpToast';
 import RewardsModal from '../../components/RewardsModal';
 import { BlitzHourStartedModal, BlitzHourEndedModal } from '../../components/BlitzModals';
+import ProfileModal from '../../components/ProfileModal';
 import RoundHistoryStrip from './RoundHistoryStrip';
 import solanaLogo from '../../assets/logo_solana.png';
 
@@ -107,6 +109,7 @@ function validateUsername(username: string): { valid: boolean; error?: string } 
 const PumpItSim: React.FC = () => {
   // Privy login hook - triggers wallet connection modal
   const { login } = useLogin();
+  const { logout } = usePrivy();
   
   // Wallet state - ALL wallet access goes through useSolanaWallet hook
   const { 
@@ -124,6 +127,7 @@ const PumpItSim: React.FC = () => {
     setUsername,
     checkUsernameAvailable,
     getAuthToken,
+    disconnect: disconnectWallet,
   } = useSolanaWallet();
   
   // Game state from hook (for real trading) - pass wallet address and auth token
@@ -140,6 +144,13 @@ const PumpItSim: React.FC = () => {
   // Blitz competition state
   const blitz = useBlitz(publicKey || null, getAuthToken);
   const [activeCurrency, setActiveCurrency] = useState<'sol' | 'csol'>('sol');
+
+  // Auto-open profile modal if returning from social OAuth redirect
+  const [profileOpen, setProfileOpen] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.has('social_connected') || params.has('social_error');
+  });
+  const profileData = useProfile(publicKey || null, getAuthToken, profileOpen);
   
   // Local simulation state (visual chart)
   const [price, setPrice] = useState(INITIAL_PRICE);
@@ -803,6 +814,21 @@ const PumpItSim: React.FC = () => {
     }
   }, [successMessage]);
 
+  // Pipe social connect toasts into existing toast system
+  useEffect(() => {
+    if (profileData.socialMessage) {
+      setSuccessMessage(profileData.socialMessage);
+      profileData.clearSocialMessage();
+    }
+  }, [profileData.socialMessage]);
+
+  useEffect(() => {
+    if (profileData.socialError) {
+      setTradeError(profileData.socialError);
+      profileData.clearSocialError();
+    }
+  }, [profileData.socialError]);
+
   // ============================================================================
   // RENDER
   // ============================================================================
@@ -1058,6 +1084,7 @@ const PumpItSim: React.FC = () => {
             blitz={blitz}
             activeCurrency={activeCurrency}
             onCurrencyChange={setActiveCurrency}
+            onOpenProfile={() => setProfileOpen(true)}
           />
         }
         sidebar={
@@ -1258,11 +1285,28 @@ const PumpItSim: React.FC = () => {
         isLoadingChests={rewards.isLoadingChests}
         chestHistory={rewards.chestHistory}
         fetchHistory={rewards.fetchHistory}
-        referral={referral}
       />
       {/* Blitz Modals */}
       <BlitzHourStartedModal data={blitz.hourStartedSplash} onDismiss={blitz.dismissHourStarted} />
       <BlitzHourEndedModal data={blitz.hourEndedSplash} onDismiss={blitz.dismissHourEnded} />
+      {/* Profile Modal */}
+      <ProfileModal
+        isOpen={profileOpen}
+        onClose={() => setProfileOpen(false)}
+        onDisconnect={async () => {
+          try {
+            await logout();
+            await disconnectWallet();
+          } catch (e) {
+            console.error('Error disconnecting:', e);
+          }
+        }}
+        walletAddress={publicKey || null}
+        username={_username}
+        xpState={rewards.xpState}
+        profile={profileData}
+        referral={referral}
+      />
     </>
   );
 };

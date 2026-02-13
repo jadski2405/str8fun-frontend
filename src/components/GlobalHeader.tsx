@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LogOut, ArrowDownToLine, ArrowUpFromLine, ChevronDown, X, Menu, User } from 'lucide-react';
+import { LogOut, ArrowDownToLine, ArrowUpFromLine, X, Menu, User } from 'lucide-react';
 import { useLogin, usePrivy } from '@privy-io/react-auth';
 import { useSolanaWallet } from '../hooks/useSolanaWallet';
 import BlitzHeaderCarousel from './BlitzHeaderCarousel';
@@ -20,6 +20,7 @@ interface GlobalHeaderProps {
   blitz?: BlitzState;
   activeCurrency?: 'sol' | 'csol';
   onCurrencyChange?: (currency: 'sol' | 'csol') => void;
+  onOpenProfile?: () => void;
 }
 
 // Color themes for dropdowns
@@ -914,7 +915,7 @@ const GameNavButtons: React.FC = () => {
   );
 };
 
-const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat, onOpenDeposit, onOpenWithdraw, xpState, onOpenChests, blitz, activeCurrency, onCurrencyChange }) => {
+const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat, onOpenDeposit, onOpenWithdraw, xpState, onOpenChests, blitz, activeCurrency, onCurrencyChange, onOpenProfile }) => {
   // Router hooks for navigation
   const location = useLocation();
   const navigate = useNavigate();
@@ -940,7 +941,6 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
   } = useSolanaWallet();
   
   // Dropdown states
-  const [showWalletMenu, setShowWalletMenu] = useState(false);
   const [showDepositMenu, setShowDepositMenu] = useState(false);
   const [showWithdrawMenu, setShowWithdrawMenu] = useState(false);
   const [showMobileNav, setShowMobileNav] = useState(false);
@@ -950,16 +950,12 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
   const depositPromoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // Refs for click outside handling
-  const menuRef = useRef<HTMLDivElement>(null);
   const depositRef = useRef<HTMLDivElement>(null);
   const withdrawRef = useRef<HTMLDivElement>(null);
 
   // Click outside handler
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setShowWalletMenu(false);
-      }
       if (depositRef.current && !depositRef.current.contains(event.target as Node)) {
         setShowDepositMenu(false);
       }
@@ -986,7 +982,6 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
   // Close other menus when opening one
   const handleOpenDeposit = () => {
     setShowWithdrawMenu(false);
-    setShowWalletMenu(false);
     setShowDepositMenu(!showDepositMenu);
     // Show promo popup for 5 seconds
     if (!showDepositMenu) {
@@ -1001,14 +996,13 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
 
   const handleOpenWithdraw = () => {
     setShowDepositMenu(false);
-    setShowWalletMenu(false);
     setShowWithdrawMenu(!showWithdrawMenu);
   };
 
-  const handleOpenWalletMenu = () => {
+  const handleOpenProfileModal = () => {
     setShowDepositMenu(false);
     setShowWithdrawMenu(false);
-    setShowWalletMenu(!showWalletMenu);
+    if (onOpenProfile) onOpenProfile();
   };
 
   // Format wallet address for display
@@ -1317,11 +1311,11 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
           </div>
           
           {/* Username Profile Button - Last element (furthest right) */}
-          <div className="relative" ref={menuRef}>
+          <div className="relative">
             <button
               id="profile-btn"
               type="button"
-              onClick={handleOpenWalletMenu}
+              onClick={handleOpenProfileModal}
               style={{
                 height: 36,
                 minWidth: 100,
@@ -1354,86 +1348,9 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
                 e.currentTarget.style.boxShadow = 'rgba(59, 130, 246, 0.5) 0px 4px 12px 0px';
               }}
             >
+              <User size={14} />
               <span>{username || formatAddress(walletAddress)}</span>
-              <ChevronDown 
-                size={14} 
-                style={{
-                  transition: 'transform 0.2s ease',
-                  transform: showWalletMenu ? 'rotate(180deg)' : 'rotate(0deg)',
-                  flexShrink: 0,
-                }}
-              />
             </button>
-          
-            {/* Dropdown Menu */}
-            <AnimatePresence>
-              {showWalletMenu && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                  transition={{ duration: 0.15 }}
-                  style={{
-                    position: 'absolute',
-                    right: 0,
-                    marginTop: 8,
-                    width: 200,
-                    background: 'rgb(21, 22, 29)',
-                    border: '1px solid rgb(56, 57, 67)',
-                    borderRadius: 12,
-                    boxShadow: '0 10px 40px rgba(0, 0, 0, 0.5)',
-                    overflow: 'hidden',
-                    zIndex: 50,
-                  }}
-                >
-                  {/* Balance Header */}
-                  <div style={{ padding: '12px 16px', borderBottom: '1px solid rgb(56, 57, 67)' }}>
-                    <div style={{ fontSize: 12, color: 'rgba(248, 248, 252, 0.6)', fontFamily: "'DynaPuff', sans-serif" }}>
-                      Game Balance
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 18, fontWeight: 600, color: '#00ff88', fontFamily: "'DynaPuff', sans-serif" }}>
-                      <img src={solanaLogo} alt="SOL" style={{ width: 24, height: 24 }} />
-                      {depositedBalance.toFixed(4)}
-                    </div>
-                  </div>
-                  
-                  {/* Wallet Address */}
-                  <div style={{ padding: '8px 16px', borderBottom: '1px solid rgb(56, 57, 67)' }}>
-                    <div style={{ fontSize: 11, color: 'rgba(248, 248, 252, 0.5)', fontFamily: "'DynaPuff', sans-serif" }}>
-                      {formatAddress(walletAddress)}
-                    </div>
-                  </div>
-                  
-                  {/* Disconnect */}
-                  <button
-                    onClick={() => { handleDisconnect(); setShowWalletMenu(false); }}
-                    style={{
-                      width: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 12,
-                      padding: '12px 16px',
-                      background: 'transparent',
-                      border: 'none',
-                      fontFamily: "'DynaPuff', sans-serif",
-                      fontSize: 14,
-                      color: '#f87171',
-                      cursor: 'pointer',
-                      transition: 'background 0.2s ease',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = 'rgba(248, 113, 113, 0.1)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'transparent';
-                    }}
-                  >
-                    <LogOut size={16} />
-                    Disconnect
-                  </button>
-                </motion.div>
-              )}
-            </AnimatePresence>
           </div>
         </div>
 
@@ -1473,7 +1390,7 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
             <div className="mobile-nav-username">
               {username || formatAddress(walletAddress)}
             </div>
-            <div className="mobile-nav-view-profile">
+            <div className="mobile-nav-view-profile" onClick={() => { setShowMobileNav(false); if (onOpenProfile) onOpenProfile(); }} style={{ cursor: 'pointer' }}>
               <User size={16} />
               View Profile
             </div>

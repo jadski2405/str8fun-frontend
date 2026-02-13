@@ -378,3 +378,36 @@ export interface BlitzTradeEvent {
   csol_balance: number;
   timestamp: number;
 }
+
+// ============================================================================
+// PROFILE MODAL — Stats, recent games, social connections
+// ============================================================================
+
+export interface ProfileStats {
+  games_played: number;
+  profitable_rounds: number;
+  total_pnl: number;
+  total_volume: number;
+  total_fees_paid: number;
+  bonus_sol_claimed: number;
+  pnl_7d: number;
+  pnl_rank_7d: number | null;
+  member_since: string;
+}
+
+export interface RecentGame {
+  round_id: string;
+  timestamp: string;
+  pnl: number;
+  peak_multiplier: number;
+  is_bust: boolean;
+}
+
+export interface SocialConnection {
+  provider: 'discord' | 'twitter';
+  provider_username: string;
+  provider_avatar?: string;
+  connected_at: string;
+}
+
+export type LeaderboardPeriod = '24h' | '7d' | '30d' | 'all';
