@@ -331,6 +331,140 @@ body {
 }
 
 /* ============================================
+   CHAT LEVEL BADGE - Green pill before username
+   ============================================ */
+.chat-level-badge {
+  display: inline-block;
+  padding: 1px 6px;
+  margin-right: 5px;
+  border-radius: 9999px;
+  font-family: 'DynaPuff', sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #15803d;
+  background: rgba(74, 222, 128, 0.18);
+  vertical-align: middle;
+  white-space: nowrap;
+  user-select: none;
+}
+
+/* ============================================
+   PLAYER PROFILE POPUP
+   ============================================ */
+.chat-player-popup-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+}
+
+.chat-player-popup {
+  position: relative;
+  width: 340px;
+  max-width: 92vw;
+  max-height: 80vh;
+  overflow-y: auto;
+  background: rgb(21, 22, 29);
+  border: 1px solid rgb(56, 57, 67);
+  border-radius: 16px;
+  padding: 20px;
+  font-family: 'DynaPuff', sans-serif;
+  color: rgb(248, 248, 252);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.chat-player-popup-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: none;
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: color 0.15s, background 0.15s;
+}
+.chat-player-popup-close:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.chat-player-popup-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 16px;
+}
+
+.chat-player-popup-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: #facc15;
+}
+
+.chat-player-popup-wallet {
+  font-size: 12px;
+  color: #9ca3af;
+  letter-spacing: 0.03em;
+}
+
+.chat-player-popup-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.chat-player-popup-stat {
+  display: flex;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+.chat-player-popup-stat .label {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-bottom: 2px;
+}
+.chat-player-popup-stat .value {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.chat-player-popup-games {
+  border-top: 1px solid rgb(56, 57, 67);
+  padding-top: 12px;
+}
+
+.chat-player-popup-game-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+  font-size: 13px;
+  border-bottom: 1px solid rgba(56, 57, 67, 0.4);
+}
+.chat-player-popup-game-row:last-child {
+  border-bottom: none;
+}
+
+.chat-player-popup-game-time {
+  color: #9ca3af;
+  font-size: 12px;
+}
+
+/* ============================================
    LIVE PNL FEED - Player Trades Ticker
    ============================================ */
 
@@ -1942,17 +2076,13 @@ body {
   overflow: hidden;
 }
 
-/* Mobile-specific: Position over chart + trading deck area */
+/* Mobile-specific: Position centered over viewport */
 @media (max-width: 767px) {
   .mobile-modal-content {
     width: 380px;
     max-width: 95vw;
-    /* Position to cover chart and trading deck */
-    /* Chart starts at ~74px (50px header + 24px margin), height 495px */
-    /* Trade deck adds ~80px below chart */
-    /* Total area: ~74px to ~650px, center = ~362px */
-    top: 32%;
-    left: 6%;
+    top: 50%;
+    left: 50%;
     transform: translate(-50%, -50%);
     border-radius: 12px;
   }
@@ -6377,4 +6507,100 @@ body {
     align-items: flex-start;
     gap: 8px;
   }
+}
+
+/* ============================================================================
+   FIRST-DEPOSIT BONUS POPUP
+   ============================================================================ */
+.first-deposit-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 16px;
+}
+
+.first-deposit-modal {
+  position: relative;
+  background: rgb(21, 22, 29);
+  border: 1px solid rgb(56, 57, 67);
+  border-radius: 16px;
+  padding: 32px 28px;
+  width: 100%;
+  max-width: 360px;
+  text-align: center;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+}
+
+.first-deposit-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: none;
+  color: rgb(140, 142, 155);
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.first-deposit-close:hover {
+  background: rgb(42, 43, 54);
+  color: #fff;
+}
+
+.first-deposit-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.first-deposit-title {
+  font-family: 'DynaPuff', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 12px;
+}
+
+.first-deposit-text {
+  font-family: 'DynaPuff', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: #00ff88;
+  margin-bottom: 8px;
+}
+
+.first-deposit-subtext {
+  font-family: 'DynaPuff', sans-serif;
+  font-size: 12px;
+  color: rgb(140, 142, 155);
+  margin-bottom: 24px;
+}
+
+.first-deposit-cta {
+  width: 100%;
+  height: 48px;
+  background: linear-gradient(to right, #00ff88, #00cc6a);
+  border: none;
+  border-radius: 10px;
+  font-family: 'DynaPuff', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: rgb(21, 22, 29);
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.first-deposit-cta:hover {
+  opacity: 0.9;
 }

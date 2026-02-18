@@ -8,6 +8,7 @@ export interface ChatMessage {
   wallet_address: string;
   message: string;
   created_at: string;
+  level?: number;
 }
 
 interface UseChatOptions {
@@ -50,7 +51,15 @@ export function useChat({ walletAddress = null, getAuthToken = undefined, limit 
         if (!response.ok) throw new Error('Failed to fetch messages');
         const data = await response.json();
         // API returns oldest to newest already
-        const msgs: ChatMessage[] = Array.isArray(data) ? data : (data.messages || []);
+        const raw: any[] = Array.isArray(data) ? data : (data.messages || []);
+        const msgs: ChatMessage[] = raw.map(m => ({
+          id: m.id,
+          username: m.username || '',
+          wallet_address: m.wallet_address || '',
+          message: m.message || '',
+          created_at: m.created_at || '',
+          level: typeof m.level === 'number' ? m.level : undefined,
+        }));
         setMessages(msgs);
       } catch (err) {
         console.error('[useChat] Error fetching messages:', err);
@@ -74,6 +83,7 @@ export function useChat({ walletAddress = null, getAuthToken = undefined, limit 
         wallet_address: detail.wallet_address || '',
         message: detail.message || '',
         created_at: detail.created_at || new Date().toISOString(),
+        level: typeof detail.level === 'number' ? detail.level : undefined,
       };
 
       setMessages(prev => {

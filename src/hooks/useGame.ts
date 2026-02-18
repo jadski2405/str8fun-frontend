@@ -486,20 +486,6 @@ export function useGame(
               setCountdownRemaining(COUNTDOWN_SECONDS);
               isTransitioningRef.current = false;
             }, GET_RINSED_DURATION);
-
-            // Accumulate round history from crash event
-            const crashedRoundId = data.round_id || roundIdRef.current || '';
-            const peakMult = Number(data.peak_multiplier || data.final_multiplier) || 0;
-            const thumbnailUrl = data.thumbnail_url || undefined;
-            setRoundHistory(prev => {
-              const entry: RoundResult = {
-                roundId: crashedRoundId,
-                peakMultiplier: peakMult,
-                isBust: peakMult < 1.0,
-                thumbnailUrl,
-              };
-              return [entry, ...prev].slice(0, 20);
-            });
           }
 
           // TRADE events — do NOT move chart, just update feed
@@ -556,7 +542,7 @@ export function useGame(
             window.dispatchEvent(new CustomEvent('pumpit:blitz_trade', { detail: data }));
           }
 
-          // Round history update — new round completed, append to history
+          // Round history update — new round completed, add or update entry
           if (data.type === 'ROUND_HISTORY_UPDATE' && data.round) {
             const r = data.round;
             setRoundHistory(prev => {
@@ -566,8 +552,13 @@ export function useGame(
                 isBust: Number(r.peak_multiplier) < 1.0,
                 thumbnailUrl: r.thumbnail_url || undefined,
               };
-              // Deduplicate by roundId
-              if (prev.some(p => p.roundId === entry.roundId)) return prev;
+              // Update existing entry if present, otherwise prepend
+              const idx = prev.findIndex(p => p.roundId === entry.roundId);
+              if (idx !== -1) {
+                const updated = [...prev];
+                updated[idx] = entry;
+                return updated;
+              }
               return [entry, ...prev].slice(0, 20);
             });
           }

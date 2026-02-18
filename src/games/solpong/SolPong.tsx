@@ -3,6 +3,7 @@ import { MessageCircle } from 'lucide-react';
 import GlobalHeader from '../../components/GlobalHeader';
 import GlobalChatSidebar from '../../components/GlobalChatSidebar';
 import { useSolanaWallet } from '../../hooks/useSolanaWallet';
+import { useGame } from '../../hooks/useGame';
 
 const SolPong: React.FC = () => {
   // Chat sidebar state - open by default on desktop, collapsed on mobile
@@ -12,7 +13,8 @@ const SolPong: React.FC = () => {
     }
     return false;
   });
-  const { isConnected, publicKey, getAuthToken } = useSolanaWallet();
+  const { isConnected, publicKey, getAuthToken, profileId } = useSolanaWallet();
+  const game = useGame(profileId, publicKey || null, getAuthToken);
 
   return (
     <div className={`layout-vertical ${!chatCollapsed ? 'sidebar-open' : ''}`}>
@@ -34,7 +36,7 @@ const SolPong: React.FC = () => {
               isWalletConnected={isConnected}
               walletAddress={publicKey || null}
               getAuthToken={getAuthToken}
-              onlineCount={50}
+              onlineCount={game.onlineCount}
             />
           </div>
         </aside>

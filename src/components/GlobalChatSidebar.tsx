@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Send, MessageCircle, Loader2 } from 'lucide-react';
+import { Send, MessageCircle, Loader2, X } from 'lucide-react';
 import { useChat } from '../hooks/useChat';
-import { tierIconUrl } from '../types/game';
+import { tierIconUrl, ProfileStats, RecentGame } from '../types/game';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://api.str8.fun';
 
@@ -15,6 +15,87 @@ interface GlobalChatSidebarProps {
   playerTier?: number;
 }
 
+/* ============ Player Profile Popup ============ */
+interface PlayerPopupProps {
+  wallet: string;
+  username: string;
+  onClose: () => void;
+}
+
+const PlayerPopup: React.FC<PlayerPopupProps> = ({ wallet, username, onClose }) => {
+  const [stats, setStats] = useState<ProfileStats | null>(null);
+  const [games, setGames] = useState<RecentGame[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const [sRes, gRes] = await Promise.all([
+          fetch(`${API_URL}/api/profile/stats?wallet=${wallet}`),
+          fetch(`${API_URL}/api/profile/recent-games?wallet=${wallet}`),
+        ]);
+        if (!cancelled && sRes.ok) setStats(await sRes.json());
+        if (!cancelled && gRes.ok) {
+          const gData = await gRes.json();
+          setGames(Array.isArray(gData) ? gData : gData.games || []);
+        }
+      } catch { /* ignore */ }
+      if (!cancelled) setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [wallet]);
+
+  return (
+    <div className="chat-player-popup-overlay" onClick={onClose}>
+      <div className="chat-player-popup" onClick={e => e.stopPropagation()}>
+        <button className="chat-player-popup-close" onClick={onClose}><X size={18} /></button>
+        <div className="chat-player-popup-header">
+          <span className="chat-player-popup-name">{username}</span>
+          <span className="chat-player-popup-wallet">{wallet.slice(0, 4)}...{wallet.slice(-4)}</span>
+        </div>
+
+        {loading ? (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: 24 }}>
+            <Loader2 size={24} className="text-[#2DE2E6] animate-spin" />
+          </div>
+        ) : stats ? (
+          <>
+            <div className="chat-player-popup-stats">
+              <div className="chat-player-popup-stat"><span className="label">Level</span><span className="value">{(stats as any).level ?? '—'}</span></div>
+              <div className="chat-player-popup-stat"><span className="label">XP</span><span className="value">{(stats as any).xp?.toLocaleString() ?? '—'}</span></div>
+              <div className="chat-player-popup-stat"><span className="label">Total PnL</span><span className="value" style={{ color: stats.total_pnl >= 0 ? '#4ade80' : '#f87171' }}>{stats.total_pnl >= 0 ? '+' : ''}{stats.total_pnl.toFixed(4)}</span></div>
+              <div className="chat-player-popup-stat"><span className="label">7d PnL</span><span className="value" style={{ color: stats.pnl_7d >= 0 ? '#4ade80' : '#f87171' }}>{stats.pnl_7d >= 0 ? '+' : ''}{stats.pnl_7d.toFixed(4)}</span></div>
+              <div className="chat-player-popup-stat"><span className="label">Games</span><span className="value">{stats.games_played}</span></div>
+              <div className="chat-player-popup-stat"><span className="label">Profitable</span><span className="value">{stats.profitable_rounds}</span></div>
+              <div className="chat-player-popup-stat"><span className="label">Volume</span><span className="value">{stats.total_volume.toFixed(2)}</span></div>
+              <div className="chat-player-popup-stat"><span className="label">Member Since</span><span className="value">{new Date(stats.member_since).toLocaleDateString()}</span></div>
+            </div>
+
+            {games.length > 0 && (
+              <div className="chat-player-popup-games">
+                <h4 style={{ margin: '0 0 8px', fontSize: 13, color: '#9ca3af' }}>Recent Games</h4>
+                {games.slice(0, 5).map(g => (
+                  <div key={g.round_id} className="chat-player-popup-game-row">
+                    <span className="chat-player-popup-game-time">{new Date(g.timestamp).toLocaleDateString()}</span>
+                    <span style={{ color: g.pnl >= 0 ? '#4ade80' : '#f87171', fontWeight: 600 }}>
+                      {g.pnl >= 0 ? '+' : ''}{g.pnl.toFixed(4)} SOL
+                    </span>
+                    <span style={{ color: '#9ca3af', fontSize: 12 }}>{g.peak_multiplier.toFixed(2)}x</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        ) : (
+          <p style={{ textAlign: 'center', color: '#9ca3af', padding: 16 }}>No profile data</p>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const GlobalChatSidebar: React.FC<GlobalChatSidebarProps> = ({ 
   isCollapsed: _isCollapsed, 
   onToggleCollapse: _onToggleCollapse,
@@ -25,6 +106,7 @@ const GlobalChatSidebar: React.FC<GlobalChatSidebarProps> = ({
   playerTier = 0,
 }) => {
   const [inputValue, setInputValue] = useState('');
+  const [popupPlayer, setPopupPlayer] = useState<{ wallet: string; username: string } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   
@@ -242,7 +324,13 @@ const GlobalChatSidebar: React.FC<GlobalChatSidebarProps> = ({
                   
                   {/* Content Container - Username + Message */}
                   <div className="chat-content">
-                    <span className="chat-username">
+                    {typeof msg.level === 'number' && (
+                      <span className="chat-level-badge">Lv{msg.level}</span>
+                    )}
+                    <span
+                      className="chat-username"
+                      onClick={() => msg.wallet_address && setPopupPlayer({ wallet: msg.wallet_address, username: displayName })}
+                    >
                       {displayName}
                     </span>
                     <span className="chat-message-text">{msg.message}</span>
@@ -391,6 +479,15 @@ const GlobalChatSidebar: React.FC<GlobalChatSidebarProps> = ({
           </div>
         )}
       </div>
+
+      {/* Player Profile Popup */}
+      {popupPlayer && (
+        <PlayerPopup
+          wallet={popupPlayer.wallet}
+          username={popupPlayer.username}
+          onClose={() => setPopupPlayer(null)}
+        />
+      )}
     </div>
   );
 };

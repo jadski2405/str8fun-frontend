@@ -12,8 +12,6 @@ import solanaLogo from '../assets/logo_solana.png';
 
 interface GlobalHeaderProps {
   // Props can be extended as needed
-  onOpenDeposit?: () => void;
-  onOpenWithdraw?: () => void;
   onToggleChat?: () => void;
   xpState?: PlayerXpState | null;
   onOpenChests?: () => void;
@@ -49,7 +47,7 @@ interface TransactionDropdownProps {
   isOpen: boolean;
   onClose: () => void;
   balance: number;
-  onTransaction: (amount: number, promoCode?: string) => Promise<{ success: boolean; error?: string }>;
+  onTransaction: (amount: number, promoCode?: string) => Promise<{ success: boolean; error?: string; message?: string }>;
 }
 
 const TransactionDropdown: React.FC<TransactionDropdownProps> = ({ 
@@ -63,6 +61,7 @@ const TransactionDropdown: React.FC<TransactionDropdownProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [successText, setSuccessText] = useState('');
   const [promoCode, setPromoCode] = useState('');
   const [promoStatus, setPromoStatus] = useState<'idle' | 'applied' | 'invalid'>('idle');
   const [showPromoInput, setShowPromoInput] = useState(false);
@@ -90,6 +89,7 @@ const TransactionDropdown: React.FC<TransactionDropdownProps> = ({
       const result = await onTransaction(amountNum, code);
       if (result.success) {
         setSuccess(true);
+        setSuccessText(type === 'withdraw' ? (result.message || 'Withdrawal in progress') : 'Deposit successful!');
         setAmount('');
         setPromoCode('');
         setPromoStatus('idle');
@@ -97,6 +97,7 @@ const TransactionDropdown: React.FC<TransactionDropdownProps> = ({
         // Auto-close after success
         setTimeout(() => {
           setSuccess(false);
+          setSuccessText('');
           onClose();
         }, 1500);
       } else {
@@ -424,7 +425,7 @@ const TransactionDropdown: React.FC<TransactionDropdownProps> = ({
                   textAlign: 'center',
                 }}
               >
-                {type === 'deposit' ? 'Deposit successful!' : 'Withdrawal successful!'}
+                {successText || (type === 'deposit' ? 'Deposit successful!' : 'Withdrawal in progress')}
               </div>
             )}
 
@@ -521,7 +522,7 @@ interface MobileTransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
   balance: number;
-  onTransaction: (amount: number, promoCode?: string) => Promise<{ success: boolean; error?: string }>;
+  onTransaction: (amount: number, promoCode?: string) => Promise<{ success: boolean; error?: string; message?: string }>;
 }
 
 const MobileTransactionModal: React.FC<MobileTransactionModalProps> = ({ 
@@ -535,6 +536,7 @@ const MobileTransactionModal: React.FC<MobileTransactionModalProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [successText, setSuccessText] = useState('');
   const [promoCode, setPromoCode] = useState('');
   const [promoStatus, setPromoStatus] = useState<'idle' | 'applied' | 'invalid'>('idle');
   const [showPromoInput, setShowPromoInput] = useState(false);
@@ -562,12 +564,14 @@ const MobileTransactionModal: React.FC<MobileTransactionModalProps> = ({
       const result = await onTransaction(amountNum, code);
       if (result.success) {
         setSuccess(true);
+        setSuccessText(type === 'withdraw' ? (result.message || 'Withdrawal in progress') : 'Deposit successful!');
         setAmount('');
         setPromoCode('');
         setPromoStatus('idle');
         setShowPromoInput(false);
         setTimeout(() => {
           setSuccess(false);
+          setSuccessText('');
           onClose();
         }, 1500);
       } else {
@@ -799,7 +803,7 @@ const MobileTransactionModal: React.FC<MobileTransactionModalProps> = ({
                     textAlign: 'center',
                   }}
                 >
-                  {type === 'deposit' ? 'Deposit successful!' : 'Withdrawal successful!'}
+                  {successText || (type === 'deposit' ? 'Deposit successful!' : 'Withdrawal in progress')}
                 </div>
               )}
 
@@ -915,7 +919,7 @@ const GameNavButtons: React.FC = () => {
   );
 };
 
-const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat, onOpenDeposit, onOpenWithdraw, xpState, onOpenChests, blitz, activeCurrency, onCurrencyChange, onOpenProfile }) => {
+const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat, xpState, onOpenChests, blitz, activeCurrency, onCurrencyChange, onOpenProfile }) => {
   // Router hooks for navigation
   const location = useLocation();
   const navigate = useNavigate();
@@ -978,6 +982,23 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
       document.body.classList.remove('mobile-nav-open');
     };
   }, [showMobileNav]);
+
+  // Listen for pumpit:open-deposit custom event (fired when user tries to trade with 0 balance)
+  useEffect(() => {
+    const handleOpenDepositEvent = () => {
+      if (window.innerWidth <= 767) {
+        setShowMobileDeposit(true);
+      } else {
+        setShowWithdrawMenu(false);
+        setShowDepositMenu(true);
+        setShowDepositPromo(true);
+        if (depositPromoTimer.current) clearTimeout(depositPromoTimer.current);
+        depositPromoTimer.current = setTimeout(() => setShowDepositPromo(false), 5000);
+      }
+    };
+    window.addEventListener('pumpit:open-deposit', handleOpenDepositEvent);
+    return () => window.removeEventListener('pumpit:open-deposit', handleOpenDepositEvent);
+  }, []);
 
   // Close other menus when opening one
   const handleOpenDeposit = () => {
@@ -1402,11 +1423,7 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
               className="mobile-nav-action-btn mobile-nav-withdraw"
               onClick={() => {
                 setShowMobileNav(false);
-                if (onOpenWithdraw) {
-                  onOpenWithdraw();
-                } else {
-                  setShowMobileWithdraw(true);
-                }
+                setShowMobileWithdraw(true);
               }}
             >
               <ArrowUpFromLine size={14} />
@@ -1416,11 +1433,7 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
               className="mobile-nav-action-btn mobile-nav-deposit"
               onClick={() => {
                 setShowMobileNav(false);
-                if (onOpenDeposit) {
-                  onOpenDeposit();
-                } else {
-                  setShowMobileDeposit(true);
-                }
+                setShowMobileDeposit(true);
               }}
             >
               <ArrowDownToLine size={14} />

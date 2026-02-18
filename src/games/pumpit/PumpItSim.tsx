@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLogin, usePrivy } from '@privy-io/react-auth';
-import { MessageCircle } from 'lucide-react';
+import { MessageCircle, X } from 'lucide-react';
 import RugsChart from './RugsChart';
 import TradeDeck, { MobileTradeDeck } from './TradeDeck';
 import LivePnLFeed, { PlayerPnL } from './LivePnLFeed';
@@ -115,10 +115,10 @@ const PumpItSim: React.FC = () => {
   const { 
     isConnected: connected,
     publicKey,
-    balance: walletBalance, 
+    balance: _walletBalance, 
     depositedBalance,
-    deposit,
-    withdraw,
+    deposit: _deposit,
+    withdraw: _withdraw,
     refreshDepositedBalance,
     updateDepositedBalance,
     profileId,
@@ -165,16 +165,11 @@ const PumpItSim: React.FC = () => {
   // Trading state
   const [isProcessingTrade, setIsProcessingTrade] = useState(false);
   
-  // Deposit/Withdraw UI state
-  const [showDepositModal, setShowDepositModal] = useState(false);
-  const [depositAmount, setDepositAmount] = useState('');
-  const [promoCode, setPromoCode] = useState('');
-  const [promoStatus, setPromoStatus] = useState<'idle' | 'applied' | 'invalid'>('idle');
-  const [withdrawAmount, setWithdrawAmount] = useState('');
-  const [isDepositing, setIsDepositing] = useState(false);
-  const [isWithdrawing, setIsWithdrawing] = useState(false);
-  const [depositError, setDepositError] = useState<string | null>(null);
+  // Success message state
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  
+  // First-deposit bonus popup state
+  const [showFirstDepositBonus, setShowFirstDepositBonus] = useState(false);
   
   // Trade error state for user feedback
   const [tradeError, setTradeError] = useState<string | null>(null);
@@ -295,6 +290,10 @@ const PumpItSim: React.FC = () => {
     } else {
       setShowUsernameModal(false);
       setUsernameInput('');
+      // Show first-deposit bonus popup for new users with no balance
+      if (depositedBalance === 0) {
+        setShowFirstDepositBonus(true);
+      }
     }
   }, [usernameInput, usernameError, setUsername]);
 
@@ -562,9 +561,8 @@ const PumpItSim: React.FC = () => {
     const effectiveBalance = isCsol ? blitz.csolBalance : depositedBalance;
     
     if (!isCsol && depositedBalance <= 0) {
-      // Show deposit modal if no SOL balance
-      setShowDepositModal(true);
-      setDepositError('Deposit SOL to start trading');
+      // Trigger GlobalHeader's deposit modal via custom event
+      window.dispatchEvent(new CustomEvent('pumpit:open-deposit'));
       return;
     }
     
@@ -717,83 +715,6 @@ const PumpItSim: React.FC = () => {
   }, [connected, game, login, refreshDepositedBalance, updateDepositedBalance, activeCurrency]);
 
   // ============================================================================
-  // DEPOSIT/WITHDRAW HANDLERS
-  // ============================================================================
-  const handleDeposit = useCallback(async () => {
-    const amount = parseFloat(depositAmount);
-    if (isNaN(amount) || amount < 0.001) {
-      setDepositError('Minimum deposit is 0.001 SOL');
-      return;
-    }
-    if (amount > walletBalance) {
-      setDepositError('Insufficient wallet balance');
-      return;
-    }
-    
-    setIsDepositing(true);
-    setDepositError(null);
-    
-    try {
-      const trimmedPromo = promoCode.trim() || undefined;
-      const result = await deposit(amount, trimmedPromo);
-      if (result.success) {
-        setDepositAmount('');
-        setPromoCode('');
-        setPromoStatus('idle');
-        setShowDepositModal(false);
-        
-        // Show bonus celebration if applicable
-        if (result.bonusApplied && result.bonusAmount) {
-          setSuccessMessage(`🎉 Promo Applied! Deposit matched! +${result.bonusAmount} SOL bonus added!`);
-        } else if (trimmedPromo && result.promoMessage) {
-          // Promo code was entered but not applied — show reason
-          setSuccessMessage(`✅ Deposited ${amount} SOL — ❌ Promo Invalid: ${result.promoMessage}`);
-        } else if (trimmedPromo && !result.bonusApplied) {
-          setSuccessMessage(`✅ Deposited ${amount} SOL — ❌ Promo Invalid`);
-        } else {
-          setSuccessMessage(`✅ Deposited ${amount} SOL`);
-        }
-      } else {
-        setDepositError(result.error || 'Deposit failed');
-      }
-    } catch (error) {
-      setDepositError('Deposit failed');
-    } finally {
-      setIsDepositing(false);
-    }
-  }, [depositAmount, promoCode, walletBalance, deposit]);
-
-  const handleWithdraw = useCallback(async () => {
-    const amount = parseFloat(withdrawAmount);
-    if (isNaN(amount) || amount < 0.001) {
-      setDepositError('Minimum withdrawal is 0.001 SOL');
-      return;
-    }
-    if (amount > depositedBalance) {
-      setDepositError('Insufficient deposited balance');
-      return;
-    }
-    
-    setIsWithdrawing(true);
-    setDepositError(null);
-    
-    try {
-      const result = await withdraw(amount);
-      if (result.success) {
-        setWithdrawAmount('');
-        // Show pending message for withdrawals
-        setSuccessMessage(result.message || '⏳ Withdrawal submitted - processing within 24-48 hours');
-      } else {
-        setDepositError(result.error || 'Withdrawal failed');
-      }
-    } catch (error) {
-      setDepositError('Withdrawal failed');
-    } finally {
-      setIsWithdrawing(false);
-    }
-  }, [withdrawAmount, depositedBalance, withdraw]);
-
-  // ============================================================================
   // CALCULATED VALUES
   // ============================================================================
   const displayBalance = connected ? depositedBalance : 10.0; // Show 10 SOL for demo when not connected
@@ -910,164 +831,35 @@ const PumpItSim: React.FC = () => {
         </div>
       )}
 
-      {/* Deposit/Withdraw Modal */}
-      {showDepositModal && connected && !showUsernameModal && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#12171f] rounded-2xl border border-[#1f2937] p-6 w-full max-w-md">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-white">💰 Manage Balance</h2>
-              <button 
-                onClick={() => { setShowDepositModal(false); setDepositError(null); }}
-                className="text-gray-400 hover:text-white text-2xl leading-none w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#1a1f2a] transition-colors"
-              >
-                ×
-              </button>
+      {/* First-Deposit Bonus Popup */}
+      {showFirstDepositBonus && (
+        <div className="first-deposit-overlay" onClick={() => setShowFirstDepositBonus(false)}>
+          <div className="first-deposit-modal" onClick={(e) => e.stopPropagation()}>
+            <button
+              className="first-deposit-close"
+              onClick={() => setShowFirstDepositBonus(false)}
+            >
+              <X size={18} />
+            </button>
+            <div className="first-deposit-icon">
+              <img src={solanaLogo} alt="SOL" style={{ width: 48, height: 48 }} />
             </div>
-            
-            {/* Balance Display - Two columns */}
-            <div className="grid grid-cols-2 gap-3 mb-6">
-              <div className="bg-[#1a1f2a] rounded-xl p-4 text-center">
-                <div className="text-gray-400 text-xs uppercase tracking-wider mb-1">Wallet</div>
-                <div className="flex items-center justify-center gap-2">
-                  <img src={solanaLogo} alt="SOL" className="w-6 h-6" />
-                  <span className="text-white font-bold text-xl">{walletBalance.toFixed(4)}</span>
-                </div>
-              </div>
-              <div className="bg-[#1a1f2a] rounded-xl p-4 text-center border border-[#00ff88]/30">
-                <div className="text-[#00ff88] text-xs uppercase tracking-wider mb-1">Game Balance</div>
-                <div className="flex items-center justify-center gap-2">
-                  <img src={solanaLogo} alt="SOL" className="w-6 h-6" />
-                  <span className="text-[#00ff88] font-bold text-xl">{depositedBalance.toFixed(4)}</span>
-                </div>
-              </div>
+            <div className="first-deposit-title">Welcome Bonus</div>
+            <div className="first-deposit-text">
+              Deposit 1 SOL, get a 0.5 SOL reward
             </div>
-
-            {/* Promo Code */}
-            <div className="mb-4">
-              <label className="text-white text-sm font-medium mb-2 block">Have a promo code?</label>
-              <div className="flex gap-3">
-                <input
-                  type="text"
-                  value={promoCode}
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
-                    setPromoCode(val);
-                    setPromoStatus('idle');
-                  }}
-                  placeholder="Enter 4-digit code"
-                  maxLength={4}
-                  className="flex-1 bg-[#1a1f2a] border border-[#2a3441] rounded-xl px-3 py-3 text-white text-base tracking-widest text-center font-mono focus:outline-none focus:border-[#00ff88] transition-colors"
-                />
-                <button
-                  onClick={() => {
-                    if (promoCode.length === 4) {
-                      setPromoStatus('applied');
-                    } else {
-                      setPromoStatus('invalid');
-                    }
-                  }}
-                  disabled={promoCode.length !== 4}
-                  className="px-5 py-3 bg-gradient-to-r from-[#00ff88] to-[#00cc6a] text-black font-bold rounded-xl hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-base"
-                >
-                  Apply
-                </button>
-              </div>
-              {promoStatus === 'applied' && (
-                <p className="mt-2 text-sm text-[#00ff88]">✅ Promo code applied — bonus will be added on deposit</p>
-              )}
-              {promoStatus === 'invalid' && (
-                <p className="mt-2 text-sm text-red-400">❌ Enter a valid 4-digit promo code</p>
-              )}
+            <div className="first-deposit-subtext">
+              Limited time offer for new players
             </div>
-            
-            {/* Error Message */}
-            {depositError && (
-              <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm text-center">
-                {depositError}
-              </div>
-            )}
-            
-            {/* Deposit Section */}
-            <div className="mb-6">
-              <label className="text-gray-400 text-sm font-medium mb-3 block">Deposit SOL to Game</label>
-              <div className="flex gap-3">
-                <input
-                  type="number"
-                  value={depositAmount}
-                  onChange={(e) => setDepositAmount(e.target.value)}
-                  placeholder="0.00"
-                  step="0.01"
-                  min="0.01"
-                  className="flex-1 bg-[#1a1f2a] border border-[#2a3441] rounded-xl px-4 py-4 text-white text-lg focus:outline-none focus:border-[#00ff88] transition-colors"
-                />
-                <button
-                  onClick={handleDeposit}
-                  disabled={isDepositing}
-                  className="px-6 py-4 bg-gradient-to-r from-[#00ff88] to-[#00cc6a] text-black font-bold rounded-xl hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-lg"
-                >
-                  {isDepositing ? '...' : 'Deposit'}
-                </button>
-              </div>
-              <div className="flex gap-2 mt-3">
-                {[0.1, 0.25, 0.5, 1.0].map((val) => (
-                  <button
-                    key={val}
-                    onClick={() => setDepositAmount(val.toString())}
-                    className="flex-1 py-2.5 bg-[#1a1f2a] border border-[#2a3441] rounded-lg text-sm text-gray-400 hover:text-white hover:border-[#00ff88] transition-colors"
-                  >
-                    {val} SOL
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Divider */}
-            <div className="border-t border-[#2a3441] my-6"></div>
-            
-            {/* Withdraw Section */}
-            <div>
-              <label className="text-gray-400 text-sm font-medium mb-3 block">Withdraw SOL to Wallet</label>
-              <div className="flex gap-3">
-                <input
-                  type="number"
-                  value={withdrawAmount}
-                  onChange={(e) => setWithdrawAmount(e.target.value)}
-                  placeholder="0.00"
-                  step="0.01"
-                  min="0.01"
-                  className="flex-1 bg-[#1a1f2a] border border-[#2a3441] rounded-xl px-4 py-4 text-white text-lg focus:outline-none focus:border-[#00ff88] transition-colors"
-                />
-                <button
-                  onClick={handleWithdraw}
-                  disabled={isWithdrawing || depositedBalance <= 0}
-                  className="px-6 py-4 bg-[#2a3441] text-white font-bold rounded-xl hover:bg-[#3a4451] disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-lg"
-                >
-                  {isWithdrawing ? '...' : 'Withdraw'}
-                </button>
-              </div>
-              <div className="flex gap-2 mt-3">
-                {[25, 50, 75].map((pct) => (
-                  <button
-                    key={pct}
-                    onClick={() => setWithdrawAmount((depositedBalance * pct / 100).toFixed(4))}
-                    disabled={depositedBalance <= 0}
-                    className="flex-1 py-2.5 bg-[#1a1f2a] border border-[#2a3441] rounded-lg text-sm text-gray-400 hover:text-white hover:border-[#00ff88] transition-colors disabled:opacity-50"
-                  >
-                    {pct}%
-                  </button>
-                ))}
-                <button
-                  onClick={() => {
-                    const formatted = depositedBalance < 0.001 ? '0.000' : depositedBalance.toFixed(3);
-                    setWithdrawAmount(formatted);
-                  }}
-                  disabled={depositedBalance <= 0}
-                  className="flex-1 py-2.5 bg-[#1a1f2a] border border-[#2a3441] rounded-lg text-sm text-gray-400 hover:text-white hover:border-[#00ff88] transition-colors disabled:opacity-50"
-                >
-                  Max
-                </button>
-              </div>
-            </div>
+            <button
+              className="first-deposit-cta"
+              onClick={() => {
+                setShowFirstDepositBonus(false);
+                window.dispatchEvent(new CustomEvent('pumpit:open-deposit'));
+              }}
+            >
+              Deposit Now
+            </button>
           </div>
         </div>
       )}
@@ -1076,8 +868,6 @@ const PumpItSim: React.FC = () => {
       <GameLayout
         header={
           <GlobalHeader
-            onOpenDeposit={() => setShowDepositModal(true)}
-            onOpenWithdraw={() => setShowDepositModal(true)}
             onToggleChat={() => setChatCollapsed(!chatCollapsed)}
             xpState={rewards.xpState}
             onOpenChests={() => { rewards.fetchChests(); setChestsOpen(true); }}
