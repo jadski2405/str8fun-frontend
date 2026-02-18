@@ -65,12 +65,12 @@ const PlayerPopup: React.FC<PlayerPopupProps> = ({ wallet, username, onClose }) 
             <div className="chat-player-popup-stats">
               <div className="chat-player-popup-stat"><span className="label">Level</span><span className="value">{(stats as any).level ?? '—'}</span></div>
               <div className="chat-player-popup-stat"><span className="label">XP</span><span className="value">{(stats as any).xp?.toLocaleString() ?? '—'}</span></div>
-              <div className="chat-player-popup-stat"><span className="label">Total PnL</span><span className="value" style={{ color: stats.total_pnl >= 0 ? '#4ade80' : '#f87171' }}>{stats.total_pnl >= 0 ? '+' : ''}{stats.total_pnl.toFixed(4)}</span></div>
-              <div className="chat-player-popup-stat"><span className="label">7d PnL</span><span className="value" style={{ color: stats.pnl_7d >= 0 ? '#4ade80' : '#f87171' }}>{stats.pnl_7d >= 0 ? '+' : ''}{stats.pnl_7d.toFixed(4)}</span></div>
-              <div className="chat-player-popup-stat"><span className="label">Games</span><span className="value">{stats.games_played}</span></div>
-              <div className="chat-player-popup-stat"><span className="label">Profitable</span><span className="value">{stats.profitable_rounds}</span></div>
-              <div className="chat-player-popup-stat"><span className="label">Volume</span><span className="value">{stats.total_volume.toFixed(2)}</span></div>
-              <div className="chat-player-popup-stat"><span className="label">Member Since</span><span className="value">{new Date(stats.member_since).toLocaleDateString()}</span></div>
+              <div className="chat-player-popup-stat"><span className="label">Total PnL</span><span className="value" style={{ color: (stats.total_pnl ?? 0) >= 0 ? '#4ade80' : '#f87171' }}>{(stats.total_pnl ?? 0) >= 0 ? '+' : ''}{(stats.total_pnl ?? 0).toFixed(4)}</span></div>
+              <div className="chat-player-popup-stat"><span className="label">7d PnL</span><span className="value" style={{ color: (stats.pnl_7d ?? 0) >= 0 ? '#4ade80' : '#f87171' }}>{(stats.pnl_7d ?? 0) >= 0 ? '+' : ''}{(stats.pnl_7d ?? 0).toFixed(4)}</span></div>
+              <div className="chat-player-popup-stat"><span className="label">Games</span><span className="value">{stats.games_played ?? 0}</span></div>
+              <div className="chat-player-popup-stat"><span className="label">Profitable</span><span className="value">{stats.profitable_rounds ?? 0}</span></div>
+              <div className="chat-player-popup-stat"><span className="label">Volume</span><span className="value">{(stats.total_volume ?? 0).toFixed(2)}</span></div>
+              <div className="chat-player-popup-stat"><span className="label">Member Since</span><span className="value">{stats.member_since ? new Date(stats.member_since).toLocaleDateString() : '—'}</span></div>
             </div>
 
             {games.length > 0 && (
@@ -79,10 +79,10 @@ const PlayerPopup: React.FC<PlayerPopupProps> = ({ wallet, username, onClose }) 
                 {games.slice(0, 5).map(g => (
                   <div key={g.round_id} className="chat-player-popup-game-row">
                     <span className="chat-player-popup-game-time">{new Date(g.timestamp).toLocaleDateString()}</span>
-                    <span style={{ color: g.pnl >= 0 ? '#4ade80' : '#f87171', fontWeight: 600 }}>
-                      {g.pnl >= 0 ? '+' : ''}{g.pnl.toFixed(4)} SOL
+                    <span style={{ color: (g.pnl ?? 0) >= 0 ? '#4ade80' : '#f87171', fontWeight: 600 }}>
+                      {(g.pnl ?? 0) >= 0 ? '+' : ''}{(g.pnl ?? 0).toFixed(4)} SOL
                     </span>
-                    <span style={{ color: '#9ca3af', fontSize: 12 }}>{g.peak_multiplier.toFixed(2)}x</span>
+                    <span style={{ color: '#9ca3af', fontSize: 12 }}>{(g.peak_multiplier ?? 0).toFixed(2)}x</span>
                   </div>
                 ))}
               </div>
@@ -325,7 +325,7 @@ const GlobalChatSidebar: React.FC<GlobalChatSidebarProps> = ({
                   {/* Content Container - Username + Message */}
                   <div className="chat-content">
                     {typeof msg.level === 'number' && (
-                      <span className="chat-level-badge">Lv{msg.level}</span>
+                      <span className="chat-level-badge">{msg.level}</span>
                     )}
                     <span
                       className="chat-username"
