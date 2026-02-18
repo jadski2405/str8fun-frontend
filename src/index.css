@@ -6468,6 +6468,109 @@ body {
   cursor: not-allowed;
 }
 
+/* ── Deposits / Withdrawals Tabs ───────────────────────────────────────────── */
+
+.profile-tx-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.profile-tx-loading {
+  display: flex;
+  justify-content: center;
+  padding: 32px 0;
+}
+
+.profile-tx-empty {
+  text-align: center;
+  color: rgba(156, 163, 175, 0.6);
+  font-size: 14px;
+  padding: 32px 0;
+}
+
+.profile-tx-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.profile-tx-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  gap: 12px;
+}
+
+.profile-tx-amount {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.profile-tx-sol {
+  font-family: 'DynaPuff', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  color: #f8f8fc;
+}
+
+.profile-tx-status {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-family: 'DynaPuff', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+.profile-tx-status.pending {
+  color: #facc15;
+  background: rgba(250, 204, 21, 0.12);
+}
+.profile-tx-status.confirmed {
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.12);
+}
+.profile-tx-status.completed {
+  color: #4ade80;
+  background: rgba(74, 222, 128, 0.12);
+}
+
+.profile-tx-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.profile-tx-date {
+  font-size: 12px;
+  color: #9ca3af;
+  white-space: nowrap;
+}
+
+.profile-tx-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: 'DynaPuff', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: #3b82f6;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 0.15s;
+}
+.profile-tx-link:hover {
+  color: #60a5fa;
+  text-decoration: underline;
+}
+
 /* ── Responsive ────────────────────────────────────────────────────────────── */
 
 @media (max-width: 640px) {
@@ -6506,6 +6609,17 @@ body {
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
+  }
+
+  .profile-tab-btn {
+    font-size: 12px;
+    padding: 8px 0;
+  }
+
+  .profile-tx-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
   }
 }
 

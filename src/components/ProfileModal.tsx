@@ -1,16 +1,18 @@
-import React, { useState, useCallback } from 'react';
-import { X, LogOut, Copy, Check, Users, Link2, Trophy, ChevronRight } from 'lucide-react';
+import React, { useState, useCallback, useEffect } from 'react';
+import { X, LogOut, Copy, Check, Users, Link2, Trophy, ChevronRight, ExternalLink, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { UseProfileReturn } from '../hooks/useProfile';
 import type { UseReferralReturn } from '../hooks/useReferral';
 import type { PlayerXpState, LeaderboardPeriod } from '../types/game';
 import { TIER_COLORS, TIER_NAMES, tierIconUrl } from '../types/game';
 
+const API_URL = import.meta.env.VITE_API_URL || 'https://api.str8.fun';
+
 // ============================================================================
 // Types
 // ============================================================================
 
-type ProfileTab = 'profile' | 'refer' | 'socials';
+type ProfileTab = 'profile' | 'refer' | 'socials' | 'deposits' | 'withdrawals';
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -21,6 +23,7 @@ interface ProfileModalProps {
   xpState: PlayerXpState | null;
   profile: UseProfileReturn;
   referral: UseReferralReturn | null;
+  getAuthToken?: () => Promise<string | null>;
 }
 
 // ============================================================================
@@ -37,6 +40,23 @@ const ordinalSuffix = (n: number): string => {
   const v = n % 100;
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
 };
+
+// Transaction entry interfaces
+interface DepositEntry {
+  id: string;
+  amount: number;
+  status: 'pending' | 'confirmed' | 'completed';
+  tx_signature: string;
+  created_at: string;
+}
+
+interface WithdrawalEntry {
+  id: string;
+  amount: number;
+  status: 'pending' | 'confirmed' | 'completed';
+  tx_signature: string;
+  created_at: string;
+}
 
 // Discord SVG icon
 const DiscordIcon: React.FC<{ size?: number }> = ({ size = 20 }) => (
@@ -65,10 +85,17 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
   xpState,
   profile,
   referral,
+  getAuthToken,
 }) => {
   const [activeTab, setActiveTab] = useState<ProfileTab>('profile');
   const [copiedAddress, setCopiedAddress] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+
+  // Deposits / Withdrawals state
+  const [deposits, setDeposits] = useState<DepositEntry[]>([]);
+  const [withdrawals, setWithdrawals] = useState<WithdrawalEntry[]>([]);
+  const [depositsLoading, setDepositsLoading] = useState(false);
+  const [withdrawalsLoading, setWithdrawalsLoading] = useState(false);
 
   // Copy wallet address
   const handleCopyAddress = useCallback(() => {
@@ -87,6 +114,52 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
       setTimeout(() => setCopiedLink(false), 2000);
     });
   }, [referral?.referralLink]);
+
+  // Fetch deposits
+  const fetchDeposits = useCallback(async () => {
+    if (!getAuthToken || !walletAddress) return;
+    setDepositsLoading(true);
+    try {
+      const token = await getAuthToken();
+      const res = await fetch(`${API_URL}/api/profile/deposits?limit=20`, {
+        headers: {
+          'x-wallet-address': walletAddress,
+          ...(token ? { 'Authorization': `Bearer ${token}`, 'x-auth-token': token } : {}),
+        },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setDeposits(Array.isArray(data) ? data : data.deposits || []);
+      }
+    } catch { /* ignore */ }
+    setDepositsLoading(false);
+  }, [getAuthToken, walletAddress]);
+
+  // Fetch withdrawals
+  const fetchWithdrawals = useCallback(async () => {
+    if (!getAuthToken || !walletAddress) return;
+    setWithdrawalsLoading(true);
+    try {
+      const token = await getAuthToken();
+      const res = await fetch(`${API_URL}/api/profile/withdrawals?limit=20`, {
+        headers: {
+          'x-wallet-address': walletAddress,
+          ...(token ? { 'Authorization': `Bearer ${token}`, 'x-auth-token': token } : {}),
+        },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setWithdrawals(Array.isArray(data) ? data : data.withdrawals || []);
+      }
+    } catch { /* ignore */ }
+    setWithdrawalsLoading(false);
+  }, [getAuthToken, walletAddress]);
+
+  // Auto-fetch when switching to deposits/withdrawals tab
+  useEffect(() => {
+    if (activeTab === 'deposits' && deposits.length === 0) fetchDeposits();
+    if (activeTab === 'withdrawals' && withdrawals.length === 0) fetchWithdrawals();
+  }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handle disconnect
   const handleDisconnect = useCallback(() => {
@@ -154,6 +227,18 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
               onClick={() => setActiveTab('socials')}
             >
               Socials
+            </button>
+            <button
+              className={`profile-tab-btn${activeTab === 'deposits' ? ' active' : ''}`}
+              onClick={() => { setActiveTab('deposits'); fetchDeposits(); }}
+            >
+              Deposits
+            </button>
+            <button
+              className={`profile-tab-btn${activeTab === 'withdrawals' ? ' active' : ''}`}
+              onClick={() => { setActiveTab('withdrawals'); fetchWithdrawals(); }}
+            >
+              Withdrawals
             </button>
           </div>
         </div>
@@ -510,6 +595,100 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
                     isDisconnecting={profile.isDisconnecting}
                     accentColor="#fff"
                   />
+                </div>
+              </motion.div>
+            )}
+
+            {/* ══════════════════ DEPOSITS TAB ══════════════════ */}
+            {activeTab === 'deposits' && (
+              <motion.div
+                key="deposits"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
+                transition={{ duration: 0.15 }}
+                className="profile-tab-content"
+              >
+                <div className="profile-tx-tab">
+                  <h3 className="profile-section-title">Deposit History</h3>
+                  {depositsLoading ? (
+                    <div className="profile-tx-loading">
+                      <Loader2 size={24} className="animate-spin" style={{ color: '#3B82F6' }} />
+                    </div>
+                  ) : deposits.length > 0 ? (
+                    <div className="profile-tx-list">
+                      {deposits.map(d => (
+                        <div key={d.id} className="profile-tx-row">
+                          <div className="profile-tx-amount">
+                            <span className="profile-tx-sol">{(d.amount ?? 0).toFixed(4)} SOL</span>
+                            <span className={`profile-tx-status ${d.status}`}>{d.status}</span>
+                          </div>
+                          <div className="profile-tx-meta">
+                            <span className="profile-tx-date">{new Date(d.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                            {d.tx_signature && (
+                              <a
+                                href={`https://solscan.io/tx/${d.tx_signature}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="profile-tx-link"
+                              >
+                                Solscan <ExternalLink size={12} />
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="profile-tx-empty">No deposits yet</div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+
+            {/* ══════════════════ WITHDRAWALS TAB ══════════════════ */}
+            {activeTab === 'withdrawals' && (
+              <motion.div
+                key="withdrawals"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
+                transition={{ duration: 0.15 }}
+                className="profile-tab-content"
+              >
+                <div className="profile-tx-tab">
+                  <h3 className="profile-section-title">Withdrawal History</h3>
+                  {withdrawalsLoading ? (
+                    <div className="profile-tx-loading">
+                      <Loader2 size={24} className="animate-spin" style={{ color: '#3B82F6' }} />
+                    </div>
+                  ) : withdrawals.length > 0 ? (
+                    <div className="profile-tx-list">
+                      {withdrawals.map(w => (
+                        <div key={w.id} className="profile-tx-row">
+                          <div className="profile-tx-amount">
+                            <span className="profile-tx-sol">{(w.amount ?? 0).toFixed(4)} SOL</span>
+                            <span className={`profile-tx-status ${w.status}`}>{w.status}</span>
+                          </div>
+                          <div className="profile-tx-meta">
+                            <span className="profile-tx-date">{new Date(w.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                            {w.tx_signature && (
+                              <a
+                                href={`https://solscan.io/tx/${w.tx_signature}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="profile-tx-link"
+                              >
+                                Solscan <ExternalLink size={12} />
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="profile-tx-empty">No withdrawals yet</div>
+                  )}
                 </div>
               </motion.div>
             )}

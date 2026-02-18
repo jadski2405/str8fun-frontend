@@ -1096,6 +1096,7 @@ const PumpItSim: React.FC = () => {
         xpState={rewards.xpState}
         profile={profileData}
         referral={referral}
+        getAuthToken={getAuthToken}
       />
     </>
   );
