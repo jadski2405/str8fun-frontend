@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LogOut, ArrowDownToLine, ArrowUpFromLine, X, Menu, User } from 'lucide-react';
+import { LogOut, ArrowDownToLine, ArrowUpFromLine, X, Menu, User, TrendingUp, Bomb } from 'lucide-react';
 import { useLogin, usePrivy } from '@privy-io/react-auth';
 import { useSolanaWallet } from '../hooks/useSolanaWallet';
 import BlitzHeaderCarousel from './BlitzHeaderCarousel';
@@ -860,7 +860,7 @@ const GameNavButtons: React.FC = () => {
   const navigate = useNavigate();
   
   const isPumpit = location.pathname === '/';
-  const isSolpong = location.pathname === '/solpong';
+  const isSolpong = location.pathname === '/solpong' || location.pathname === '/mineit';
   
   const baseButtonStyle: React.CSSProperties = {
     height: 36,
@@ -901,8 +901,8 @@ const GameNavButtons: React.FC = () => {
           boxShadow: isPumpit ? activeGlow : inactiveShadow,
         }}
       >
-        <span>🎰</span>
-        <span>Pumpit</span>
+        <TrendingUp size={16} color="#22C55E" strokeWidth={2.5} />
+        <span>PumpIt</span>
       </button>
       <button
         type="button"
@@ -912,8 +912,8 @@ const GameNavButtons: React.FC = () => {
           boxShadow: isSolpong ? activeGlow : inactiveShadow,
         }}
       >
-        <span>🏓</span>
-        <span>SolPong</span>
+        <Bomb size={16} />
+        <span>MineIt</span>
       </button>
     </div>
   );
@@ -1468,8 +1468,8 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
                 boxShadow: location.pathname === '/' ? 'rgba(250, 204, 21, 0.4) 0px 0px 12px 0px, #b89b10 0px 4px 0px 0px' : '#b89b10 0px 4px 0px 0px',
               }}
             >
-              <span>🎰</span>
-              <span>Pumpit</span>
+              <TrendingUp size={14} color="#22C55E" strokeWidth={2.5} />
+              <span>PumpIt</span>
             </button>
             <button
               type="button"
@@ -1493,11 +1493,11 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 6,
-                boxShadow: location.pathname === '/solpong' ? 'rgba(250, 204, 21, 0.4) 0px 0px 12px 0px, #b89b10 0px 4px 0px 0px' : '#b89b10 0px 4px 0px 0px',
+                boxShadow: location.pathname === '/solpong' || location.pathname === '/mineit' ? 'rgba(250, 204, 21, 0.4) 0px 0px 12px 0px, #b89b10 0px 4px 0px 0px' : '#b89b10 0px 4px 0px 0px',
               }}
             >
-              <span>🏓</span>
-              <span>SolPong</span>
+              <Bomb size={14} />
+              <span>MineIt</span>
             </button>
           </div>
 
