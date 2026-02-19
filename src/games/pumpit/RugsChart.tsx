@@ -63,7 +63,7 @@ const SHOW_GRID_LINES = true; // Left-side multiplier labels + subtle grid lines
 
 // Animation smoothing
 const Y_AXIS_LERP_ZOOM_OUT = 0.25; // Fast snap when range needs to grow
-const Y_AXIS_LERP_ZOOM_IN = 0;     // Ratchet prevents zoom-in within a round
+const Y_AXIS_LERP_ZOOM_IN = 0.01;  // Very slow zoom-in so animated values can converge
 
 // ============================================================================
 // RUGS CHART COMPONENT - Canvas Based for 60fps
@@ -90,6 +90,7 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
 
   // Reset-view ref — set synchronously during render so the RAF loop sees it immediately
   const resetViewRef = useRef(false);
+  const prevResetViewRef = useRef(false);
   
   // Keep refs for loop
   const dataRef = useRef(data);
@@ -114,13 +115,15 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
   }, [data, currentPrice, startPrice, tradeMarkers, hasPosition, entryMultiplier, unrealizedPnL, showPnL]);
 
   // ============================================================================
-  // RESET VIEW - Set ref synchronously during render (NOT in useEffect)
-  // so the RAF loop sees it before the next frame, preventing stale candle
-  // data from re-expanding the ratchet and undoing the reset.
+  // RESET VIEW - Fire on rising edge only (false→true), not while held true.
+  // Set ref synchronously during render (NOT in useEffect) so the RAF loop
+  // sees it before the next frame, preventing stale candle data from
+  // re-expanding the ratchet and undoing the reset.
   // ============================================================================
-  if (resetView) {
+  if (resetView && !prevResetViewRef.current) {
     resetViewRef.current = true;
   }
+  prevResetViewRef.current = resetView;
 
   // ============================================================================
   // CANVAS SETUP - Dynamic sizing via ResizeObserver with retina scaling
