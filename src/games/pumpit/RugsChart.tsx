@@ -87,6 +87,9 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
   // Ratchet refs — Y-axis range can only GROW within a round (never shrink)
   const ratchetMinRef = useRef(startPrice * 0.95);
   const ratchetMaxRef = useRef(startPrice * 1.05);
+
+  // Reset-view ref — set synchronously during render so the RAF loop sees it immediately
+  const resetViewRef = useRef(false);
   
   // Keep refs for loop
   const dataRef = useRef(data);
@@ -111,19 +114,13 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
   }, [data, currentPrice, startPrice, tradeMarkers, hasPosition, entryMultiplier, unrealizedPnL, showPnL]);
 
   // ============================================================================
-  // RESET VIEW - Snap Y-axis back to 1.00x centered (on round end/new round)
+  // RESET VIEW - Set ref synchronously during render (NOT in useEffect)
+  // so the RAF loop sees it before the next frame, preventing stale candle
+  // data from re-expanding the ratchet and undoing the reset.
   // ============================================================================
-  useEffect(() => {
-    if (resetView) {
-      const sp = startPrice;
-      animatedMinRef.current = sp * 0.95;
-      animatedMaxRef.current = sp * 1.05;
-      targetMinRef.current = sp * 0.95;
-      targetMaxRef.current = sp * 1.05;
-      ratchetMinRef.current = sp * 0.95;
-      ratchetMaxRef.current = sp * 1.05;
-    }
-  }, [resetView, startPrice]);
+  if (resetView) {
+    resetViewRef.current = true;
+  }
 
   // ============================================================================
   // CANVAS SETUP - Dynamic sizing via ResizeObserver with retina scaling
@@ -235,11 +232,36 @@ const RugsChart: React.FC<RugsChartProps> = ({ data, currentPrice, startPrice, p
       const computedMin = startPrice - scaledBelow;
 
       // Ratchet: range can only GROW within a round — never shrink back
-      // This eliminates all wiggle/jitter from zoom-in/zoom-out oscillation
-      ratchetMaxRef.current = Math.max(ratchetMaxRef.current, computedMax);
-      ratchetMinRef.current = Math.min(ratchetMinRef.current, computedMin);
-      targetMaxRef.current = ratchetMaxRef.current;
-      targetMinRef.current = ratchetMinRef.current;
+      // This eliminates all wiggle/jitter from zoom-in/zoom-out oscillation.
+      //
+      // If resetViewRef is set, force-reset everything and skip ratchet expansion
+      // for this frame — prevents stale candle data from re-inflating range.
+      if (resetViewRef.current) {
+        const sp = startPrice;
+        ratchetMaxRef.current = sp * 1.05;
+        ratchetMinRef.current = sp * 0.95;
+        targetMaxRef.current = sp * 1.05;
+        targetMinRef.current = sp * 0.95;
+        animatedMaxRef.current = sp * 1.05;
+        animatedMinRef.current = sp * 0.95;
+        resetViewRef.current = false;
+      } else {
+        ratchetMaxRef.current = Math.max(ratchetMaxRef.current, computedMax);
+        ratchetMinRef.current = Math.min(ratchetMinRef.current, computedMin);
+
+        // Slow ratchet decay — gently contract toward computed range over time
+        // so the Y-axis can recover from old extremes within a long round
+        const RATCHET_DECAY = 0.002;
+        if (ratchetMaxRef.current > computedMax) {
+          ratchetMaxRef.current -= (ratchetMaxRef.current - computedMax) * RATCHET_DECAY;
+        }
+        if (ratchetMinRef.current < computedMin) {
+          ratchetMinRef.current += (computedMin - ratchetMinRef.current) * RATCHET_DECAY;
+        }
+
+        targetMaxRef.current = ratchetMaxRef.current;
+        targetMinRef.current = ratchetMinRef.current;
+      }
 
       // Asymmetric zoom: fast zoom-out (nothing clips), slow zoom-in (no jitter)
       const minLerp = targetMinRef.current < animatedMinRef.current ? Y_AXIS_LERP_ZOOM_OUT : Y_AXIS_LERP_ZOOM_IN;
