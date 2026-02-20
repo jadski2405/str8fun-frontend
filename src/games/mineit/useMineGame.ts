@@ -43,6 +43,13 @@ export interface MineGame {
   created_at: string;
   next_green_multiplier?: number;
   cashout_amount?: number;
+  // v2 fixed-track fields
+  greens_found: number;
+  green_track: number[];
+  max_multiplier: number;
+  max_payout: number;
+  auto_cashout?: boolean;
+  cap_hit?: boolean;
 }
 
 export interface RevealResult {
@@ -51,6 +58,8 @@ export interface RevealResult {
   slash_amount?: number;
   game_over: boolean;
   payout?: number;
+  auto_cashout?: boolean;
+  cap_hit?: boolean;
 }
 
 export interface MineHistoryEntry extends MineGame {
@@ -224,6 +233,8 @@ export function useMineGame(
         slash_amount: data.slash_amount,
         game_over: data.game_over,
         payout: data.payout,
+        auto_cashout: data.auto_cashout,
+        cap_hit: data.cap_hit,
       };
       if (mountedRef.current) {
         setGame(data.game);

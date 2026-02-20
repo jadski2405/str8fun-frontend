@@ -912,7 +912,7 @@ const GameNavButtons: React.FC = () => {
           boxShadow: isSolpong ? activeGlow : inactiveShadow,
         }}
       >
-        <Bomb size={16} />
+        <Bomb size={16} color="#ff4757" />
         <span>MineIt</span>
       </button>
     </div>
@@ -1496,7 +1496,7 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
                 boxShadow: location.pathname === '/solpong' || location.pathname === '/mineit' || location.pathname === '/mine' ? 'rgba(250, 204, 21, 0.4) 0px 0px 12px 0px, #b89b10 0px 4px 0px 0px' : '#b89b10 0px 4px 0px 0px',
               }}
             >
-              <Bomb size={14} />
+              <Bomb size={14} color="#ff4757" />
               <span>MineIt</span>
             </button>
           </div>

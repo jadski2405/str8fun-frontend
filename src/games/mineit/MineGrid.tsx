@@ -87,7 +87,7 @@ export default function MineGrid({
   const [clickedIndex, setClickedIndex] = useState<number | null>(null);
   const [animatingTiles, setAnimatingTiles] = useState<Set<number>>(new Set());
   const [tileMultipliers, setTileMultipliers] = useState<Map<number, number>>(new Map());
-  const cooldownRef = useRef(false);
+  const busyRef = useRef(false);
 
   useEffect(() => {
     if (!isRevealing) setClickedIndex(null);
@@ -99,30 +99,33 @@ export default function MineGrid({
   }, [revealedTiles.length]);
 
   const handleClick = useCallback(async (index: number) => {
-    if (disabled || gameOver || isRevealing || cooldownRef.current) return;
+    if (disabled || gameOver || busyRef.current) return;
     const state = getTileState(index, revealedTiles, tileMap, gameOver);
     if (state !== 'hidden') return;
 
-    cooldownRef.current = true;
+    busyRef.current = true;
     setClickedIndex(index);
     playTileClick();
 
-    const result = await onReveal(index);
-    if (result) {
-      // Store multiplier for this tile
-      if (result.tile_type === 'green' || result.tile_type === 'yellow') {
-        setTileMultipliers((prev) => new Map(prev).set(index, result.new_multiplier));
+    try {
+      const result = await onReveal(index);
+      if (result) {
+        // Store multiplier for this tile
+        if (result.tile_type === 'green' || result.tile_type === 'yellow') {
+          setTileMultipliers((prev) => new Map(prev).set(index, result.new_multiplier));
+        }
+        setAnimatingTiles((prev) => new Set(prev).add(index));
+        if (result.tile_type === 'green') playGreenReveal();
+        else if (result.tile_type === 'yellow') playYellowReveal();
+        else if (result.tile_type === 'red') playRedBust();
+        setTimeout(() => {
+          setAnimatingTiles((prev) => { const n = new Set(prev); n.delete(index); return n; });
+        }, 600);
       }
-      setAnimatingTiles((prev) => new Set(prev).add(index));
-      if (result.tile_type === 'green') playGreenReveal();
-      else if (result.tile_type === 'yellow') playYellowReveal();
-      else if (result.tile_type === 'red') playRedBust();
-      setTimeout(() => {
-        setAnimatingTiles((prev) => { const n = new Set(prev); n.delete(index); return n; });
-      }, 600);
+    } finally {
+      busyRef.current = false;
     }
-    setTimeout(() => { cooldownRef.current = false; }, 300);
-  }, [disabled, gameOver, isRevealing, revealedTiles, tileMap, onReveal]);
+  }, [disabled, gameOver, revealedTiles, tileMap, onReveal]);
 
   const totalTiles = gridSize * gridSize;
 
@@ -153,22 +156,20 @@ export default function MineGrid({
               clickable ? 'mine-tile--clickable' : '',
               isAnimating && (state === 'green' || state === 'yellow') ? 'mine-tile--pop' : '',
               isAnimating && state === 'red' ? 'mine-tile--dead' : '',
-              isClicked && isRevealing ? 'mine-tile--loading' : '',
               disabled ? 'mine-tile--idle' : '',
               (gameOver && isHidden) ? 'mine-tile--disabled' : '',
             ].filter(Boolean).join(' ')}
             disabled={!clickable}
-            onClick={() => handleClick(i)}
+            onPointerDown={(e) => { e.preventDefault(); handleClick(i); }}
+            onClick={(e) => e.preventDefault()}
             aria-label={`Tile ${i + 1}`}
           >
-            {/* 3D raised cover on unrevealed tiles */}
-            {isHidden && !(isClicked && isRevealing) && (
-              <div className="mine-tile-cover" />
+            {/* 3D raised cover — stays visible but pressed down while loading */}
+            {isHidden && (
+              <div className={`mine-tile-cover${isClicked && isRevealing ? ' mine-tile-cover--pressed' : ''}`} />
             )}
 
-            {isClicked && isRevealing ? (
-              <span className="mine-tile-spinner" />
-            ) : !isHidden ? (
+            {!isHidden ? (
               <span className={`mine-tile-face ${isGhost ? 'mine-tile-face--ghost' : ''}`}>
                 <TileIcon type={state} />
                 {/* Show multiplier under icon for green/yellow revealed tiles */}

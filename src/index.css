@@ -263,6 +263,18 @@ body {
   flex-shrink: 0;
 }
 
+/* Tier Icon Badge - Circular icon left of message */
+.chat-tier-badge {
+  width: 24px !important;
+  height: 24px !important;
+  min-width: 24px;
+  min-height: 24px;
+  border-radius: 50%;
+  object-fit: contain;
+  display: block;
+  flex-shrink: 0;
+}
+
 /* Badge - Crown/Level indicator */
 .chat-badge {
   padding: 2px 6px;
@@ -6723,6 +6735,19 @@ body {
    MINE IT — Stake-style Mines game
    ============================================================================ */
 
+/* ─── One-tap: kill 300ms mobile delay on all interactive elements ──────── */
+.mine-tile,
+.mine-bet-btn,
+.mine-input-action,
+.mine-stepper-btn,
+.mine-tab,
+.mine-icon-btn,
+.mine-slider {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
 /* ─── Main wrapper ──────────────────────────────────────────────────────── */
 .mine-main {
   overflow-y: auto;
@@ -7244,9 +7269,14 @@ body {
   opacity: 0.3;
 }
 
-/* Loading (spinner) */
-.mine-tile--loading .mine-tile-cover {
-  display: none;
+/* Pressed state — tile pushed down while awaiting server response */
+.mine-tile-cover--pressed {
+  transform: translateY(3px);
+  box-shadow:
+    0 0.05em 0 #1a1c28,
+    inset 0 1px 0 rgba(255,255,255,0.02);
+  background: #292b3a;
+  transition: transform 0.06s, box-shadow 0.06s;
 }
 
 /* ─── Revealed tiles (vibrant) ──────────────────────────────────────────── */
@@ -7317,16 +7347,7 @@ body {
   text-shadow: 0 0 6px rgba(251, 191, 36, 0.5);
 }
 
-/* Spinner */
-.mine-tile-spinner {
-  width: 18px;
-  height: 18px;
-  border: 2px solid rgba(255,255,255,0.12);
-  border-top-color: #00ff88;
-  border-radius: 50%;
-  animation: mine-spin 0.6s linear infinite;
-  z-index: 2;
-}
+
 
 /* ─── Tile Animations ───────────────────────────────────────────────────── */
 .mine-tile--pop {
@@ -7352,10 +7373,6 @@ body {
   100% { transform: translate(0, 0); }
 }
 
-@keyframes mine-spin {
-  to { transform: rotate(360deg); }
-}
-
 @keyframes mine-cashout-glow {
   0%, 100% { box-shadow: 0 0 14px rgba(250, 204, 21, 0.25); }
   50%      { box-shadow: 0 0 26px rgba(250, 204, 21, 0.45); }
@@ -7366,11 +7383,13 @@ body {
   .mine-game-frame {
     flex-direction: column;
     margin: 0;
-    padding-top: 5vh;
+    padding-top: 0;
     border-radius: 0;
     border: none;
     box-shadow: none;
     background: transparent;
+    transform: scale(0.70) translateY(-5vh);
+    transform-origin: top center;
   }
 
   /* Gems overlay — centered above grid on mobile */

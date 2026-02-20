@@ -122,9 +122,13 @@ const MineIt: React.FC = () => {
   const phaseLabel = useMemo((): string => {
     if (mine.phase === 'active') return 'Playing';
     if (mine.phase === 'ended' && mine.game?.status === 'bust') return 'Busted!';
-    if (mine.phase === 'ended' && mine.game?.status === 'cashout') return 'Cashed Out';
+    if (mine.phase === 'ended' && mine.game?.status === 'cashout') {
+      if (mine.game.auto_cashout && mine.game.cap_hit) return 'Max Payout Reached!';
+      if (mine.game.auto_cashout) return 'Board Cleared!';
+      return 'Cashed Out';
+    }
     return '';
-  }, [mine.phase, mine.game?.status]);
+  }, [mine.phase, mine.game?.status, mine.game?.auto_cashout, mine.game?.cap_hit]);
 
   // ==========================================================================
   // RENDER
@@ -148,6 +152,7 @@ const MineIt: React.FC = () => {
               walletAddress={publicKey || null}
               getAuthToken={getAuthToken}
               onlineCount={gameChat.onlineCount}
+              playerTier={0}
             />
           </div>
         </aside>
