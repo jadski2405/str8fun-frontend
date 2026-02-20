@@ -180,6 +180,9 @@ const MineIt: React.FC = () => {
                       placeholder="0.000"
                       autoComplete="off"
                     />
+                    <div className="mine-balance-display">
+                      <span className="mine-balance-value">{fmt(depositedBalance)}</span>
+                    </div>
                   </div>
                   <div className="mine-input-btn-wrap">
                     <button className="mine-input-action" onClick={handleHalf} disabled={configLocked}>½</button>

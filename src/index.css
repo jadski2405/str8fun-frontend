@@ -6960,6 +6960,19 @@ body {
 }
 .mine-input[type="number"] { -moz-appearance: textfield; }
 
+/* Balance display inside input row — matches TradeDeck */
+.mine-balance-display {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.mine-balance-value {
+  font-family: 'DynaPuff', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(248, 248, 252, 0.5);
+}
+
 /* Readonly values (Gems, Profit) */
 .mine-readonly-val {
   font-family: 'DynaPuff', sans-serif;
@@ -7236,50 +7249,72 @@ body {
   display: none;
 }
 
-/* ─── Revealed tiles ────────────────────────────────────────────────────── */
+/* ─── Revealed tiles (vibrant) ──────────────────────────────────────────── */
 .mine-tile--green {
-  background: radial-gradient(circle, rgba(16,185,129,0.25) 0%, rgba(16,185,129,0.08) 70%);
-  border: 1px solid rgba(16,185,129,0.3);
+  background: radial-gradient(circle, rgba(0, 255, 136, 0.35) 0%, rgba(0, 255, 136, 0.12) 60%, rgba(0, 255, 136, 0.04) 100%);
+  border: 1px solid rgba(0, 255, 136, 0.5);
+  box-shadow: inset 0 0 12px rgba(0, 255, 136, 0.15), 0 0 8px rgba(0, 255, 136, 0.2);
 }
 .mine-tile--yellow {
-  background: radial-gradient(circle, rgba(245,158,11,0.25) 0%, rgba(245,158,11,0.08) 70%);
-  border: 1px solid rgba(245,158,11,0.3);
+  background: radial-gradient(circle, rgba(251, 191, 36, 0.35) 0%, rgba(245, 158, 11, 0.12) 60%, rgba(245, 158, 11, 0.04) 100%);
+  border: 1px solid rgba(251, 191, 36, 0.5);
+  box-shadow: inset 0 0 12px rgba(251, 191, 36, 0.15), 0 0 8px rgba(251, 191, 36, 0.2);
 }
 .mine-tile--red {
-  background: radial-gradient(circle, rgba(239,68,68,0.3) 0%, rgba(239,68,68,0.08) 70%);
-  border: 1px solid rgba(239,68,68,0.4);
+  background: radial-gradient(circle, rgba(255, 71, 87, 0.4) 0%, rgba(255, 71, 87, 0.12) 60%, rgba(255, 71, 87, 0.04) 100%);
+  border: 1px solid rgba(255, 71, 87, 0.55);
+  box-shadow: inset 0 0 14px rgba(255, 71, 87, 0.2), 0 0 10px rgba(255, 71, 87, 0.25);
 }
 
 /* Ghost tiles (post-game unrevealed) */
 .mine-tile--ghost-green {
-  background: rgba(16,185,129,0.05);
-  border: 1px solid rgba(16,185,129,0.1);
+  background: rgba(0, 255, 136, 0.06);
+  border: 1px solid rgba(0, 255, 136, 0.12);
 }
 .mine-tile--ghost-yellow {
-  background: rgba(245,158,11,0.05);
-  border: 1px solid rgba(245,158,11,0.1);
+  background: rgba(251, 191, 36, 0.06);
+  border: 1px solid rgba(251, 191, 36, 0.12);
 }
 .mine-tile--ghost-red {
-  background: rgba(239,68,68,0.05);
-  border: 1px solid rgba(239,68,68,0.1);
+  background: rgba(255, 71, 87, 0.06);
+  border: 1px solid rgba(255, 71, 87, 0.12);
 }
 
 /* ─── Tile icons ────────────────────────────────────────────────────────── */
 .mine-tile-icon {
-  width: 50%;
-  height: 50%;
-  max-width: 36px;
-  max-height: 36px;
+  width: 40%;
+  height: 40%;
+  max-width: 28px;
+  max-height: 28px;
 }
 .mine-tile-face {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   width: 100%;
   height: 100%;
+  gap: 1px;
 }
 .mine-tile-face--ghost {
   opacity: 0.4;
+}
+
+/* Multiplier text under icon */
+.mine-tile-mult {
+  font-family: 'DynaPuff', sans-serif;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.3px;
+}
+.mine-tile-mult--green {
+  color: #00ff88;
+  text-shadow: 0 0 6px rgba(0, 255, 136, 0.5);
+}
+.mine-tile-mult--yellow {
+  color: #fbbf24;
+  text-shadow: 0 0 6px rgba(251, 191, 36, 0.5);
 }
 
 /* Spinner */
@@ -7287,7 +7322,7 @@ body {
   width: 18px;
   height: 18px;
   border: 2px solid rgba(255,255,255,0.12);
-  border-top-color: #10b981;
+  border-top-color: #00ff88;
   border-radius: 50%;
   animation: mine-spin 0.6s linear infinite;
   z-index: 2;

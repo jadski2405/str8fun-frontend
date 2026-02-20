@@ -86,11 +86,17 @@ export default function MineGrid({
 }: MineGridProps) {
   const [clickedIndex, setClickedIndex] = useState<number | null>(null);
   const [animatingTiles, setAnimatingTiles] = useState<Set<number>>(new Set());
+  const [tileMultipliers, setTileMultipliers] = useState<Map<number, number>>(new Map());
   const cooldownRef = useRef(false);
 
   useEffect(() => {
     if (!isRevealing) setClickedIndex(null);
   }, [isRevealing]);
+
+  // Reset multiplier map when a new game starts (revealedTiles empties)
+  useEffect(() => {
+    if (revealedTiles.length === 0) setTileMultipliers(new Map());
+  }, [revealedTiles.length]);
 
   const handleClick = useCallback(async (index: number) => {
     if (disabled || gameOver || isRevealing || cooldownRef.current) return;
@@ -103,6 +109,10 @@ export default function MineGrid({
 
     const result = await onReveal(index);
     if (result) {
+      // Store multiplier for this tile
+      if (result.tile_type === 'green' || result.tile_type === 'yellow') {
+        setTileMultipliers((prev) => new Map(prev).set(index, result.new_multiplier));
+      }
       setAnimatingTiles((prev) => new Set(prev).add(index));
       if (result.tile_type === 'green') playGreenReveal();
       else if (result.tile_type === 'yellow') playYellowReveal();
@@ -131,6 +141,8 @@ export default function MineGrid({
         const isGhost = state.startsWith('ghost-');
         const isHidden = state === 'hidden';
         const clickable = isHidden && !gameOver && !isRevealing && !disabled;
+        const tileMultiplier = tileMultipliers.get(i);
+        const baseType = state.replace('ghost-', '');
 
         return (
           <button
@@ -159,6 +171,12 @@ export default function MineGrid({
             ) : !isHidden ? (
               <span className={`mine-tile-face ${isGhost ? 'mine-tile-face--ghost' : ''}`}>
                 <TileIcon type={state} />
+                {/* Show multiplier under icon for green/yellow revealed tiles */}
+                {(baseType === 'green' || baseType === 'yellow') && tileMultiplier && !isGhost && (
+                  <span className={`mine-tile-mult mine-tile-mult--${baseType}`}>
+                    {tileMultiplier.toFixed(2)}×
+                  </span>
+                )}
               </span>
             ) : null}
           </button>
