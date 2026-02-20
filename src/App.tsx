@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import PumpItSim from './games/pumpit/PumpItSim'
 import SolPong from './games/solpong/SolPong'
+import MineIt from './games/mineit/MineIt'
 
 // Launch time: 7 PM EST on Feb 2, 2026
 // EST = UTC-5, so 7 PM EST = 00:00 UTC on Feb 3
@@ -139,6 +140,7 @@ function App() {
     <Routes>
       <Route path="/" element={<PumpItSim />} />
       <Route path="/solpong" element={<SolPong />} />
+      <Route path="/mine" element={<MineIt />} />
     </Routes>
   )
 }

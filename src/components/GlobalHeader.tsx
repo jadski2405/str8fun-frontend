@@ -860,7 +860,7 @@ const GameNavButtons: React.FC = () => {
   const navigate = useNavigate();
   
   const isPumpit = location.pathname === '/';
-  const isSolpong = location.pathname === '/solpong' || location.pathname === '/mineit';
+  const isSolpong = location.pathname === '/solpong' || location.pathname === '/mineit' || location.pathname === '/mine';
   
   const baseButtonStyle: React.CSSProperties = {
     height: 36,
@@ -906,7 +906,7 @@ const GameNavButtons: React.FC = () => {
       </button>
       <button
         type="button"
-        onClick={() => navigate('/solpong')}
+        onClick={() => navigate('/mine')}
         style={{
           ...baseButtonStyle,
           boxShadow: isSolpong ? activeGlow : inactiveShadow,
@@ -1475,7 +1475,7 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
               type="button"
               onClick={() => {
                 setShowMobileNav(false);
-                navigate('/solpong');
+                navigate('/mine');
               }}
               style={{
                 flex: 1,
@@ -1493,7 +1493,7 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 6,
-                boxShadow: location.pathname === '/solpong' || location.pathname === '/mineit' ? 'rgba(250, 204, 21, 0.4) 0px 0px 12px 0px, #b89b10 0px 4px 0px 0px' : '#b89b10 0px 4px 0px 0px',
+                boxShadow: location.pathname === '/solpong' || location.pathname === '/mineit' || location.pathname === '/mine' ? 'rgba(250, 204, 21, 0.4) 0px 0px 12px 0px, #b89b10 0px 4px 0px 0px' : '#b89b10 0px 4px 0px 0px',
               }}
             >
               <Bomb size={14} />
