@@ -127,9 +127,15 @@ const GlobalChatSidebar: React.FC<GlobalChatSidebarProps> = ({
     if (pendingRef.current.has(wallet)) return;
     pendingRef.current.add(wallet);
     try {
-      const res = await fetch(`${API_URL}/api/rewards/xp`, {
-        headers: { 'x-wallet-address': wallet },
-      });
+      const headers: Record<string, string> = { 'x-wallet-address': wallet };
+      if (getAuthToken) {
+        const token = await getAuthToken();
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+          headers['x-auth-token'] = token;
+        }
+      }
+      const res = await fetch(`${API_URL}/api/rewards/xp`, { headers });
       if (res.ok) {
         const data = await res.json();
         const idx = typeof data.tier_index === 'number' ? data.tier_index : 0;
@@ -140,7 +146,7 @@ const GlobalChatSidebar: React.FC<GlobalChatSidebarProps> = ({
     } catch {
       setTierCache(prev => ({ ...prev, [wallet]: 0 }));
     }
-  }, []);
+  }, [getAuthToken]);
 
   // Fetch tiers for any wallets not yet in cache
   useEffect(() => {
