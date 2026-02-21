@@ -662,8 +662,6 @@ const MobileTransactionModal: React.FC<MobileTransactionModalProps> = ({
   return (
     <AnimatePresence>
       {isOpen && (
-        <>
-          {/* Backdrop */}
           <motion.div
             className="mobile-modal-backdrop"
             initial={{ opacity: 0 }}
@@ -671,19 +669,20 @@ const MobileTransactionModal: React.FC<MobileTransactionModalProps> = ({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
             onClick={onClose}
-          />
-          {/* Modal */}
-          <motion.div
-            className="mobile-modal-content"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            transition={{ duration: 0.2 }}
-            style={{
-              ['--color-primary' as string]: theme.primary,
-              ['--color-primary-active' as string]: theme.primaryActive,
-            }}
           >
+            {/* Modal */}
+            <motion.div
+              className="mobile-modal-content"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                ['--color-primary' as string]: theme.primary,
+                ['--color-primary-active' as string]: theme.primaryActive,
+              }}
+            >
             {/* Header */}
             <div className="mobile-modal-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -920,8 +919,8 @@ const MobileTransactionModal: React.FC<MobileTransactionModalProps> = ({
                 }
               </p>
             </form>
+            </motion.div>
           </motion.div>
-        </>
       )}
     </AnimatePresence>
   );
