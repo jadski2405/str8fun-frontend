@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LogOut, ArrowDownToLine, ArrowUpFromLine, X, Menu, User, TrendingUp, Bomb } from 'lucide-react';
+import { LogOut, ArrowDownToLine, ArrowUpFromLine, X, Menu, User, TrendingUp, Bomb, Lock, AlertTriangle } from 'lucide-react';
 import { useLogin, usePrivy } from '@privy-io/react-auth';
 import { useSolanaWallet } from '../hooks/useSolanaWallet';
 import BlitzHeaderCarousel from './BlitzHeaderCarousel';
@@ -48,6 +48,12 @@ interface TransactionDropdownProps {
   onClose: () => void;
   balance: number;
   onTransaction: (amount: number, promoCode?: string) => Promise<{ success: boolean; error?: string; message?: string }>;
+  // Bonus / wagering info (withdraw only)
+  hasActiveBonus?: boolean;
+  bonusBalance?: number;
+  wagerProgress?: number;
+  bonusWagerRequirement?: number;
+  bonusWagered?: number;
 }
 
 const TransactionDropdown: React.FC<TransactionDropdownProps> = ({ 
@@ -56,6 +62,11 @@ const TransactionDropdown: React.FC<TransactionDropdownProps> = ({
   onClose,
   balance,
   onTransaction,
+  hasActiveBonus,
+  bonusBalance,
+  wagerProgress,
+  bonusWagerRequirement,
+  bonusWagered,
 }) => {
   const [amount, setAmount] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -228,6 +239,39 @@ const TransactionDropdown: React.FC<TransactionDropdownProps> = ({
                 {balance.toFixed(4)}
               </span>
             </div>
+
+            {/* Wager Warning Banner - Withdraw Only */}
+            {type === 'withdraw' && hasActiveBonus && (bonusBalance ?? 0) > 0 && (
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 8,
+                  padding: '10px 14px',
+                  background: 'rgba(255, 193, 7, 0.1)',
+                  border: '1px solid rgba(255, 193, 7, 0.3)',
+                  borderRadius: 8,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <AlertTriangle size={14} color="#ffc107" />
+                  <span style={{ fontFamily: "'DynaPuff', sans-serif", fontSize: 11, fontWeight: 600, color: '#ffc107' }}>
+                    Wagering Requirement Active
+                  </span>
+                </div>
+                <span style={{ fontFamily: "'DynaPuff', sans-serif", fontSize: 10, color: 'rgba(248, 248, 252, 0.7)', lineHeight: 1.4 }}>
+                  {(bonusBalance ?? 0).toFixed(4)} SOL is locked bonus balance.
+                  Wager {((bonusWagerRequirement ?? 0) - (bonusWagered ?? 0)).toFixed(4)} more SOL to unlock.
+                </span>
+                {/* Mini progress bar */}
+                <div style={{ width: '100%', height: 4, background: 'rgba(255, 255, 255, 0.1)', borderRadius: 2 }}>
+                  <div style={{ width: `${(wagerProgress ?? 0) * 100}%`, height: '100%', background: '#ffc107', borderRadius: 2, transition: 'width 0.3s ease' }} />
+                </div>
+                <span style={{ fontFamily: "'DynaPuff', sans-serif", fontSize: 10, color: 'rgba(248, 248, 252, 0.5)', textAlign: 'right' }}>
+                  {((wagerProgress ?? 0) * 100).toFixed(1)}% complete
+                </span>
+              </div>
+            )}
 
             {/* Promo Code - Deposit Only */}
             {type === 'deposit' && (
@@ -523,6 +567,12 @@ interface MobileTransactionModalProps {
   onClose: () => void;
   balance: number;
   onTransaction: (amount: number, promoCode?: string) => Promise<{ success: boolean; error?: string; message?: string }>;
+  // Bonus / wagering info (withdraw only)
+  hasActiveBonus?: boolean;
+  bonusBalance?: number;
+  wagerProgress?: number;
+  bonusWagerRequirement?: number;
+  bonusWagered?: number;
 }
 
 const MobileTransactionModal: React.FC<MobileTransactionModalProps> = ({ 
@@ -531,6 +581,11 @@ const MobileTransactionModal: React.FC<MobileTransactionModalProps> = ({
   onClose,
   balance,
   onTransaction,
+  hasActiveBonus,
+  bonusBalance,
+  wagerProgress,
+  bonusWagerRequirement,
+  bonusWagered,
 }) => {
   const [amount, setAmount] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -653,6 +708,38 @@ const MobileTransactionModal: React.FC<MobileTransactionModalProps> = ({
                   {balance.toFixed(4)}
                 </span>
               </div>
+
+              {/* Wager Warning Banner - Withdraw Only (Mobile) */}
+              {type === 'withdraw' && hasActiveBonus && (bonusBalance ?? 0) > 0 && (
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 8,
+                    padding: '10px 14px',
+                    background: 'rgba(255, 193, 7, 0.1)',
+                    border: '1px solid rgba(255, 193, 7, 0.3)',
+                    borderRadius: 8,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <AlertTriangle size={14} color="#ffc107" />
+                    <span style={{ fontFamily: "'DynaPuff', sans-serif", fontSize: 11, fontWeight: 600, color: '#ffc107' }}>
+                      Wagering Requirement Active
+                    </span>
+                  </div>
+                  <span style={{ fontFamily: "'DynaPuff', sans-serif", fontSize: 10, color: 'rgba(248, 248, 252, 0.7)', lineHeight: 1.4 }}>
+                    {(bonusBalance ?? 0).toFixed(4)} SOL is locked bonus balance.
+                    Wager {((bonusWagerRequirement ?? 0) - (bonusWagered ?? 0)).toFixed(4)} more SOL to unlock.
+                  </span>
+                  <div style={{ width: '100%', height: 4, background: 'rgba(255, 255, 255, 0.1)', borderRadius: 2 }}>
+                    <div style={{ width: `${(wagerProgress ?? 0) * 100}%`, height: '100%', background: '#ffc107', borderRadius: 2, transition: 'width 0.3s ease' }} />
+                  </div>
+                  <span style={{ fontFamily: "'DynaPuff', sans-serif", fontSize: 10, color: 'rgba(248, 248, 252, 0.5)', textAlign: 'right' }}>
+                    {((wagerProgress ?? 0) * 100).toFixed(1)}% complete
+                  </span>
+                </div>
+              )}
 
               {/* Promo Code - Deposit Only */}
               {type === 'deposit' && (
@@ -942,6 +1029,11 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
     deposit, 
     withdraw,
     disconnect: disconnectWallet,
+    bonusBalance,
+    bonusWagerRequirement,
+    bonusWagered,
+    wagerProgress,
+    hasActiveBonus,
   } = useSolanaWallet();
   
   // Dropdown states
@@ -1159,17 +1251,19 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
           ) : (
             <div
               className="header-balance-box"
+              title={hasActiveBonus ? `${bonusBalance.toFixed(4)} SOL locked until you wager ${(bonusWagerRequirement - bonusWagered).toFixed(4)} more SOL` : undefined}
               style={{
                 height: 36,
                 borderRadius: 8,
                 padding: '0 12px',
                 background: '#0d1117',
-                border: '1px solid rgba(248, 248, 252, 0.15)',
+                border: hasActiveBonus ? '1px solid rgba(255, 193, 7, 0.4)' : '1px solid rgba(248, 248, 252, 0.15)',
                 boxSizing: 'border-box',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 6,
+                position: 'relative',
               }}
             >
               <img src={solanaLogo} alt="SOL" style={{ width: 20, height: 20 }} />
@@ -1184,6 +1278,23 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
               >
                 {depositedBalance.toFixed(3)}
               </span>
+              {hasActiveBonus && bonusBalance > 0 && (
+                <span
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 3,
+                    fontFamily: "'DynaPuff', sans-serif",
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: '#ffc107',
+                    opacity: 0.9,
+                  }}
+                >
+                  <Lock size={10} />
+                  +{bonusBalance.toFixed(3)}
+                </span>
+              )}
             </div>
           )}
 
@@ -1234,6 +1345,11 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
               onClose={() => setShowWithdrawMenu(false)}
               balance={depositedBalance}
               onTransaction={withdraw}
+              hasActiveBonus={hasActiveBonus}
+              bonusBalance={bonusBalance}
+              wagerProgress={wagerProgress}
+              bonusWagerRequirement={bonusWagerRequirement}
+              bonusWagered={bonusWagered}
             />
           </div>
           
@@ -1604,6 +1720,11 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
         onClose={() => setShowMobileWithdraw(false)}
         balance={depositedBalance}
         onTransaction={withdraw}
+        hasActiveBonus={hasActiveBonus}
+        bonusBalance={bonusBalance}
+        wagerProgress={wagerProgress}
+        bonusWagerRequirement={bonusWagerRequirement}
+        bonusWagered={bonusWagered}
       />
     </div>
   );

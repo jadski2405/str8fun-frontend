@@ -34,6 +34,15 @@ export interface WalletState {
   depositedBalance: number;
   isLoadingDepositedBalance: boolean;
   
+  // Bonus / wagering requirement
+  bonusBalance: number;
+  bonusWagerRequirement: number;
+  bonusWagered: number;
+  wagerProgress: number;  // 0..1  (bonusWagered / bonusWagerRequirement)
+  hasActiveBonus: boolean; // convenience: wagerProgress < 1 && bonusWagerRequirement > 0
+  wagerCompletedFlag: boolean; // true briefly when wager requirement is met
+  dismissWagerCompleted: () => void;
+  
   // Actions
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
@@ -109,6 +118,15 @@ export function useSolanaWallet(): WalletState {
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
   const [depositedBalance, setDepositedBalance] = useState(0);
   const [isLoadingDepositedBalance, setIsLoadingDepositedBalance] = useState(false);
+  
+  // Bonus / wagering requirement state
+  const [bonusBalance, setBonusBalance] = useState(0);
+  const [bonusWagerRequirement, setBonusWagerRequirement] = useState(0);
+  const [bonusWagered, setBonusWagered] = useState(0);
+  const [wagerProgress, setWagerProgress] = useState(1); // default 1 = no active bonus
+  const prevWagerProgress = useRef<number>(1);
+  // Listeners for wager-progress-complete event
+  const [wagerCompletedFlag, setWagerCompletedFlag] = useState(false);
   
   // Track when we last manually updated balance (to prevent refresh overwriting)
   const lastManualBalanceUpdate = useRef<number>(0);
@@ -314,6 +332,10 @@ export function useSolanaWallet(): WalletState {
       setUsernameState(null);
       setNeedsUsername(false);
       setDepositedBalance(0);
+      setBonusBalance(0);
+      setBonusWagerRequirement(0);
+      setBonusWagered(0);
+      setWagerProgress(1);
       return;
     }
     
@@ -361,6 +383,26 @@ export function useSolanaWallet(): WalletState {
         setUsernameState(profile.username);
         setNeedsUsername(profile.needsUsername || profile.username === null);
         setDepositedBalance(Number(profile.deposited_balance) || 0);
+        
+        // Bonus / wagering fields from backend
+        const newBonusBalance = Number(profile.bonus_balance) || 0;
+        const newBonusWagerReq = Number(profile.bonus_wager_requirement) || 0;
+        const newBonusWagered = Number(profile.bonus_wagered) || 0;
+        const newWagerProgress = newBonusWagerReq > 0 ? Math.min(1, newBonusWagered / newBonusWagerReq) : 1;
+        
+        setBonusBalance(newBonusBalance);
+        setBonusWagerRequirement(newBonusWagerReq);
+        setBonusWagered(newBonusWagered);
+        setWagerProgress(newWagerProgress);
+        
+        // Detect wager completion: previously < 1, now === 1
+        if (prevWagerProgress.current < 1 && newWagerProgress >= 1 && newBonusWagerReq > 0) {
+          setWagerCompletedFlag(true);
+          // Auto-clear after 8s
+          setTimeout(() => setWagerCompletedFlag(false), 8000);
+        }
+        prevWagerProgress.current = newWagerProgress;
+        
         // Clear referral code after successful profile creation/fetch
         localStorage.removeItem('referral_code');
       } else {
@@ -386,6 +428,10 @@ export function useSolanaWallet(): WalletState {
       setUsernameState(null);
       setNeedsUsername(false);
       setDepositedBalance(0);
+      setBonusBalance(0);
+      setBonusWagerRequirement(0);
+      setBonusWagered(0);
+      setWagerProgress(1);
     }
   }, [isConnected, publicKey, authenticated, refreshProfile]);
 
@@ -709,6 +755,13 @@ export function useSolanaWallet(): WalletState {
     isLoadingBalance,
     depositedBalance,
     isLoadingDepositedBalance,
+    bonusBalance,
+    bonusWagerRequirement,
+    bonusWagered,
+    wagerProgress,
+    hasActiveBonus: wagerProgress < 1 && bonusWagerRequirement > 0,
+    wagerCompletedFlag,
+    dismissWagerCompleted: () => setWagerCompletedFlag(false),
     connect,
     disconnect,
     refreshBalance,

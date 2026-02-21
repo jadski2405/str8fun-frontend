@@ -24,6 +24,12 @@ interface ProfileModalProps {
   profile: UseProfileReturn;
   referral: UseReferralReturn | null;
   getAuthToken?: () => Promise<string | null>;
+  // Bonus / wagering
+  hasActiveBonus?: boolean;
+  bonusBalance?: number;
+  wagerProgress?: number;
+  bonusWagerRequirement?: number;
+  bonusWagered?: number;
 }
 
 // ============================================================================
@@ -86,6 +92,11 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
   profile,
   referral,
   getAuthToken,
+  hasActiveBonus,
+  bonusBalance,
+  wagerProgress,
+  bonusWagerRequirement,
+  bonusWagered,
 }) => {
   const [activeTab, setActiveTab] = useState<ProfileTab>('profile');
   const [copiedAddress, setCopiedAddress] = useState(false);
@@ -327,6 +338,29 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
                     <div className="profile-stat-label">Total Bets</div>
                   </div>
                 </div>
+
+                {/* Wager Progress Section */}
+                {hasActiveBonus && (bonusBalance ?? 0) > 0 && (
+                  <div className="profile-wager-progress-section">
+                    <div className="profile-wager-header">
+                      <span className="profile-wager-title">🔒 Wagering Requirement</span>
+                      <span className="profile-wager-percent">{((wagerProgress ?? 0) * 100).toFixed(1)}%</span>
+                    </div>
+                    <div className="profile-wager-bar-container">
+                      <div
+                        className="profile-wager-bar-fill"
+                        style={{ width: `${(wagerProgress ?? 0) * 100}%` }}
+                      />
+                    </div>
+                    <div className="profile-wager-details">
+                      <span>Bonus Balance: <strong style={{ color: '#ffc107' }}>{(bonusBalance ?? 0).toFixed(4)} SOL</strong></span>
+                      <span>Wagered: {(bonusWagered ?? 0).toFixed(4)} / {(bonusWagerRequirement ?? 0).toFixed(4)} SOL</span>
+                    </div>
+                    <div className="profile-wager-hint">
+                      Wager {((bonusWagerRequirement ?? 0) - (bonusWagered ?? 0)).toFixed(4)} more SOL to unlock your bonus balance for withdrawal.
+                    </div>
+                  </div>
+                )}
 
                 {/* Recent Games */}
                 <div className="profile-recent-games">

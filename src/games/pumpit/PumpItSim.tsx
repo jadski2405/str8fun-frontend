@@ -17,6 +17,8 @@ import GlobalHeader from '../../components/GlobalHeader';
 import GlobalChatSidebar from '../../components/GlobalChatSidebar';
 import LevelUpPopup from '../../components/LevelUpPopup';
 import XpToast from '../../components/XpToast';
+import WagerToast from '../../components/WagerToast';
+import type { WagerNotification } from '../../components/WagerToast';
 import RewardsModal from '../../components/RewardsModal';
 import { BlitzHourStartedModal, BlitzHourEndedModal } from '../../components/BlitzModals';
 import ProfileModal from '../../components/ProfileModal';
@@ -128,6 +130,13 @@ const PumpItSim: React.FC = () => {
     checkUsernameAvailable,
     getAuthToken,
     disconnect: disconnectWallet,
+    hasActiveBonus,
+    bonusBalance,
+    wagerProgress,
+    bonusWagerRequirement,
+    bonusWagered,
+    wagerCompletedFlag,
+    dismissWagerCompleted,
   } = useSolanaWallet();
   
   // Game state from hook (for real trading) - pass wallet address and auth token
@@ -170,6 +179,27 @@ const PumpItSim: React.FC = () => {
   
   // First-deposit bonus popup state
   const [showFirstDepositBonus, setShowFirstDepositBonus] = useState(false);
+  
+  // Wager notification state
+  const [wagerNotifications, setWagerNotifications] = useState<WagerNotification[]>([]);
+  const wagerNotifId = useRef(0);
+  
+  const pushWagerNotification = useCallback((type: 'locked' | 'completed', message: string) => {
+    const id = `wager-${++wagerNotifId.current}`;
+    setWagerNotifications(prev => [...prev, { id, type, message }]);
+  }, []);
+  
+  const dismissWagerNotification = useCallback((id: string) => {
+    setWagerNotifications(prev => prev.filter(n => n.id !== id));
+  }, []);
+  
+  // Show celebration toast when wagering requirement is met
+  useEffect(() => {
+    if (wagerCompletedFlag) {
+      pushWagerNotification('completed', '🎉 Wagering requirement complete! Your bonus balance is now unlocked and withdrawable.');
+      dismissWagerCompleted();
+    }
+  }, [wagerCompletedFlag, pushWagerNotification, dismissWagerCompleted]);
   
   // Trade error state for user feedback
   const [tradeError, setTradeError] = useState<string | null>(null);
@@ -654,6 +684,10 @@ const PumpItSim: React.FC = () => {
           } else {
             refreshDepositedBalance();
           }
+          // Notify if winnings are locked
+          if (hasActiveBonus) {
+            pushWagerNotification('locked', 'Winnings added to bonus balance (locked until wager complete)');
+          }
         }
       } else {
         console.log(`Sell failed: ${result.error}`);
@@ -701,6 +735,10 @@ const PumpItSim: React.FC = () => {
             updateDepositedBalance(result.newBalance);
           } else {
             refreshDepositedBalance();
+          }
+          // Notify if winnings are locked
+          if (hasActiveBonus) {
+            pushWagerNotification('locked', 'Winnings added to bonus balance (locked until wager complete)');
           }
         }
       } else {
@@ -1065,6 +1103,10 @@ const PumpItSim: React.FC = () => {
         gains={rewards.xpGainQueue}
         onClear={rewards.clearXpGain}
       />
+      <WagerToast
+        notifications={wagerNotifications}
+        onDismiss={dismissWagerNotification}
+      />
       <RewardsModal
         isOpen={chestsOpen}
         onClose={() => setChestsOpen(false)}
@@ -1097,6 +1139,11 @@ const PumpItSim: React.FC = () => {
         profile={profileData}
         referral={referral}
         getAuthToken={getAuthToken}
+        hasActiveBonus={hasActiveBonus}
+        bonusBalance={bonusBalance}
+        wagerProgress={wagerProgress}
+        bonusWagerRequirement={bonusWagerRequirement}
+        bonusWagered={bonusWagered}
       />
     </>
   );

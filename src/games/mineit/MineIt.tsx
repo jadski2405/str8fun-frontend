@@ -14,6 +14,8 @@ import {
 } from 'lucide-react';
 import GlobalHeader from '../../components/GlobalHeader';
 import GlobalChatSidebar from '../../components/GlobalChatSidebar';
+import WagerToast from '../../components/WagerToast';
+import type { WagerNotification } from '../../components/WagerToast';
 import { useSolanaWallet } from '../../hooks/useSolanaWallet';
 import { useGame } from '../../hooks/useGame';
 import { useMineGame } from './useMineGame';
@@ -48,9 +50,33 @@ const MineIt: React.FC = () => {
     profileId,
     depositedBalance,
     refreshDepositedBalance,
+    hasActiveBonus,
+    wagerCompletedFlag,
+    dismissWagerCompleted,
   } = useSolanaWallet();
   const gameChat = useGame(profileId, publicKey || null, getAuthToken);
   const [muted, setMuted] = useState(false);
+
+  /* ── Wager notification state ────────────────────────────────────────── */
+  const [wagerNotifications, setWagerNotifications] = useState<WagerNotification[]>([]);
+  const wagerNotifId = React.useRef(0);
+
+  const pushWagerNotification = useCallback((type: 'locked' | 'completed', message: string) => {
+    const id = `wager-mine-${++wagerNotifId.current}`;
+    setWagerNotifications(prev => [...prev, { id, type, message }]);
+  }, []);
+
+  const dismissWagerNotification = useCallback((id: string) => {
+    setWagerNotifications(prev => prev.filter(n => n.id !== id));
+  }, []);
+
+  // Show celebration toast when wagering requirement is met
+  useEffect(() => {
+    if (wagerCompletedFlag) {
+      pushWagerNotification('completed', '🎉 Wagering requirement complete! Your bonus balance is now unlocked and withdrawable.');
+      dismissWagerCompleted();
+    }
+  }, [wagerCompletedFlag, pushWagerNotification, dismissWagerCompleted]);
 
   /* ── Mine game hook ──────────────────────────────────────────────────── */
   const mine = useMineGame(getAuthToken, publicKey || null, refreshDepositedBalance);
@@ -110,8 +136,11 @@ const MineIt: React.FC = () => {
 
   const handleCashout = useCallback(async () => {
     if (!muted) playCashout();
-    await mine.cashout();
-  }, [mine, muted]);
+    const success = await mine.cashout();
+    if (success && hasActiveBonus) {
+      pushWagerNotification('locked', 'Winnings added to bonus balance (locked until wager complete)');
+    }
+  }, [mine, muted, hasActiveBonus, pushWagerNotification]);
 
   /* ── Derived display ─────────────────────────────────────────────────── */
   const multiplier = mine.game?.current_multiplier ?? 1;
@@ -384,6 +413,12 @@ const MineIt: React.FC = () => {
       >
         <MessageCircle size={chatCollapsed ? 22 : 16} className="text-black" />
       </button>
+
+      {/* Wager Notifications */}
+      <WagerToast
+        notifications={wagerNotifications}
+        onDismiss={dismissWagerNotification}
+      />
     </div>
   );
 };
