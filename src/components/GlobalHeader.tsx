@@ -96,7 +96,7 @@ const TransactionDropdown: React.FC<TransactionDropdownProps> = ({
     
     setIsProcessing(true);
     try {
-      const code = (type === 'deposit' && promoStatus === 'applied' && promoCode.length === 4) ? promoCode : undefined;
+      const code = (type === 'deposit' && promoStatus === 'applied' && promoCode.length >= 1) ? promoCode : undefined;
       const result = await onTransaction(amountNum, code);
       if (result.success) {
         setSuccess(true);
@@ -301,14 +301,15 @@ const TransactionDropdown: React.FC<TransactionDropdownProps> = ({
                     <div style={{ display: 'flex', gap: 8 }}>
                       <input
                         type="text"
+                        inputMode="text"
+                        autoCapitalize="characters"
                         value={promoCode}
                         onChange={(e) => {
-                          const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
-                          setPromoCode(val);
+                          setPromoCode(e.target.value.toUpperCase().slice(0, 10));
                           setPromoStatus('idle');
                         }}
-                        placeholder="Enter code"
-                        maxLength={4}
+                        placeholder="Enter promo code"
+                        maxLength={10}
                         style={{
                           flex: 1,
                           height: 40,
@@ -329,24 +330,24 @@ const TransactionDropdown: React.FC<TransactionDropdownProps> = ({
                       <button
                         type="button"
                         onClick={() => {
-                          if (promoCode.length === 4) {
+                          if (promoCode.length >= 1) {
                             setPromoStatus('applied');
                           } else {
                             setPromoStatus('invalid');
                           }
                         }}
-                        disabled={promoCode.length !== 4}
+                        disabled={promoCode.length < 1}
                         style={{
                           padding: '0 16px',
                           height: 40,
-                          background: promoCode.length === 4 ? '#22c55e' : 'rgba(255,255,255,0.1)',
+                          background: promoCode.length >= 1 ? '#22c55e' : 'rgba(255,255,255,0.1)',
                           border: 'none',
                           borderRadius: 8,
                           fontFamily: "'DynaPuff', sans-serif",
                           fontSize: 12,
                           fontWeight: 600,
-                          color: promoCode.length === 4 ? 'rgb(21, 22, 29)' : 'rgba(248,248,252,0.4)',
-                          cursor: promoCode.length === 4 ? 'pointer' : 'not-allowed',
+                          color: promoCode.length >= 1 ? 'rgb(21, 22, 29)' : 'rgba(248,248,252,0.4)',
+                          cursor: promoCode.length >= 1 ? 'pointer' : 'not-allowed',
                           transition: 'all 0.2s ease',
                         }}
                       >
@@ -357,7 +358,7 @@ const TransactionDropdown: React.FC<TransactionDropdownProps> = ({
                       <span style={{ fontFamily: "'DynaPuff', sans-serif", fontSize: 11, color: '#22c55e' }}>✅ Promo applied — bonus on deposit</span>
                     )}
                     {promoStatus === 'invalid' && (
-                      <span style={{ fontFamily: "'DynaPuff', sans-serif", fontSize: 11, color: '#ef4444' }}>❌ Enter a valid 4-digit code</span>
+                      <span style={{ fontFamily: "'DynaPuff', sans-serif", fontSize: 11, color: '#ef4444' }}>❌ Enter a valid promo code</span>
                     )}
                   </>
                 )}
@@ -615,7 +616,7 @@ const MobileTransactionModal: React.FC<MobileTransactionModalProps> = ({
     
     setIsProcessing(true);
     try {
-      const code = (type === 'deposit' && promoStatus === 'applied' && promoCode.length === 4) ? promoCode : undefined;
+      const code = (type === 'deposit' && promoStatus === 'applied' && promoCode.length >= 1) ? promoCode : undefined;
       const result = await onTransaction(amountNum, code);
       if (result.success) {
         setSuccess(true);
@@ -674,9 +675,9 @@ const MobileTransactionModal: React.FC<MobileTransactionModalProps> = ({
           {/* Modal */}
           <motion.div
             className="mobile-modal-content"
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
             transition={{ duration: 0.2 }}
             style={{
               ['--color-primary' as string]: theme.primary,
@@ -767,14 +768,15 @@ const MobileTransactionModal: React.FC<MobileTransactionModalProps> = ({
                       <div style={{ display: 'flex', gap: 8 }}>
                         <input
                           type="text"
+                          inputMode="text"
+                          autoCapitalize="characters"
                           value={promoCode}
                           onChange={(e) => {
-                            const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
-                            setPromoCode(val);
+                            setPromoCode(e.target.value.toUpperCase().slice(0, 10));
                             setPromoStatus('idle');
                           }}
-                          placeholder="Enter code"
-                          maxLength={4}
+                          placeholder="Enter promo code"
+                          maxLength={10}
                           style={{
                             flex: 1,
                             height: 40,
@@ -795,24 +797,24 @@ const MobileTransactionModal: React.FC<MobileTransactionModalProps> = ({
                         <button
                           type="button"
                           onClick={() => {
-                            if (promoCode.length === 4) {
+                            if (promoCode.length >= 1) {
                               setPromoStatus('applied');
                             } else {
                               setPromoStatus('invalid');
                             }
                           }}
-                          disabled={promoCode.length !== 4}
+                          disabled={promoCode.length < 1}
                           style={{
                             padding: '0 16px',
                             height: 40,
-                            background: promoCode.length === 4 ? '#22c55e' : 'rgba(255,255,255,0.1)',
+                            background: promoCode.length >= 1 ? '#22c55e' : 'rgba(255,255,255,0.1)',
                             border: 'none',
                             borderRadius: 8,
                             fontFamily: "'DynaPuff', sans-serif",
                             fontSize: 12,
                             fontWeight: 600,
-                            color: promoCode.length === 4 ? 'rgb(21, 22, 29)' : 'rgba(248,248,252,0.4)',
-                            cursor: promoCode.length === 4 ? 'pointer' : 'not-allowed',
+                            color: promoCode.length >= 1 ? 'rgb(21, 22, 29)' : 'rgba(248,248,252,0.4)',
+                            cursor: promoCode.length >= 1 ? 'pointer' : 'not-allowed',
                             transition: 'all 0.2s ease',
                           }}
                         >
@@ -823,7 +825,7 @@ const MobileTransactionModal: React.FC<MobileTransactionModalProps> = ({
                         <span style={{ fontFamily: "'DynaPuff', sans-serif", fontSize: 11, color: '#22c55e' }}>✅ Promo applied — bonus on deposit</span>
                       )}
                       {promoStatus === 'invalid' && (
-                        <span style={{ fontFamily: "'DynaPuff', sans-serif", fontSize: 11, color: '#ef4444' }}>❌ Enter a valid 4-digit code</span>
+                        <span style={{ fontFamily: "'DynaPuff', sans-serif", fontSize: 11, color: '#ef4444' }}>❌ Enter a valid promo code</span>
                       )}
                     </>
                   )}
