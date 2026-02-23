@@ -27,8 +27,8 @@ import solanaLogo from '../../assets/logo_solana.png';
 // HELPERS
 // ============================================================================
 const fmt = (v: number): string => {
-  if (v < 0.001 && v > 0) return '<0.001';
-  return v.toFixed(3);
+  if (v < 0.01 && v > 0) return '<0.01';
+  return v.toFixed(2);
 };
 
 const DEFAULT_GRID = 5;

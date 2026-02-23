@@ -322,18 +322,18 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
                     </div>
                     <div className="profile-stat-label">PnL Rank (7d)</div>
                     <div className={`profile-stat-sub ${(stats?.pnl_7d ?? 0) >= 0 ? 'positive' : 'negative'}`}>
-                      {stats ? `${(stats.pnl_7d >= 0 ? '+' : '')}${stats.pnl_7d.toFixed(3)} SOL` : '--'}
+                      {stats ? `${(stats.pnl_7d >= 0 ? '+' : '')}${stats.pnl_7d.toFixed(2)} SOL` : '--'}
                     </div>
                   </div>
                   <div className="profile-stat-card">
                     <div className="profile-stat-value" style={{ color: '#00FFA3' }}>
-                      {(stats?.bonus_sol_claimed ?? 0).toFixed(3)}
+                      {(stats?.bonus_sol_claimed ?? 0).toFixed(2)}
                     </div>
                     <div className="profile-stat-label">Bonus SOL Claimed</div>
                   </div>
                   <div className="profile-stat-card">
                     <div className="profile-stat-value">
-                      {(stats?.total_volume ?? 0).toFixed(3)}
+                      {(stats?.total_volume ?? 0).toFixed(2)}
                     </div>
                     <div className="profile-stat-label">Total Bets</div>
                   </div>
@@ -353,11 +353,11 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
                       />
                     </div>
                     <div className="profile-wager-details">
-                      <span>Bonus Balance: <strong style={{ color: '#ffc107' }}>{(bonusBalance ?? 0).toFixed(4)} SOL</strong></span>
-                      <span>Wagered: {(bonusWagered ?? 0).toFixed(4)} / {(bonusWagerRequirement ?? 0).toFixed(4)} SOL</span>
+                      <span>Bonus Balance: <strong style={{ color: '#ffc107' }}>{(bonusBalance ?? 0).toFixed(2)} SOL</strong></span>
+                      <span>Wagered: {(bonusWagered ?? 0).toFixed(2)} / {(bonusWagerRequirement ?? 0).toFixed(2)} SOL</span>
                     </div>
                     <div className="profile-wager-hint">
-                      Wager {((bonusWagerRequirement ?? 0) - (bonusWagered ?? 0)).toFixed(4)} more SOL to unlock your bonus balance for withdrawal.
+                      Wager {((bonusWagerRequirement ?? 0) - (bonusWagered ?? 0)).toFixed(2)} more SOL to unlock your bonus balance for withdrawal.
                     </div>
                   </div>
                 )}
@@ -376,7 +376,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
                             {game.peak_multiplier.toFixed(2)}x
                           </div>
                           <div className={`profile-game-pnl ${game.pnl >= 0 ? 'positive' : 'negative'}`}>
-                            {game.pnl >= 0 ? '+' : ''}{game.pnl.toFixed(4)}
+                            {game.pnl >= 0 ? '+' : ''}{game.pnl.toFixed(2)}
                           </div>
                           <div className="profile-game-time">
                             {new Date(game.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
@@ -540,7 +540,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
                               Week of {new Date(week.week_start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                             </span>
                             <span className="referral-claim-amount" style={{ color: '#00FFA3' }}>
-                              {week.amount.toFixed(4)} SOL
+                              {week.amount.toFixed(2)} SOL
                             </span>
                           </div>
                           <button
@@ -654,7 +654,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
                       {deposits.map(d => (
                         <div key={d.id} className="profile-tx-row">
                           <div className="profile-tx-amount">
-                            <span className="profile-tx-sol">{(d.amount ?? 0).toFixed(4)} SOL</span>
+                            <span className="profile-tx-sol">{(d.amount ?? 0).toFixed(2)} SOL</span>
                             <span className={`profile-tx-status ${d.status}`}>{d.status}</span>
                           </div>
                           <div className="profile-tx-meta">
@@ -701,7 +701,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
                       {withdrawals.map(w => (
                         <div key={w.id} className="profile-tx-row">
                           <div className="profile-tx-amount">
-                            <span className="profile-tx-sol">{(w.amount ?? 0).toFixed(4)} SOL</span>
+                            <span className="profile-tx-sol">{(w.amount ?? 0).toFixed(2)} SOL</span>
                             <span className={`profile-tx-status ${w.status}`}>{w.status}</span>
                           </div>
                           <div className="profile-tx-meta">

@@ -95,8 +95,23 @@ export function useChat({ walletAddress = null, getAuthToken = undefined, limit 
       });
     };
 
+    // Listen for WS ERROR events (e.g. level-gate for chat)
+    const handleWsError = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (!detail) return;
+      const msg = detail.message || detail.error || '';
+      if (msg && (msg.toLowerCase().includes('chat') || msg.toLowerCase().includes('level'))) {
+        setError(msg);
+        setTimeout(() => setError(null), 6000);
+      }
+    };
+
     window.addEventListener('pumpit:chat_message', handleChatMessage);
-    return () => window.removeEventListener('pumpit:chat_message', handleChatMessage);
+    window.addEventListener('pumpit:ws_error', handleWsError);
+    return () => {
+      window.removeEventListener('pumpit:chat_message', handleChatMessage);
+      window.removeEventListener('pumpit:ws_error', handleWsError);
+    };
   }, [limit]);
 
   // Send message
@@ -145,10 +160,13 @@ export function useChat({ walletAddress = null, getAuthToken = undefined, limit 
           const text = await response.text();
           const parsed = JSON.parse(text);
           if (parsed.error) errorMsg = parsed.error;
+          if (parsed.message) errorMsg = parsed.message;
         } catch { /* non-JSON response, use default */ }
         setMessages(prev => prev.filter(m => m.id !== tempId));
         optimisticIdsRef.current.delete(tempId);
         setError(errorMsg);
+        // Auto-clear error after 6 seconds
+        setTimeout(() => setError(null), 6000);
         return false;
       }
 

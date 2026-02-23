@@ -23,10 +23,10 @@ interface TradeDeckProps {
 // ============================================================================
 const BUY_PERCENTAGES = [10, 25, 50, 100] as const;
 
-// Helper: Format SOL to exactly 3 decimal places, 0.000 if < 0.001
+// Helper: Format SOL to exactly 2 decimal places
 const formatSOL = (value: number): string => {
-  if (value < 0.001) return '0.000';
-  return value.toFixed(3);
+  if (value < 0.01) return '0.00';
+  return value.toFixed(2);
 };
 
 // ============================================================================

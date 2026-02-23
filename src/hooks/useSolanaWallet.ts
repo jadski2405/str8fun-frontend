@@ -382,13 +382,16 @@ export function useSolanaWallet(): WalletState {
         setProfileId(profile.id);
         setUsernameState(profile.username);
         setNeedsUsername(profile.needsUsername || profile.username === null);
-        setDepositedBalance(Number(profile.deposited_balance) || 0);
         
         // Bonus / wagering fields from backend
         const newBonusBalance = Number(profile.bonus_balance) || 0;
         const newBonusWagerReq = Number(profile.bonus_wager_requirement) || 0;
         const newBonusWagered = Number(profile.bonus_wagered) || 0;
         const newWagerProgress = newBonusWagerReq > 0 ? Math.min(1, newBonusWagered / newBonusWagerReq) : 1;
+        
+        // Combined balance = deposited + bonus (displayed everywhere)
+        const depositedVal = Number(profile.deposited_balance) || 0;
+        setDepositedBalance(depositedVal + newBonusBalance);
         
         setBonusBalance(newBonusBalance);
         setBonusWagerRequirement(newBonusWagerReq);
@@ -653,9 +656,9 @@ export function useSolanaWallet(): WalletState {
         return { success: false, error: result.error || 'Failed to confirm deposit' };
       }
       
-      // Update local state immediately
+      // Update local state immediately (new_balance is deposited only; add bonus for display)
       lastManualBalanceUpdate.current = Date.now();
-      setDepositedBalance(Number(result.new_balance) || 0);
+      setDepositedBalance((Number(result.new_balance) || 0) + bonusBalance);
       await refreshBalance();
       
       // Return success with optional bonus/promo info
@@ -669,7 +672,7 @@ export function useSolanaWallet(): WalletState {
       console.error('Deposit error:', error);
       return { success: false, error: 'Transaction failed or cancelled' };
     }
-  }, [walletAddress, privyWallet, walletAdapterPublicKey, walletAdapterSendTransaction, balance, connection, privySignAndSendTransaction, refreshBalance, getAuthToken]);
+  }, [walletAddress, privyWallet, walletAdapterPublicKey, walletAdapterSendTransaction, balance, connection, privySignAndSendTransaction, refreshBalance, getAuthToken, bonusBalance]);
 
   // ============================================================================
   // WITHDRAW - Send SOL from escrow back to wallet
@@ -719,9 +722,9 @@ export function useSolanaWallet(): WalletState {
         return { success: false, error: result.error || 'Withdrawal failed' };
       }
       
-      // Update local state immediately
+      // Update local state immediately (new_balance is deposited only; add bonus for display)
       lastManualBalanceUpdate.current = Date.now();
-      setDepositedBalance(Number(result.new_balance) || Math.max(0, depositedBalance - amount));
+      setDepositedBalance((Number(result.new_balance) || Math.max(0, depositedBalance - amount)) + bonusBalance);
       await refreshBalance();
       
       // Withdrawals are now pending (processed within 24-48 hours)
@@ -734,13 +737,13 @@ export function useSolanaWallet(): WalletState {
       console.error('Withdrawal error:', error);
       return { success: false, error: 'Withdrawal failed' };
     }
-  }, [walletAddress, depositedBalance, refreshBalance, getAuthToken]);
+  }, [walletAddress, depositedBalance, refreshBalance, getAuthToken, bonusBalance]);
 
-  // Immediate balance update (for after trades)
+  // Immediate balance update (for after trades – new_balance from trade API is deposited only)
   const updateDepositedBalance = useCallback((newBalance: number) => {
     lastManualBalanceUpdate.current = Date.now();
-    setDepositedBalance(newBalance);
-  }, []);
+    setDepositedBalance(newBalance + bonusBalance);
+  }, [bonusBalance]);
 
   return {
     isConnected,

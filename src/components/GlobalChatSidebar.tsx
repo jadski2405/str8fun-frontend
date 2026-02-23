@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Send, MessageCircle, Loader2, X } from 'lucide-react';
+import { Send, MessageCircle, Loader2, X, Lock } from 'lucide-react';
 import { useChat } from '../hooks/useChat';
 import { tierIconUrl, ProfileStats, RecentGame } from '../types/game';
 
@@ -13,6 +13,7 @@ interface GlobalChatSidebarProps {
   getAuthToken?: () => Promise<string | null>;
   onlineCount?: number;
   playerTier?: number;
+  playerLevel?: number;
 }
 
 /* ============ Player Profile Popup ============ */
@@ -65,8 +66,8 @@ const PlayerPopup: React.FC<PlayerPopupProps> = ({ wallet, username, onClose }) 
             <div className="chat-player-popup-stats">
               <div className="chat-player-popup-stat"><span className="label">Level</span><span className="value">{(stats as any).level ?? '—'}</span></div>
               <div className="chat-player-popup-stat"><span className="label">XP</span><span className="value">{(stats as any).xp?.toLocaleString() ?? '—'}</span></div>
-              <div className="chat-player-popup-stat"><span className="label">Total PnL</span><span className="value" style={{ color: (stats.total_pnl ?? 0) >= 0 ? '#4ade80' : '#f87171' }}>{(stats.total_pnl ?? 0) >= 0 ? '+' : ''}{(stats.total_pnl ?? 0).toFixed(4)}</span></div>
-              <div className="chat-player-popup-stat"><span className="label">7d PnL</span><span className="value" style={{ color: (stats.pnl_7d ?? 0) >= 0 ? '#4ade80' : '#f87171' }}>{(stats.pnl_7d ?? 0) >= 0 ? '+' : ''}{(stats.pnl_7d ?? 0).toFixed(4)}</span></div>
+              <div className="chat-player-popup-stat"><span className="label">Total PnL</span><span className="value" style={{ color: (stats.total_pnl ?? 0) >= 0 ? '#4ade80' : '#f87171' }}>{(stats.total_pnl ?? 0) >= 0 ? '+' : ''}{(stats.total_pnl ?? 0).toFixed(2)}</span></div>
+              <div className="chat-player-popup-stat"><span className="label">7d PnL</span><span className="value" style={{ color: (stats.pnl_7d ?? 0) >= 0 ? '#4ade80' : '#f87171' }}>{(stats.pnl_7d ?? 0) >= 0 ? '+' : ''}{(stats.pnl_7d ?? 0).toFixed(2)}</span></div>
               <div className="chat-player-popup-stat"><span className="label">Games</span><span className="value">{stats.games_played ?? 0}</span></div>
               <div className="chat-player-popup-stat"><span className="label">Profitable</span><span className="value">{stats.profitable_rounds ?? 0}</span></div>
               <div className="chat-player-popup-stat"><span className="label">Volume</span><span className="value">{(stats.total_volume ?? 0).toFixed(2)}</span></div>
@@ -80,7 +81,7 @@ const PlayerPopup: React.FC<PlayerPopupProps> = ({ wallet, username, onClose }) 
                   <div key={g.round_id} className="chat-player-popup-game-row">
                     <span className="chat-player-popup-game-time">{new Date(g.timestamp).toLocaleDateString()}</span>
                     <span style={{ color: (g.pnl ?? 0) >= 0 ? '#4ade80' : '#f87171', fontWeight: 600 }}>
-                      {(g.pnl ?? 0) >= 0 ? '+' : ''}{(g.pnl ?? 0).toFixed(4)} SOL
+                      {(g.pnl ?? 0) >= 0 ? '+' : ''}{(g.pnl ?? 0).toFixed(2)} SOL
                     </span>
                     <span style={{ color: '#9ca3af', fontSize: 12 }}>{(g.peak_multiplier ?? 0).toFixed(2)}x</span>
                   </div>
@@ -104,13 +105,46 @@ const GlobalChatSidebar: React.FC<GlobalChatSidebarProps> = ({
   getAuthToken = undefined,
   onlineCount = 0,
   playerTier = 0,
+  playerLevel: playerLevelProp,
 }) => {
   const [inputValue, setInputValue] = useState('');
   const [popupPlayer, setPopupPlayer] = useState<{ wallet: string; username: string } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const [fetchedLevel, setFetchedLevel] = useState<number | null>(null);
   
   const { messages, loading, error, sendMessage, isRateLimited } = useChat({ walletAddress, getAuthToken });
+
+  // Self-fetch level from XP endpoint when playerLevel prop not provided
+  useEffect(() => {
+    if (playerLevelProp !== undefined || !walletAddress || !isWalletConnected) {
+      setFetchedLevel(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const headers: Record<string, string> = { 'x-wallet-address': walletAddress };
+        if (getAuthToken) {
+          const token = await getAuthToken();
+          if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+            headers['x-auth-token'] = token;
+          }
+        }
+        const res = await fetch(`${API_URL}/api/rewards/xp`, { headers });
+        if (res.ok && !cancelled) {
+          const data = await res.json();
+          setFetchedLevel(typeof data.level === 'number' ? data.level : 0);
+        }
+      } catch { /* ignore */ }
+    })();
+    return () => { cancelled = true; };
+  }, [walletAddress, isWalletConnected, playerLevelProp, getAuthToken]);
+
+  // Resolve player level: prop takes priority, then fetched, default 0
+  const playerLevel = playerLevelProp ?? fetchedLevel ?? 0;
+  const chatLocked = isWalletConnected && playerLevel < 2;
 
   // Wallet → tier cache: fetch real tier for every unique wallet in chat
   const [tierCache, setTierCache] = useState<Record<string, number>>({});
@@ -165,7 +199,7 @@ const GlobalChatSidebar: React.FC<GlobalChatSidebarProps> = ({
 
   const handleSend = async () => {
     const text = inputValue.trim();
-    if (!text || isRateLimited || !isWalletConnected) return;
+    if (!text || isRateLimited || !isWalletConnected || chatLocked) return;
     
     setInputValue('');
     const success = await sendMessage(text);
@@ -375,7 +409,32 @@ const GlobalChatSidebar: React.FC<GlobalChatSidebarProps> = ({
           userSelect: 'text',
         }}
       >
-        {isWalletConnected ? (
+        {isWalletConnected && chatLocked ? (
+          /* Level-locked chat message */
+          <div 
+            style={{
+              width: '100%',
+              height: 45,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 6,
+              fontFamily: 'inherit',
+              fontSize: 13,
+              fontWeight: 500,
+              color: '#ffc107',
+              backgroundColor: 'rgba(255, 193, 7, 0.08)',
+              border: '1px solid rgba(255, 193, 7, 0.25)',
+              borderRadius: 8,
+              boxSizing: 'border-box',
+              cursor: 'not-allowed',
+              userSelect: 'none',
+            }}
+          >
+            <Lock size={14} />
+            Reach level 2 to unlock chat
+          </div>
+        ) : isWalletConnected ? (
           /* Input Form Container - strictly contained within 319px wrapper */
           <div 
             style={{ 

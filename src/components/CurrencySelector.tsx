@@ -81,7 +81,7 @@ const CurrencySelector: React.FC<CurrencySelectorProps> = ({
             textShadow: isCsol ? '0 0 8px rgba(168, 85, 247, 0.3)' : '0 0 8px rgba(0, 255, 163, 0.3)',
           }}
         >
-          {isCsol ? csolBalance.toFixed(3) : solBalance.toFixed(3)}
+          {isCsol ? csolBalance.toFixed(2) : solBalance.toFixed(2)}
         </span>
         {isParticipating && (
           <ChevronDown size={12} style={{ opacity: 0.5, color: isCsol ? '#A855F7' : '#9CA3AF' }} />
@@ -136,7 +136,7 @@ const CurrencySelector: React.FC<CurrencySelectorProps> = ({
                 <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 1 }}>Game balance</div>
               </div>
               <span style={{ fontFamily: "'DynaPuff', sans-serif", fontSize: 13, fontWeight: 600, color: '#00FFA3' }}>
-                {solBalance.toFixed(3)}
+                {solBalance.toFixed(2)}
               </span>
               {activeCurrency === 'sol' && <Check size={14} style={{ color: '#00FFA3' }} />}
             </button>
@@ -168,7 +168,7 @@ const CurrencySelector: React.FC<CurrencySelectorProps> = ({
                 <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 1 }}>Competition only</div>
               </div>
               <span style={{ fontFamily: "'DynaPuff', sans-serif", fontSize: 13, fontWeight: 600, color: '#A855F7' }}>
-                {csolBalance.toFixed(3)}
+                {csolBalance.toFixed(2)}
               </span>
               {activeCurrency === 'csol' && <Check size={14} style={{ color: '#A855F7' }} />}
             </button>

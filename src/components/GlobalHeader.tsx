@@ -122,7 +122,7 @@ const TransactionDropdown: React.FC<TransactionDropdownProps> = ({
   };
 
   const handleMaxClick = () => {
-    const formatted = balance < 0.001 ? '0.000' : balance.toFixed(3);
+    const formatted = balance < 0.01 ? '0.00' : balance.toFixed(2);
     setAmount(formatted);
     setError(null);
   };
@@ -236,7 +236,7 @@ const TransactionDropdown: React.FC<TransactionDropdownProps> = ({
               </span>
               <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: "'DynaPuff', sans-serif", fontSize: 14, fontWeight: 600, color: theme.primary }}>
                 <img src={solanaLogo} alt="SOL" style={{ width: 22, height: 22 }} />
-                {balance.toFixed(4)}
+                {balance.toFixed(2)}
               </span>
             </div>
 
@@ -260,8 +260,8 @@ const TransactionDropdown: React.FC<TransactionDropdownProps> = ({
                   </span>
                 </div>
                 <span style={{ fontFamily: "'DynaPuff', sans-serif", fontSize: 10, color: 'rgba(248, 248, 252, 0.7)', lineHeight: 1.4 }}>
-                  {(bonusBalance ?? 0).toFixed(4)} SOL is locked bonus balance.
-                  Wager {((bonusWagerRequirement ?? 0) - (bonusWagered ?? 0)).toFixed(4)} more SOL to unlock.
+                  {(bonusBalance ?? 0).toFixed(2)} SOL is locked bonus balance.
+                  Wager {((bonusWagerRequirement ?? 0) - (bonusWagered ?? 0)).toFixed(2)} more SOL to unlock.
                 </span>
                 {/* Mini progress bar */}
                 <div style={{ width: '100%', height: 4, background: 'rgba(255, 255, 255, 0.1)', borderRadius: 2 }}>
@@ -641,7 +641,7 @@ const MobileTransactionModal: React.FC<MobileTransactionModalProps> = ({
   };
 
   const handleMaxClick = () => {
-    const formatted = balance < 0.001 ? '0.000' : balance.toFixed(3);
+    const formatted = balance < 0.01 ? '0.00' : balance.toFixed(2);
     setAmount(formatted);
     setError(null);
   };
@@ -705,7 +705,7 @@ const MobileTransactionModal: React.FC<MobileTransactionModalProps> = ({
                 </span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: "'DynaPuff', sans-serif", fontSize: 14, fontWeight: 600, color: theme.primary }}>
                   <img src={solanaLogo} alt="SOL" style={{ width: 22, height: 22 }} />
-                  {balance.toFixed(4)}
+                  {balance.toFixed(2)}
                 </span>
               </div>
 
@@ -729,8 +729,8 @@ const MobileTransactionModal: React.FC<MobileTransactionModalProps> = ({
                     </span>
                   </div>
                   <span style={{ fontFamily: "'DynaPuff', sans-serif", fontSize: 10, color: 'rgba(248, 248, 252, 0.7)', lineHeight: 1.4 }}>
-                    {(bonusBalance ?? 0).toFixed(4)} SOL is locked bonus balance.
-                    Wager {((bonusWagerRequirement ?? 0) - (bonusWagered ?? 0)).toFixed(4)} more SOL to unlock.
+                    {(bonusBalance ?? 0).toFixed(2)} SOL is locked bonus balance.
+                    Wager {((bonusWagerRequirement ?? 0) - (bonusWagered ?? 0)).toFixed(2)} more SOL to unlock.
                   </span>
                   <div style={{ width: '100%', height: 4, background: 'rgba(255, 255, 255, 0.1)', borderRadius: 2 }}>
                     <div style={{ width: `${(wagerProgress ?? 0) * 100}%`, height: '100%', background: '#ffc107', borderRadius: 2, transition: 'width 0.3s ease' }} />
@@ -1252,7 +1252,7 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
           ) : (
             <div
               className="header-balance-box"
-              title={hasActiveBonus ? `${bonusBalance.toFixed(4)} SOL locked until you wager ${(bonusWagerRequirement - bonusWagered).toFixed(4)} more SOL` : undefined}
+              title={hasActiveBonus ? `${bonusBalance.toFixed(2)} SOL locked until you wager ${(bonusWagerRequirement - bonusWagered).toFixed(2)} more SOL` : undefined}
               style={{
                 height: 36,
                 borderRadius: 8,
@@ -1277,7 +1277,7 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
                   textShadow: '0 0 8px rgba(0, 255, 163, 0.3)',
                 }}
               >
-                {depositedBalance.toFixed(3)}
+                {depositedBalance.toFixed(2)}
               </span>
               {hasActiveBonus && bonusBalance > 0 && (
                 <span
@@ -1291,9 +1291,10 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onToggleChat: _onToggleChat
                     color: '#ffc107',
                     opacity: 0.9,
                   }}
+                  title={`${bonusBalance.toFixed(2)} SOL bonus locked until wager requirement met`}
                 >
                   <Lock size={10} />
-                  +{bonusBalance.toFixed(3)}
+                  {bonusBalance.toFixed(2)} locked
                 </span>
               )}
             </div>

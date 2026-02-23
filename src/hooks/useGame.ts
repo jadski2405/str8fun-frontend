@@ -520,6 +520,11 @@ export function useGame(
             window.dispatchEvent(new CustomEvent('pumpit:chat_message', { detail: data }));
           }
 
+          // Error events — bridge to useChat for level-gate messages etc.
+          if (data.type === 'ERROR') {
+            window.dispatchEvent(new CustomEvent('pumpit:ws_error', { detail: data }));
+          }
+
           // Referral events — bridge to useReferral via CustomEvents
           if (data.type === 'REFERRAL_COMMISSION') {
             window.dispatchEvent(new CustomEvent('pumpit:referral_commission', { detail: data }));

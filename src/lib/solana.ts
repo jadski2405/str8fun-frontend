@@ -41,7 +41,7 @@ export async function getSOLBalance(publicKey: string): Promise<number> {
 }
 
 // Helper to format SOL amount
-export function formatSOL(amount: number, decimals = 4): string {
+export function formatSOL(amount: number, decimals = 2): string {
   return amount.toFixed(decimals);
 }
 

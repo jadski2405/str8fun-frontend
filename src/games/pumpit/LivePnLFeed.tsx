@@ -29,7 +29,7 @@ const formatMultiplier = (multiplier: number): string => {
 
 const formatPnL = (pnl: number): string => {
   const sign = pnl >= 0 ? '+' : '';
-  return `${sign}${pnl.toFixed(4)}`;
+  return `${sign}${pnl.toFixed(2)}`;
 };
 
 // ============================================================================
