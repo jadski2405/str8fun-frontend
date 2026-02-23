@@ -142,9 +142,10 @@ const GlobalChatSidebar: React.FC<GlobalChatSidebarProps> = ({
     return () => { cancelled = true; };
   }, [walletAddress, isWalletConnected, playerLevelProp, getAuthToken]);
 
-  // Resolve player level: prop takes priority, then fetched, default 0
-  const playerLevel = playerLevelProp ?? fetchedLevel ?? 0;
-  const chatLocked = isWalletConnected && playerLevel < 2;
+  // Resolve player level: prop takes priority, then fetched
+  // If level hasn't been fetched yet (null), don't lock — wait for data
+  const playerLevel = playerLevelProp ?? fetchedLevel;
+  const chatLocked = isWalletConnected && playerLevel !== null && playerLevel !== undefined && playerLevel < 2;
 
   // Wallet → tier cache: fetch real tier for every unique wallet in chat
   const [tierCache, setTierCache] = useState<Record<string, number>>({});
